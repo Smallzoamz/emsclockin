@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
-import { syncOpQueueToDiscord } from "@/lib/op-discord-sync";
+import { syncOpQueueToDiscord, teardownOpQueue } from "@/lib/op-discord-sync";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -71,8 +71,8 @@ export async function POST(req: Request) {
       // Stopping OP: Update database status first so embeds will render as CLOSED
       await supabase.from("system_settings").upsert({ key: "op_active", value: false }, { onConflict: "key" });
 
-      // Call sync (forceNewMessage = false, forceUpdate = true) which will PATCH the existing message with closed state
-      await syncOpQueueToDiscord(false, true);
+      // Teardown: Delete queue message, send summary report, clear op_queue_state & message ID
+      await teardownOpQueue();
     }
 
     return NextResponse.json({ success: true, active });

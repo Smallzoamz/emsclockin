@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { formatThaiDate, formatDuration } from "@/lib/utils";
+import { formatThaiDate } from "@/lib/utils";
 
 /**
  * Automatically compiles the doctor queue groups and edits/sends the single Discord Webhook message.
@@ -38,7 +38,8 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
     const { data: activeShifts } = await supabase
       .from("shifts")
       .select("user_email, user_name, discord_username")
-      .is("clock_out", null);
+      .is("clock_out", null)
+      .order("clock_in", { ascending: true });
 
     // 3. Fetch recent shifts (clocked out in last 12 hours)
     const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
@@ -267,7 +268,8 @@ export async function teardownOpQueue() {
     const { data: activeShifts } = await supabase
       .from("shifts")
       .select("user_email, user_name, discord_username, clock_in")
-      .is("clock_out", null);
+      .is("clock_out", null)
+      .order("clock_in", { ascending: true });
 
     // 3. Fetch recent shifts (clocked out in last 12 hours)
     const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
@@ -284,19 +286,16 @@ export async function teardownOpQueue() {
       return activeShifts.map((shift: any) => {
         const registered = registeredDoctors.find((d: any) => d.email === shift.user_email);
         const name = registered?.name || shift.user_name || "Unknown Doctor";
-        const cInTime = new Date(shift.clock_in);
-        return `• ${name} (เข้าเวรเมื่อ: \`${formatThaiDate(cInTime)}\`)`;
+        return `• ${name}`;
       }).join("\n");
     };
 
     const formatRecentList = () => {
-      if (!recentShifts || recentShifts.length === 0) return "ไม่มีแพทย์ออกเวรล่าสุด";
+      if (!recentShifts || recentShifts.length === 0) return "ไม่มีแพทย์ออกเวรในรอบนี้";
       return recentShifts.map((shift: any) => {
         const registered = registeredDoctors.find((d: any) => d.email === shift.user_email);
         const name = registered?.name || shift.user_name || "Unknown Doctor";
-        const duration = shift.duration_minutes ? formatDuration(shift.duration_minutes) : "ไม่ระบุ";
-        const cOutTime = new Date(shift.clock_out);
-        return `• ${name} (ออกเวรเมื่อ: \`${formatThaiDate(cOutTime)}\` - ปฏิบัติงาน: ${duration})`;
+        return `• ${name}`;
       }).join("\n");
     };
 

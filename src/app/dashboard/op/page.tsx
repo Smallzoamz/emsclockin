@@ -156,6 +156,12 @@ export default function OpQueuePage() {
         throw new Error(data.error || "ดำเนินการไม่สำเร็จ");
       }
       setOpActive(data.active);
+      if (!data.active) {
+        // OP closed: clear all doctor lists from UI immediately
+        setDoctors([]);
+        setOpQueueState({});
+      }
+      await fetchOpData(session);
       alert(data.active ? "🟢 เปิดเวร OP และส่งข้อความแท็กแจ้งเตือนไปยัง Discord เรียบร้อยแล้วค่ะ!" : "🔴 ปิดเวร OP เรียบร้อยแล้วค่ะ!");
     } catch (err: any) {
       alert(err.message || "เกิดข้อผิดพลาดในการปรับเปลี่ยนสถานะ OP");

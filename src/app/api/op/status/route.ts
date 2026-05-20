@@ -14,7 +14,8 @@ export async function GET() {
     const { data: activeShifts, error: activeErr } = await supabase
       .from("shifts")
       .select("*")
-      .eq("status", "active");
+      .eq("status", "active")
+      .order("clock_in", { ascending: true });
 
     if (activeErr) throw activeErr;
 
