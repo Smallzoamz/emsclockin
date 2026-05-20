@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatThaiDate, formatHoursToHHMMSS, formatDuration } from "@/lib/utils";
+import { useSession } from "next-auth/react";
 
 interface AdminOverviewEntry {
   email: string;
@@ -23,6 +24,10 @@ interface ShiftDetail {
 }
 
 export default function AdminDashboardPage() {
+  const { data: session } = useSession();
+  const currentUser = session?.user as any;
+  const isMasterAdmin = currentUser && currentUser.role === "admin" && !currentUser.discordId;
+
   const [overview, setOverview] = useState<AdminOverviewEntry[]>([]);
   const [totalShifts, setTotalShifts] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -305,6 +310,10 @@ export default function AdminDashboardPage() {
 
   const handleAddCredAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isMasterAdmin) {
+      alert("เฉพาะบัญชีแอดมินระบบหลัก (Master Admin) เท่านั้นที่มีสิทธิ์จัดการสิทธิ์ผู้ดูแลระบบได้");
+      return;
+    }
     if (!newCredUsername || !newCredPassword || !newCredName) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วนค่ะ");
       return;
@@ -344,6 +353,10 @@ export default function AdminDashboardPage() {
 
   const handleAddDiscordAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isMasterAdmin) {
+      alert("เฉพาะบัญชีแอดมินระบบหลัก (Master Admin) เท่านั้นที่มีสิทธิ์จัดการสิทธิ์ผู้ดูแลระบบได้");
+      return;
+    }
     if (discordAddMode === "email" && !newDiscordEmail) {
       alert("กรุณากรอกอีเมล Discord ค่ะ");
       return;
@@ -400,6 +413,10 @@ export default function AdminDashboardPage() {
   };
 
   const handleDeleteCredAdmin = async (username: string) => {
+    if (!isMasterAdmin) {
+      alert("เฉพาะบัญชีแอดมินระบบหลัก (Master Admin) เท่านั้นที่มีสิทธิ์จัดการสิทธิ์ผู้ดูแลระบบได้");
+      return;
+    }
     if (!confirm(`ยืนยันต้องการลบแอดมิน "${username}" หรือไม่?`)) return;
     const updated = adminCredentials.filter(acc => acc.username !== username);
     try {
@@ -418,6 +435,10 @@ export default function AdminDashboardPage() {
   };
 
   const handleDeleteDiscordAdmin = async (adminObj: any) => {
+    if (!isMasterAdmin) {
+      alert("เฉพาะบัญชีแอดมินระบบหลัก (Master Admin) เท่านั้นที่มีสิทธิ์จัดการสิทธิ์ผู้ดูแลระบบได้");
+      return;
+    }
     const displayName = adminObj.email ? adminObj.email : `@${adminObj.username}`;
     if (!confirm(`ยืนยันต้องการลบสิทธิ์แอดมินของ "${displayName}" หรือไม่?`)) return;
     
@@ -820,6 +841,26 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
+        {/* Warning Banner for Discord Admins / Sub-admins */}
+        {!isMasterAdmin && (
+          <div style={{
+            background: "rgba(245, 158, 11, 0.1)",
+            border: "1px dashed rgb(245, 158, 11)",
+            borderRadius: "8px",
+            padding: "14px 18px",
+            color: "rgb(245, 158, 11)",
+            fontSize: "0.85rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            marginBottom: "20px",
+            lineHeight: "1.4"
+          }}>
+            <span style={{ fontSize: "1.1rem" }}>⚠️</span>
+            <span>เฉพาะบัญชีผู้ดูแลระบบหลักของเว็บ (Master Admin) เท่านั้นที่มีสิทธิ์จัดการหรือสลับสิทธิ์การเข้าถึงผู้ดูแลระบบคนอื่นค่ะ</span>
+          </div>
+        )}
+
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px" }}>
           
           {/* Column 1: Credentials Admin Accounts */}
@@ -850,50 +891,54 @@ export default function AdminDashboardPage() {
                       <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-primary)" }}>{acc.name} ({acc.username})</div>
                       <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>สิทธิ์: แอดมินทั่วไป</div>
                     </div>
-                    <button 
-                      onClick={() => handleDeleteCredAdmin(acc.username)}
-                      style={{ background: "rgba(239, 68, 68, 0.15)", color: "var(--danger)", border: "none", borderRadius: "4px", padding: "4px 8px", fontSize: "0.8rem", cursor: "pointer", transition: "0.2s" }}
-                      onMouseOver={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)"}
-                      onMouseOut={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)"}
-                    >
-                      ลบ 🚫
-                    </button>
+                    {isMasterAdmin && (
+                      <button 
+                        onClick={() => handleDeleteCredAdmin(acc.username)}
+                        style={{ background: "rgba(239, 68, 68, 0.15)", color: "var(--danger)", border: "none", borderRadius: "4px", padding: "4px 8px", fontSize: "0.8rem", cursor: "pointer", transition: "0.2s" }}
+                        onMouseOver={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)"}
+                        onMouseOut={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)"}
+                      >
+                        ลบ 🚫
+                      </button>
+                    )}
                   </div>
                 ))
               )}
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleAddCredAdmin} style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)" }}>➕ เพิ่มบัญชีทั่วไป</div>
-              <input 
-                type="text" 
-                placeholder="ชื่อผู้ใช้ (Username)" 
-                value={newCredUsername}
-                onChange={e => setNewCredUsername(e.target.value.trim())}
-                style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
-                required
-              />
-              <input 
-                type="password" 
-                placeholder="รหัสผ่าน (Password)" 
-                value={newCredPassword}
-                onChange={e => setNewCredPassword(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
-                required
-              />
-              <input 
-                type="text" 
-                placeholder="ชื่อแสดง (Display Name)" 
-                value={newCredName}
-                onChange={e => setNewCredName(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
-                required
-              />
-              <button type="submit" style={{ padding: "8px", background: "var(--primary)", color: "white", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", fontSize: "0.85rem", marginTop: "4px" }}>
-                เพิ่มบัญชีแอดมิน
-              </button>
-            </form>
+            {/* Form (Only visible to Master Admin) */}
+            {isMasterAdmin && (
+              <form onSubmit={handleAddCredAdmin} style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)" }}>➕ เพิ่มบัญชีทั่วไป</div>
+                <input 
+                  type="text" 
+                  placeholder="ชื่อผู้ใช้ (Username)" 
+                  value={newCredUsername}
+                  onChange={e => setNewCredUsername(e.target.value.trim())}
+                  style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                  required
+                />
+                <input 
+                  type="password" 
+                  placeholder="รหัสผ่าน (Password)" 
+                  value={newCredPassword}
+                  onChange={e => setNewCredPassword(e.target.value)}
+                  style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                  required
+                />
+                <input 
+                  type="text" 
+                  placeholder="ชื่อแสดง (Display Name)" 
+                  value={newCredName}
+                  onChange={e => setNewCredName(e.target.value)}
+                  style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                  required
+                />
+                <button type="submit" style={{ padding: "8px", background: "var(--primary)", color: "white", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", fontSize: "0.85rem", marginTop: "4px" }}>
+                  เพิ่มบัญชีแอดมิน
+                </button>
+              </form>
+            )}
           </div>
 
           {/* Column 2: Discord Admin Accounts */}
@@ -926,75 +971,79 @@ export default function AdminDashboardPage() {
                         {acc.email ? `อีเมล: ${acc.email}` : `ชื่อผู้ใช้: @${acc.username}`}
                       </div>
                     </div>
-                    <button 
-                      onClick={() => handleDeleteDiscordAdmin(acc)}
-                      style={{ background: "rgba(239, 68, 68, 0.15)", color: "var(--danger)", border: "none", borderRadius: "4px", padding: "4px 8px", fontSize: "0.8rem", cursor: "pointer", transition: "0.2s" }}
-                      onMouseOver={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)"}
-                      onMouseOut={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)"}
-                    >
-                      ลบ 🚫
-                    </button>
+                    {isMasterAdmin && (
+                      <button 
+                        onClick={() => handleDeleteDiscordAdmin(acc)}
+                        style={{ background: "rgba(239, 68, 68, 0.15)", color: "var(--danger)", border: "none", borderRadius: "4px", padding: "4px 8px", fontSize: "0.8rem", cursor: "pointer", transition: "0.2s" }}
+                        onMouseOver={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)"}
+                        onMouseOut={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)"}
+                      >
+                        ลบ 🚫
+                      </button>
+                    )}
                   </div>
                 ))
               )}
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleAddDiscordAdmin} style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)" }}>➕ มอบสิทธิ์ Discord</span>
-                {/* Select Mode */}
-                <div style={{ display: "flex", gap: "4px", background: "var(--bg-card)", padding: "2px", borderRadius: "4px", border: "1px solid var(--border)" }}>
-                  <button 
-                    type="button" 
-                    onClick={() => setDiscordAddMode("email")}
-                    style={{ background: discordAddMode === "email" ? "var(--primary)" : "transparent", color: discordAddMode === "email" ? "white" : "var(--text-secondary)", border: "none", padding: "2px 8px", borderRadius: "3px", fontSize: "0.7rem", fontWeight: "bold", cursor: "pointer" }}
-                  >
-                    ระบุเมล
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => setDiscordAddMode("username")}
-                    style={{ background: discordAddMode === "username" ? "var(--primary)" : "transparent", color: discordAddMode === "username" ? "white" : "var(--text-secondary)", border: "none", padding: "2px 8px", borderRadius: "3px", fontSize: "0.7rem", fontWeight: "bold", cursor: "pointer" }}
-                  >
-                    ระบุชื่อเล่น
-                  </button>
+            {/* Form (Only visible to Master Admin) */}
+            {isMasterAdmin && (
+              <form onSubmit={handleAddDiscordAdmin} style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)" }}>➕ มอบสิทธิ์ Discord</span>
+                  {/* Select Mode */}
+                  <div style={{ display: "flex", gap: "4px", background: "var(--bg-card)", padding: "2px", borderRadius: "4px", border: "1px solid var(--border)" }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setDiscordAddMode("email")}
+                      style={{ background: discordAddMode === "email" ? "var(--primary)" : "transparent", color: discordAddMode === "email" ? "white" : "var(--text-secondary)", border: "none", padding: "2px 8px", borderRadius: "3px", fontSize: "0.7rem", fontWeight: "bold", cursor: "pointer" }}
+                    >
+                      ระบุเมล
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setDiscordAddMode("username")}
+                      style={{ background: discordAddMode === "username" ? "var(--primary)" : "transparent", color: discordAddMode === "username" ? "white" : "var(--text-secondary)", border: "none", padding: "2px 8px", borderRadius: "3px", fontSize: "0.7rem", fontWeight: "bold", cursor: "pointer" }}
+                    >
+                      ระบุชื่อเล่น
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {discordAddMode === "email" ? (
-                <input 
-                  type="email" 
-                  placeholder="อีเมล Discord (เช่น test@gmail.com)" 
-                  value={newDiscordEmail}
-                  onChange={e => setNewDiscordEmail(e.target.value.trim())}
-                  style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
-                  required
-                />
-              ) : (
+                {discordAddMode === "email" ? (
+                  <input 
+                    type="email" 
+                    placeholder="อีเมล Discord (เช่น test@gmail.com)" 
+                    value={newDiscordEmail}
+                    onChange={e => setNewDiscordEmail(e.target.value.trim())}
+                    style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                    required
+                  />
+                ) : (
+                  <input 
+                    type="text" 
+                    placeholder="ชื่อผู้ใช้ Discord (เช่น test_username)" 
+                    value={newDiscordUsername}
+                    onChange={e => setNewDiscordUsername(e.target.value.trim())}
+                    style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                    required
+                  />
+                )}
+
                 <input 
                   type="text" 
-                  placeholder="ชื่อผู้ใช้ Discord (เช่น test_username)" 
-                  value={newDiscordUsername}
-                  onChange={e => setNewDiscordUsername(e.target.value.trim())}
+                  placeholder="ชื่อแสดง (เช่น หมอสมพงษ์ แอดมินร่วม)" 
+                  value={newDiscordName}
+                  onChange={e => setNewDiscordName(e.target.value)}
                   style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
                   required
                 />
-              )}
-
-              <input 
-                type="text" 
-                placeholder="ชื่อแสดง (เช่น หมอสมพงษ์ แอดมินร่วม)" 
-                value={newDiscordName}
-                onChange={e => setNewDiscordName(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
-                required
-              />
-              
-              <button type="submit" style={{ padding: "8px", background: "var(--primary)", color: "white", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", fontSize: "0.85rem", marginTop: "4px" }}>
-                มอบสิทธิ์แอดมิน
-              </button>
-            </form>
+                
+                <button type="submit" style={{ padding: "8px", background: "var(--primary)", color: "white", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", fontSize: "0.85rem", marginTop: "4px" }}>
+                  มอบสิทธิ์แอดมิน
+                </button>
+              </form>
+            )}
           </div>
 
         </div>

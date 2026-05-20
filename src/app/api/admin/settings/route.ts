@@ -52,6 +52,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid data" }, { status: 400 });
     }
 
+    // Block non-master admins (like Discord admins) from editing sensitive administrative role keys
+    const isSensitiveKey = ["admin_credentials_accounts", "admin_discord_accounts"].includes(key);
+    if (isSensitiveKey && (user.discordId || user.email !== "lneeobee@gmail.com")) {
+      return NextResponse.json({ error: "เฉพาะบัญชีผู้ดูแลระบบหลักของเว็บ (Master Admin) เท่านั้นที่สามารถจัดการสิทธิ์ผู้ดูแลระบบได้" }, { status: 403 });
+    }
+
     const { error } = await supabase
       .from("system_settings")
       .upsert({ key, value, updated_at: new Date().toISOString() });

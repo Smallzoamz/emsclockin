@@ -11,6 +11,7 @@ interface SidebarProps {
     image?: string | null;
     role?: string | null;
     isOp?: boolean | null;
+    discordId?: string | null;
   };
 }
 
@@ -38,7 +39,7 @@ export function Sidebar({ user }: SidebarProps) {
           </Link>
         )}
 
-        {user.role !== "admin" && (
+        {(user.role !== "admin" || !!user.discordId) && (
           <Link
             href="/dashboard"
             className={`nav-link ${pathname === "/dashboard" ? "active" : ""}`}
@@ -63,7 +64,7 @@ export function Sidebar({ user }: SidebarProps) {
           จัดอันดับสัปดาห์นี้
         </Link>
         
-        {user.role !== "admin" && (
+        {(user.role !== "admin" || !!user.discordId) && (
           <>
             <Link
               href="/dashboard/history"

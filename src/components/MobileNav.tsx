@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean } }) {
+export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; discordId?: string } }) {
   const pathname = usePathname();
 
   return (
@@ -15,7 +15,7 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean } }
         </Link>
       )}
 
-      {user?.role !== "admin" && (
+      {(user?.role !== "admin" || !!user?.discordId) && (
         <Link href="/dashboard" className={pathname === "/dashboard" ? "active" : ""}>
           <span style={{ fontSize: "1.2rem" }}>⏰</span>
           เข้า-ออกเวร
@@ -31,7 +31,7 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean } }
         จัดอันดับ
       </Link>
       
-      {user?.role !== "admin" && (
+      {(user?.role !== "admin" || !!user?.discordId) && (
         <>
           <Link href="/dashboard/history" className={pathname === "/dashboard/history" ? "active" : ""}>
             <span style={{ fontSize: "1.2rem" }}>📊</span>
