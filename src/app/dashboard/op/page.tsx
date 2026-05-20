@@ -156,11 +156,6 @@ export default function OpQueuePage() {
         throw new Error(data.error || "ดำเนินการไม่สำเร็จ");
       }
       setOpActive(data.active);
-      if (!data.active) {
-        // OP closed: clear all doctor lists from UI immediately
-        setDoctors([]);
-        setOpQueueState({});
-      }
       await fetchOpData(session);
       alert(data.active ? "🟢 เปิดเวร OP และส่งข้อความแท็กแจ้งเตือนไปยัง Discord เรียบร้อยแล้วค่ะ!" : "🔴 ปิดเวร OP เรียบร้อยแล้วค่ะ!");
     } catch (err: any) {
@@ -524,120 +519,192 @@ export default function OpQueuePage() {
         />
       </section>
 
-      {/* Workspace columns grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px" }}>
-        
-        {/* Column 1: On-duty active */}
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => handleDrop(e, "active")}
-          style={{ background: "var(--bg-secondary)", borderRadius: "12px", border: "1px solid var(--border)", padding: "16px", display: "flex", flexDirection: "column", minHeight: "450px" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
-            <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--success)", display: "flex", alignItems: "center", gap: "6px" }}>
-              🟢 เข้าเวรรับเคส
-            </span>
-            <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
-              {activeCol.length}
-            </span>
-          </div>
+      {/* Queue columns (only when OP is active) */}
+      {opActive && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px" }}>
           
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
-            {activeCol.length === 0 ? (
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.8rem", padding: "20px", textAlign: "center" }}>
-                ไม่มีหมออยู่ในกลุ่มนี้<br/>(ลากการ์ดมาวางที่นี่)
-              </div>
-            ) : (
-              activeCol.map(doc => (
-                <DoctorCard key={doc.email} doctor={doc} onDragStart={handleDragStart} onMove={moveDoctorCategory} />
-              ))
-            )}
+          {/* Column 1: On-duty active */}
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, "active")}
+            style={{ background: "var(--bg-secondary)", borderRadius: "12px", border: "1px solid var(--border)", padding: "16px", display: "flex", flexDirection: "column", minHeight: "450px" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
+              <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--success)", display: "flex", alignItems: "center", gap: "6px" }}>
+                🟢 เข้าเวรรับเคส
+              </span>
+              <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
+                {activeCol.length}
+              </span>
+            </div>
+            
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+              {activeCol.length === 0 ? (
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.8rem", padding: "20px", textAlign: "center" }}>
+                  ไม่มีหมออยู่ในกลุ่มนี้<br/>(ลากการ์ดมาวางที่นี่)
+                </div>
+              ) : (
+                activeCol.map(doc => (
+                  <DoctorCard key={doc.email} doctor={doc} onDragStart={handleDragStart} onMove={moveDoctorCategory} />
+                ))
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Column 2: Skipped */}
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => handleDrop(e, "skipped")}
-          style={{ background: "var(--bg-secondary)", borderRadius: "12px", border: "1px solid var(--border)", padding: "16px", display: "flex", flexDirection: "column", minHeight: "450px" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
-            <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#f59e0b", display: "flex", alignItems: "center", gap: "6px" }}>
-              🟡 ข้ามเคส / เหม่อ
-            </span>
-            <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
-              {skippedCol.length}
-            </span>
+          {/* Column 2: Skipped */}
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, "skipped")}
+            style={{ background: "var(--bg-secondary)", borderRadius: "12px", border: "1px solid var(--border)", padding: "16px", display: "flex", flexDirection: "column", minHeight: "450px" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
+              <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#f59e0b", display: "flex", alignItems: "center", gap: "6px" }}>
+                🟡 ข้ามเคส / เหม่อ
+              </span>
+              <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
+                {skippedCol.length}
+              </span>
+            </div>
+            
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+              {skippedCol.length === 0 ? (
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.8rem", padding: "20px", textAlign: "center" }}>
+                  ไม่มีหมออยู่ในกลุ่มนี้<br/>(ลากการ์ดมาวางที่นี่)
+                </div>
+              ) : (
+                skippedCol.map(doc => (
+                  <DoctorCard key={doc.email} doctor={doc} onDragStart={handleDragStart} onMove={moveDoctorCategory} />
+                ))
+              )}
+            </div>
           </div>
-          
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
-            {skippedCol.length === 0 ? (
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.8rem", padding: "20px", textAlign: "center" }}>
-                ไม่มีหมออยู่ในกลุ่มนี้<br/>(ลากการ์ดมาวางที่นี่)
-              </div>
-            ) : (
-              skippedCol.map(doc => (
-                <DoctorCard key={doc.email} doctor={doc} onDragStart={handleDragStart} onMove={moveDoctorCategory} />
-              ))
-            )}
-          </div>
-        </div>
 
-        {/* Column 3: Story */}
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => handleDrop(e, "story")}
-          style={{ background: "var(--bg-secondary)", borderRadius: "12px", border: "1px solid var(--border)", padding: "16px", display: "flex", flexDirection: "column", minHeight: "450px" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
-            <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#3b82f6", display: "flex", alignItems: "center", gap: "6px" }}>
-              🔵 รายชื่อหมอสตอรี่
-            </span>
-            <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
-              {storyCol.length}
-            </span>
+          {/* Column 3: Story */}
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, "story")}
+            style={{ background: "var(--bg-secondary)", borderRadius: "12px", border: "1px solid var(--border)", padding: "16px", display: "flex", flexDirection: "column", minHeight: "450px" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
+              <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#3b82f6", display: "flex", alignItems: "center", gap: "6px" }}>
+                🔵 รายชื่อหมอสตอรี่
+              </span>
+              <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
+                {storyCol.length}
+              </span>
+            </div>
+            
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+              {storyCol.length === 0 ? (
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.8rem", padding: "20px", textAlign: "center" }}>
+                  ไม่มีหมออยู่ในกลุ่มนี้<br/>(ลากการ์ดมาวางที่นี่)
+                </div>
+              ) : (
+                storyCol.map(doc => (
+                  <DoctorCard key={doc.email} doctor={doc} onDragStart={handleDragStart} onMove={moveDoctorCategory} />
+                ))
+              )}
+            </div>
           </div>
-          
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
-            {storyCol.length === 0 ? (
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.8rem", padding: "20px", textAlign: "center" }}>
-                ไม่มีหมออยู่ในกลุ่มนี้<br/>(ลากการ์ดมาวางที่นี่)
-              </div>
-            ) : (
-              storyCol.map(doc => (
-                <DoctorCard key={doc.email} doctor={doc} onDragStart={handleDragStart} onMove={moveDoctorCategory} />
-              ))
-            )}
-          </div>
-        </div>
 
-        {/* Column 4: Inactive Clocked-out */}
-        <div
-          style={{ background: "var(--bg-secondary)", borderRadius: "12px", border: "1px solid var(--border)", padding: "16px", display: "flex", flexDirection: "column", minHeight: "450px", opacity: 0.85 }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
-            <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--danger)", display: "flex", alignItems: "center", gap: "6px" }}>
-              🔴 ออกจากระบบ (ออกเวร)
-            </span>
-            <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
-              {inactiveCol.length}
-            </span>
+          {/* Column 4: Inactive Clocked-out */}
+          <div
+            style={{ background: "var(--bg-secondary)", borderRadius: "12px", border: "1px solid var(--border)", padding: "16px", display: "flex", flexDirection: "column", minHeight: "450px", opacity: 0.85 }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
+              <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--danger)", display: "flex", alignItems: "center", gap: "6px" }}>
+                🔴 ออกจากระบบ (ออกเวร)
+              </span>
+              <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
+                {inactiveCol.length}
+              </span>
+            </div>
+            
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+              {inactiveCol.length === 0 ? (
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.8rem", padding: "20px", textAlign: "center" }}>
+                  ไม่มีแพทย์ออกเวรล่าสุด<br/>(ภายใน 12 ชม.)
+                </div>
+              ) : (
+                inactiveCol.map(doc => (
+                  <DoctorCard key={doc.email} doctor={doc} onDragStart={handleDragStart} onMove={moveDoctorCategory} />
+                ))
+              )}
+            </div>
           </div>
-          
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
-            {inactiveCol.length === 0 ? (
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.8rem", padding: "20px", textAlign: "center" }}>
-                ไม่มีแพทย์ออกเวรล่าสุด<br/>(ภายใน 12 ชม.)
-              </div>
-            ) : (
-              inactiveCol.map(doc => (
-                <DoctorCard key={doc.email} doctor={doc} onDragStart={handleDragStart} onMove={moveDoctorCategory} />
-              ))
-            )}
-          </div>
-        </div>
 
-      </div>
+        </div>
+      )}
+
+      {/* Summary card when OP is closed */}
+      {!opActive && doctors.length > 0 && (
+        <section className="card" style={{ padding: "24px" }}>
+          <h3 style={{ fontSize: "1rem", marginBottom: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+            📋 สรุปรายชื่อแพทย์ในรอบเวร OP ที่ผ่านมา
+          </h3>
+          <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginBottom: "20px" }}>
+            แสดงรายชื่อแพทย์ที่เข้าเวรและออกเวรในรอบ OP ล่าสุด
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "12px" }}>
+            {doctors.map(doc => {
+              const isCompleted = doc.status === "completed";
+              return (
+                <div
+                  key={doc.email}
+                  style={{
+                    background: "var(--bg-card)",
+                    padding: "12px 14px",
+                    borderRadius: "10px",
+                    border: `1px solid ${isCompleted ? "var(--border)" : "rgba(16, 185, 129, 0.3)"}`,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    filter: isCompleted ? "grayscale(100%)" : "none",
+                    opacity: isCompleted ? 0.55 : 1,
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  {doc.avatarUrl ? (
+                    <img src={doc.avatarUrl} alt="" style={{ width: "34px", height: "34px", borderRadius: "50%", border: "1px solid var(--border)", flexShrink: 0 }} />
+                  ) : (
+                    <div style={{
+                      width: "34px", height: "34px", borderRadius: "50%",
+                      background: isCompleted ? "var(--bg-secondary)" : "rgba(16, 185, 129, 0.15)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "0.9rem",
+                      color: isCompleted ? "var(--text-muted)" : "var(--success)",
+                      fontWeight: "bold",
+                      flexShrink: 0
+                    }}>
+                      {doc.name.charAt(0)}
+                    </div>
+                  )}
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{doc.name}</span>
+                      <span style={{
+                        fontSize: "0.6rem",
+                        background: isCompleted ? "var(--bg-secondary)" : "var(--success)",
+                        color: isCompleted ? "var(--text-muted)" : "white",
+                        padding: "1px 6px",
+                        borderRadius: "4px",
+                        fontWeight: "bold",
+                        flexShrink: 0,
+                        border: isCompleted ? "1px solid var(--border)" : "none",
+                      }}>
+                        {isCompleted ? "ออกเวร" : "เข้าเวร"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                      @{doc.discordUsername}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Weekly OP Schedule Table at the bottom for OP / Admin */}
       <section className="card" style={{ marginTop: "32px", padding: "24px" }}>
