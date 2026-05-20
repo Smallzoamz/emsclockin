@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatThaiDate, formatHoursToHHMMSS, formatDuration } from "@/lib/utils";
-import { useSession } from "next-auth/react";
+import { getSession } from "next-auth/react";
 
 interface AdminOverviewEntry {
   email: string;
@@ -24,9 +24,7 @@ interface ShiftDetail {
 }
 
 export default function AdminDashboardPage() {
-  const { data: session } = useSession();
-  const currentUser = session?.user as any;
-  const isMasterAdmin = currentUser && currentUser.role === "admin" && !currentUser.discordId;
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
 
   const [overview, setOverview] = useState<AdminOverviewEntry[]>([]);
   const [totalShifts, setTotalShifts] = useState(0);
@@ -69,6 +67,14 @@ export default function AdminDashboardPage() {
   const [discordAddMode, setDiscordAddMode] = useState<"email" | "username">("email");
 
   useEffect(() => {
+    // Get Session and determine Master Admin
+    getSession().then((session) => {
+      const user = session?.user as any;
+      if (user && user.role === "admin" && !user.discordId) {
+        setIsMasterAdmin(true);
+      }
+    });
+
     // Fetch Settings
     fetch("/api/admin/settings")
       .then(res => res.json())

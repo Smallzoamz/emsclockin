@@ -67,7 +67,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     getSession().then((session) => {
-      if ((session?.user as Record<string, unknown>)?.role === "admin") {
+      const user = session?.user as any;
+      if (user?.role === "admin" && !user?.discordId) {
         router.replace("/dashboard/admin");
       } else {
         fetchStatus();
