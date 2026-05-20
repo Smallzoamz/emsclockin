@@ -41,14 +41,18 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
       .is("clock_out", null)
       .order("clock_in", { ascending: true });
 
-    // 3. Fetch recent shifts (clocked out in last 12 hours)
-    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
-    const { data: recentShifts } = await supabase
-      .from("shifts")
-      .select("user_email, user_name, discord_username")
-      .not("clock_out", "is", null)
-      .gt("clock_out", twelveHoursAgo)
-      .order("clock_out", { ascending: false });
+    // 3. Fetch recent shifts (clocked out after op_opened_at if set)
+    const opOpenedAt = settings.op_opened_at;
+    let recentShifts: any[] = [];
+    if (opOpenedAt) {
+      const { data: fetchedRecent } = await supabase
+        .from("shifts")
+        .select("user_email, user_name, discord_username")
+        .not("clock_out", "is", null)
+        .gte("clock_out", opOpenedAt)
+        .order("clock_out", { ascending: false });
+      recentShifts = fetchedRecent || [];
+    }
 
     // 4. Group doctors
     const doctors: Array<{ email: string; name: string; discordUsername: string; status: string; queueCategory: string }> = [];
@@ -271,14 +275,18 @@ export async function teardownOpQueue() {
       .is("clock_out", null)
       .order("clock_in", { ascending: true });
 
-    // 3. Fetch recent shifts (clocked out in last 12 hours)
-    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
-    const { data: recentShifts } = await supabase
-      .from("shifts")
-      .select("user_email, user_name, discord_username, clock_in, clock_out, duration_minutes")
-      .not("clock_out", "is", null)
-      .gt("clock_out", twelveHoursAgo)
-      .order("clock_out", { ascending: false });
+    // 3. Fetch recent shifts (clocked out after op_opened_at if set)
+    const opOpenedAt = settings.op_opened_at;
+    let recentShifts: any[] = [];
+    if (opOpenedAt) {
+      const { data: fetchedRecent } = await supabase
+        .from("shifts")
+        .select("user_email, user_name, discord_username, clock_in, clock_out, duration_minutes")
+        .not("clock_out", "is", null)
+        .gte("clock_out", opOpenedAt)
+        .order("clock_out", { ascending: false });
+      recentShifts = fetchedRecent || [];
+    }
 
     // Format lists of doctors
     const formatActiveList = () => {

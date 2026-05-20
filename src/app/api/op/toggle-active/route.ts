@@ -62,7 +62,8 @@ export async function POST(req: Request) {
       // Starting OP: Keep the existing message ID if present to edit it instead of sending new
       await Promise.all([
         supabase.from("system_settings").upsert({ key: "op_active", value: true }, { onConflict: "key" }),
-        supabase.from("system_settings").upsert({ key: "op_notice", value: notice || "" }, { onConflict: "key" })
+        supabase.from("system_settings").upsert({ key: "op_notice", value: notice || "" }, { onConflict: "key" }),
+        supabase.from("system_settings").upsert({ key: "op_opened_at", value: new Date().toISOString() }, { onConflict: "key" })
       ]);
 
       // Call sync with forceNewMessage = true to signal activation (will tag OP, but still PATCH if existing)

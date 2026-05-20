@@ -19,18 +19,7 @@ export async function GET() {
 
     if (activeErr) throw activeErr;
 
-    // 2. Get recently completed shifts (last 12 hours)
-    const twelveHoursAgo = subHours(new Date(), 12).toISOString();
-    const { data: recentShifts, error: recentErr } = await supabase
-      .from("shifts")
-      .select("*")
-      .eq("status", "completed")
-      .gte("clock_out", twelveHoursAgo)
-      .order("clock_out", { ascending: false });
-
-    if (recentErr) throw recentErr;
-
-    // 3. Get system settings (registered_doctors, op_schedule, op_nickname_mode, op_queue_state)
+    // 2. Get system settings (registered_doctors, op_schedule, op_nickname_mode, op_queue_state, op_opened_at)
     const { data: settingsData, error: settingsErr } = await supabase
       .from("system_settings")
       .select("*");
@@ -52,6 +41,21 @@ export async function GET() {
     const opQueueState = settings["op_queue_state"] || {}; // email -> "skipped" | "story"
     const opActive = settings["op_active"] === true;
     const opNotice = settings["op_notice"] || "⚠️ คำเตือน: รบกวนหมอเวรทุกคนเปิดวิทยุช่องหลัก และรายงานตัวทันทีเมื่อเข้าพื้นที่เวร!";
+    const opOpenedAt = settings["op_opened_at"];
+
+    // 3. Get recently completed shifts (clocked out after op_opened_at if set)
+    let recentShifts: any[] = [];
+    if (opOpenedAt) {
+      const { data: fetchedRecent, error: recentErr } = await supabase
+        .from("shifts")
+        .select("*")
+        .eq("status", "completed")
+        .gte("clock_out", opOpenedAt)
+        .order("clock_out", { ascending: false });
+
+      if (recentErr) throw recentErr;
+      recentShifts = fetchedRecent || [];
+    }
 
     // 4. Calculate day of week in GMT+7
     const thaiTime = new Date(new Date().getTime() + (7 * 60 * 60 * 1000));
