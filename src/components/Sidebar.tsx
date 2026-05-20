@@ -1,0 +1,126 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
+
+interface SidebarProps {
+  user: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    role?: string | null;
+    isOp?: boolean | null;
+  };
+}
+
+export function Sidebar({ user }: SidebarProps) {
+  const pathname = usePathname();
+
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-logo">
+        <div className="logo-icon">🏥</div>
+        <div>
+          <h1>EMS Clock-in</h1>
+          <span>FiveM Hospital System</span>
+        </div>
+      </div>
+
+      <nav>
+        {user.role === "admin" && (
+          <Link
+            href="/dashboard/admin"
+            className={`nav-link ${pathname === "/dashboard/admin" ? "active" : ""}`}
+          >
+            <span>👑</span>
+            แดชบอร์ดแอดมิน
+          </Link>
+        )}
+
+        {user.role !== "admin" && (
+          <Link
+            href="/dashboard"
+            className={`nav-link ${pathname === "/dashboard" ? "active" : ""}`}
+          >
+            <span>⏰</span>
+            เข้า-ออกเวร
+          </Link>
+        )}
+
+        <Link
+          href="/dashboard/op"
+          className={`nav-link ${pathname === "/dashboard/op" ? "active" : ""}`}
+        >
+          <span>🏥</span>
+          {(user.isOp || user.role === "admin") ? "ระบบจัดการคิว OP" : "ตารางเวร OP"}
+        </Link>
+        <Link
+          href="/dashboard/ranking"
+          className={`nav-link ${pathname === "/dashboard/ranking" ? "active" : ""}`}
+        >
+          <span>🏆</span>
+          จัดอันดับสัปดาห์นี้
+        </Link>
+        
+        {user.role !== "admin" && (
+          <>
+            <Link
+              href="/dashboard/history"
+              className={`nav-link ${pathname === "/dashboard/history" ? "active" : ""}`}
+            >
+              <span>📊</span>
+              ประวัติ & ชั่วโมง
+            </Link>
+            <Link
+              href="/dashboard/my-bonus"
+              className={`nav-link ${pathname === "/dashboard/my-bonus" ? "active" : ""}`}
+            >
+              <span>💸</span>
+              โบนัสของฉัน
+            </Link>
+          </>
+        )}
+
+        {user.role === "admin" && (
+          <Link
+            href="/dashboard/bonus"
+            className={`nav-link ${pathname === "/dashboard/bonus" ? "active" : ""}`}
+          >
+            <span>💰</span>
+            ตารางโบนัส
+          </Link>
+        )}
+      </nav>
+
+      <div className="sidebar-footer">
+        <div className="user-info">
+          {user.image && (
+            <img
+              src={user.image}
+              alt={user.name || "User"}
+              className="user-avatar"
+              referrerPolicy="no-referrer"
+            />
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="user-name" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {user.name}
+            </div>
+            <div className="user-email" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {user.email}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => signOut({ callbackUrl: "/" })}
+          className="btn btn-ghost"
+          style={{ width: "100%", marginTop: "12px", justifyContent: "center" }}
+          id="logout-btn"
+        >
+          ออกจากระบบ
+        </button>
+      </div>
+    </aside>
+  );
+}

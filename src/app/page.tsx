@@ -1,66 +1,90 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { auth, signIn } from "@/auth";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+export default async function LoginPage() {
+  const session = await auth();
+  if (session?.user) redirect("/dashboard");
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-icon">🏥</div>
+        <h1 className="login-title">EMS Hospital</h1>
+        <p className="login-subtitle">
+          ระบบบันทึกเวรสำหรับแพทย์ FiveM<br />
+          เข้าเวร · ออกเวร · ติดตามชั่วโมง
+        </p>
+
+        <form
+          action={async (formData: FormData) => {
+            "use server";
+            await signIn("admin-login", { 
+              password: formData.get("password") as string,
+              redirectTo: "/dashboard" 
+            });
+          }}
+          style={{ marginBottom: "16px", width: "100%" }}
+        >
+          <details style={{ width: "100%" }}>
+            <summary 
+              className="login-btn" 
+              style={{ 
+                background: "transparent", 
+                color: "var(--text-muted)", 
+                border: "1px dashed var(--border)", 
+                cursor: "pointer",
+                listStyle: "none",
+                display: "flex",
+                justifyContent: "center"
+              }}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+              🔒 เข้าสู่ระบบสำหรับ Admin
+            </summary>
+            <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
+              <input 
+                type="password" 
+                name="password" 
+                placeholder="รหัสผ่าน Admin"
+                required
+                style={{ 
+                  flex: 1, 
+                  padding: "10px 14px", 
+                  borderRadius: "var(--radius)", 
+                  border: "1px solid var(--border)", 
+                  background: "var(--bg-dark)",
+                  color: "white",
+                  outline: "none"
+                }} 
+              />
+              <button 
+                type="submit" 
+                className="login-btn" 
+                style={{ width: "auto", padding: "0 20px", margin: 0 }}
+              >
+                เข้าสู่ระบบ
+              </button>
+            </div>
+          </details>
+        </form>
+
+        <form
+          action={async () => {
+            "use server";
+            await signIn("discord", { redirectTo: "/dashboard" });
+          }}
+        >
+          <button type="submit" className="login-btn discord" id="discord-login-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286z" />
+            </svg>
+            เข้าสู่ระบบด้วย Discord
+          </button>
+        </form>
+
+        <p style={{ marginTop: "24px", fontSize: "0.7rem", color: "var(--text-muted)" }}>
+          เชื่อมต่อ Discord เพื่อระบุตัวตนใน log เวร
+        </p>
+      </div>
     </div>
   );
 }

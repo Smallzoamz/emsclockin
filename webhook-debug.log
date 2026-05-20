@@ -1,0 +1,444 @@
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 ออกเวร — EMS Hospital",
+      "color": 15680580,
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/6570eada20b34a8fb371de03f70340bf.png"
+      },
+      "fields": [
+        {
+          "name": "👤 ชื่อ",
+          "value": "[BBMD] Ugly Diva",
+          "inline": true
+        },
+        {
+          "name": "🆔 Discord",
+          "value": "ohmphieng_",
+          "inline": true
+        },
+        {
+          "name": "⏰ เวลา",
+          "value": "17 พ.ค. 2026 16:36 น.",
+          "inline": false
+        },
+        {
+          "name": "📌 สถานะ",
+          "value": "🔴 ออกเวร",
+          "inline": true
+        },
+        {
+          "name": "⏱️ ระยะเวลาเวรนี้",
+          "value": "2 นาที",
+          "inline": true
+        },
+        {
+          "name": "📊 ชั่วโมงสัปดาห์นี้",
+          "value": "0.1 ชม.",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-17T09:36:46.280Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 เข้าเวร — EMS Hospital",
+      "color": 1096065,
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/6570eada20b34a8fb371de03f70340bf.png"
+      },
+      "fields": [
+        {
+          "name": "👤 ชื่อ",
+          "value": "[BBMD] Ugly Diva",
+          "inline": true
+        },
+        {
+          "name": "🆔 Discord ID",
+          "value": "956866340474478642",
+          "inline": true
+        },
+        {
+          "name": "⏰ เวลา",
+          "value": "17 พ.ค. 2026 16:39 น.",
+          "inline": false
+        },
+        {
+          "name": "📌 สถานะ",
+          "value": "🟢 เข้าเวร",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-17T09:39:10.945Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 ออกเวร — EMS Hospital",
+      "color": 15680580,
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/6570eada20b34a8fb371de03f70340bf.png"
+      },
+      "fields": [
+        {
+          "name": "👤 ชื่อ",
+          "value": "`[BBMD] Ugly Diva`",
+          "inline": true
+        },
+        {
+          "name": "🆔 Discord ID",
+          "value": "`956866340474478642`",
+          "inline": true
+        },
+        {
+          "name": "⏰ เวลา",
+          "value": "`17 พ.ค. 2026 16:40 น.`",
+          "inline": false
+        },
+        {
+          "name": "📌 สถานะ",
+          "value": "`🔴 ออกเวร`",
+          "inline": true
+        },
+        {
+          "name": "⏱️ ระยะเวลาเวรนี้",
+          "value": "`1 นาที`",
+          "inline": true
+        },
+        {
+          "name": "📊 ชั่วโมงสัปดาห์นี้",
+          "value": "`0.1 ชม.`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-17T09:40:57.047Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 เข้าเวร — EMS Hospital",
+      "color": 1096065,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `17 พ.ค. 2026 16:42 น.`\n**📌 สถานะ:** `🟢 เข้าเวร`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/6570eada20b34a8fb371de03f70340bf.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-17T09:42:22.754Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 ออกเวร — EMS Hospital",
+      "color": 15680580,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `17 พ.ค. 2026 16:42 น.`\n**📌 สถานะ:** `🔴 ออกเวร`\n\n**⏱️ ระยะเวลาเวรนี้:** `0 นาที`\n**📊 ชั่วโมงสัปดาห์นี้:** `0.1 ชม.`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/6570eada20b34a8fb371de03f70340bf.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-17T09:42:44.341Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 เข้าเวร — EMS Hospital",
+      "color": 1096065,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `17 พ.ค. 2026 16:45 น.`\n**📌 สถานะ:** `🟢 เข้าเวร`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/6570eada20b34a8fb371de03f70340bf.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-17T09:45:57.947Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 ออกเวร — EMS Hospital",
+      "color": 15680580,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `17 พ.ค. 2026 16:46 น.`\n**📌 สถานะ:** `🔴 ออกเวร`\n\n**⏱️ ระยะเวลาเวรนี้:** `0 นาที`\n**📊 ชั่วโมงสัปดาห์นี้:** `0.1 ชม.`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/6570eada20b34a8fb371de03f70340bf.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-17T09:46:31.326Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 เข้าเวร — EMS Hospital",
+      "color": 1096065,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `17 พ.ค. 2026 17:11 น.`\n**📌 สถานะ:** `🟢 เข้าเวร`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/6570eada20b34a8fb371de03f70340bf.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-17T10:11:03.861Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 ออกเวร — EMS Hospital",
+      "color": 15680580,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `17 พ.ค. 2026 17:12 น.`\n**📌 สถานะ:** `🔴 ออกเวร`\n\n**⏱️ ระยะเวลาเวรนี้:** `1 นาที`\n**📊 ชั่วโมงสัปดาห์นี้:** `0.0 ชม.`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/6570eada20b34a8fb371de03f70340bf.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-17T10:12:48.157Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 เข้าเวร — EMS Hospital",
+      "color": 1096065,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `19 พ.ค. 2026 03:35 น.`\n**📌 สถานะ:** `🟢 เข้าเวร`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/6570eada20b34a8fb371de03f70340bf.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-18T20:35:49.427Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 ออกเวร — EMS Hospital",
+      "color": 15680580,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `19 พ.ค. 2026 04:30 น.`\n**📌 สถานะ:** `🔴 ออกเวร`\n\n**⏱️ ระยะเวลาเวรนี้:** `54 นาที`\n**📊 ชั่วโมงสัปดาห์นี้:** `0.9 ชม.`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/6570eada20b34a8fb371de03f70340bf.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-18T21:30:37.765Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 เข้าเวร — EMS Hospital",
+      "color": 1096065,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `21 พ.ค. 2026 00:49 น.`\n**📌 สถานะ:** `🟢 เข้าเวร`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/e621ffb0ee95c6550197a37f8c703ef4.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-20T17:49:02.364Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 ออกเวร — EMS Hospital",
+      "color": 15680580,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `21 พ.ค. 2026 00:50 น.`\n**📌 สถานะ:** `🔴 ออกเวร`\n\n**⏱️ ระยะเวลาเวรนี้:** `1 นาที`\n**📊 ชั่วโมงสัปดาห์นี้:** `0.9 ชม.`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/e621ffb0ee95c6550197a37f8c703ef4.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-20T17:50:07.438Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 เข้าเวร — EMS Hospital",
+      "color": 1096065,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `21 พ.ค. 2026 00:54 น.`\n**📌 สถานะ:** `🟢 เข้าเวร`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/e621ffb0ee95c6550197a37f8c703ef4.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-20T17:54:45.414Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 ออกเวร — EMS Hospital",
+      "color": 15680580,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `21 พ.ค. 2026 01:06 น.`\n**📌 สถานะ:** `🔴 ออกเวร`\n\n**⏱️ ระยะเวลาเวรนี้:** `11 นาที`\n**📊 ชั่วโมงสัปดาห์นี้:** `1.1 ชม.`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/e621ffb0ee95c6550197a37f8c703ef4.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-20T18:06:06.554Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 เข้าเวร — EMS Hospital",
+      "color": 1096065,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `21 พ.ค. 2026 01:06 น.`\n**📌 สถานะ:** `🟢 เข้าเวร`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/e621ffb0ee95c6550197a37f8c703ef4.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-20T18:06:08.485Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 ออกเวร — EMS Hospital",
+      "color": 15680580,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `21 พ.ค. 2026 01:16 น.`\n**📌 สถานะ:** `🔴 ออกเวร`\n\n**⏱️ ระยะเวลาเวรนี้:** `10 นาที`\n**📊 ชั่วโมงสัปดาห์นี้:** `1.3 ชม.`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/e621ffb0ee95c6550197a37f8c703ef4.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-20T18:16:37.477Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 เข้าเวร — EMS Hospital",
+      "color": 1096065,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `21 พ.ค. 2026 01:26 น.`\n**📌 สถานะ:** `🟢 เข้าเวร`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/e621ffb0ee95c6550197a37f8c703ef4.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-20T18:26:16.399Z"
+    }
+  ]
+}
+
+{
+  "username": "EMS Clock-in Bot",
+  "avatar_url": "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+  "embeds": [
+    {
+      "title": "📋 ออกเวร — EMS Hospital",
+      "color": 15680580,
+      "description": "**👤 ชื่อ:** `[BBMD] Ugly Diva`\n**🆔 Discord ID:** `956866340474478642`\n**⏰ เวลา:** `21 พ.ค. 2026 03:10 น.`\n**📌 สถานะ:** `🔴 ออกเวร`\n\n**⏱️ ระยะเวลาเวรนี้:** `1 ชม. 44 นาที`\n**📊 ชั่วโมงสัปดาห์นี้:** `3.0 ชม.`",
+      "thumbnail": {
+        "url": "https://cdn.discordapp.com/avatars/956866340474478642/e621ffb0ee95c6550197a37f8c703ef4.png"
+      },
+      "footer": {
+        "text": "FiveM EMS Clock-in System"
+      },
+      "timestamp": "2026-05-20T20:10:39.046Z"
+    }
+  ]
+}
+
