@@ -55,6 +55,12 @@ export default function AdminDashboardPage() {
   // Admin Management State
   const [adminCredentials, setAdminCredentials] = useState<Array<{ username: string, name: string, password?: string }>>([]);
   const [adminDiscord, setAdminDiscord] = useState<Array<{ email?: string, username?: string, name: string }>>([]);
+
+  // Webhook Configuration State
+  const [discordWebhookUrl, setDiscordWebhookUrl] = useState("");
+  const [discordOpWebhookUrl, setDiscordOpWebhookUrl] = useState("");
+  const [isSavingWebhooks, setIsSavingWebhooks] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
   
   // New Admin Form State
   const [newCredUsername, setNewCredUsername] = useState("");
@@ -65,6 +71,41 @@ export default function AdminDashboardPage() {
   const [newDiscordUsername, setNewDiscordUsername] = useState("");
   const [newDiscordName, setNewDiscordName] = useState("");
   const [discordAddMode, setDiscordAddMode] = useState<"email" | "username">("email");
+
+  const handleSaveWebhooks = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isMasterAdmin) return;
+    setIsSavingWebhooks(true);
+    setWebhookStatus(null);
+
+    try {
+      // Save general webhook
+      const res1 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "discord_webhook_url", value: discordWebhookUrl }),
+      });
+      // Save OP webhook
+      const res2 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "discord_op_webhook_url", value: discordOpWebhookUrl }),
+      });
+
+      if (res1.ok && res2.ok) {
+        setWebhookStatus({ message: "บันทึกข้อมูล Discord Webhook เรียบร้อยแล้วค่ะ", type: "success" });
+      } else {
+        const d1 = await res1.json();
+        const d2 = await res2.json();
+        setWebhookStatus({ message: d1.error || d2.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
+      }
+    } catch (err) {
+      setWebhookStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    } finally {
+      setIsSavingWebhooks(false);
+      setTimeout(() => setWebhookStatus(null), 4000);
+    }
+  };
 
   useEffect(() => {
     // Get Session and determine Master Admin
@@ -90,6 +131,12 @@ export default function AdminDashboardPage() {
         }
         if (data.settings?.admin_discord_accounts) {
           setAdminDiscord(data.settings.admin_discord_accounts);
+        }
+        if (data.settings?.discord_webhook_url) {
+          setDiscordWebhookUrl(data.settings.discord_webhook_url);
+        }
+        if (data.settings?.discord_op_webhook_url) {
+          setDiscordOpWebhookUrl(data.settings.discord_op_webhook_url);
         }
       })
       .catch(err => console.error("Failed to load settings:", err));
@@ -1053,6 +1100,117 @@ export default function AdminDashboardPage() {
           </div>
 
         </div>
+      </section>
+
+      {/* Section: Webhook Configuration */}
+      <section className="card" style={{ marginTop: "32px", padding: "24px" }}>
+        <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
+          <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+            📢 ตั้งค่า Discord Webhook (Webhook Settings)
+          </h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
+            ตั้งค่า URL สำหรับส่ง log การ เข้า-ออกเวร และรายงานกลุ่มแพทย์เวร (OP) ไปยัง Discord Channel
+          </p>
+        </div>
+
+        {/* Warning Alert if not Master Admin */}
+        {!isMasterAdmin && (
+          <div style={{
+            background: "rgba(245, 158, 11, 0.1)",
+            border: "1px dashed rgb(245, 158, 11)",
+            borderRadius: "8px",
+            padding: "14px 18px",
+            color: "rgb(245, 158, 11)",
+            fontSize: "0.85rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            marginBottom: "20px",
+            lineHeight: "1.4"
+          }}>
+            <span style={{ fontSize: "1.1rem" }}>⚠️</span>
+            <span>เฉพาะบัญชีผู้ดูแลระบบหลักของเว็บ (Master Admin) เท่านั้นที่มีสิทธิ์แก้ไขและจัดการ Discord Webhook ได้ค่ะ</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSaveWebhooks} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px" }}>
+            
+            {/* Input 1: General Webhook */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                🔗 Webhook แจ้งเตือนทั่วไป (General Log Webhook)
+              </label>
+              <input 
+                type="url" 
+                placeholder="https://discord.com/api/webhooks/..." 
+                value={discordWebhookUrl}
+                onChange={e => setDiscordWebhookUrl(e.target.value.trim())}
+                disabled={!isMasterAdmin}
+                style={{ width: "100%", padding: "10px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem", transition: "border 0.2s" }}
+              />
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                ใช้ส่งข้อมูลบันทึกเข้างาน-ออกงานของแพทย์ทั่วไป และประกาศโบนัสประจำสัปดาห์
+              </span>
+            </div>
+
+            {/* Input 2: OP Webhook */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                🔗 Webhook คิวหมอเวร OP (OP Queue Webhook)
+              </label>
+              <input 
+                type="url" 
+                placeholder="https://discord.com/api/webhooks/..." 
+                value={discordOpWebhookUrl}
+                onChange={e => setDiscordOpWebhookUrl(e.target.value.trim())}
+                disabled={!isMasterAdmin}
+                style={{ width: "100%", padding: "10px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem", transition: "border 0.2s" }}
+              />
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                ใช้รายงานคิวแพทย์เวร (OP) และสถานะคิวเคสแบบอัปเดตเรียลไทม์ (ถ้าปล่อยว่างไว้จะใช้ร่วมกับตัวแจ้งเตือนทั่วไปด้านซ้าย)
+              </span>
+            </div>
+
+          </div>
+
+          {/* Status Message */}
+          {webhookStatus && (
+            <div style={{
+              padding: "10px 14px",
+              borderRadius: "6px",
+              fontSize: "0.85rem",
+              background: webhookStatus.type === "success" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+              border: `1px solid ${webhookStatus.type === "success" ? "var(--success)" : "var(--danger)"}`,
+              color: webhookStatus.type === "success" ? "var(--success)" : "var(--danger)"
+            }}>
+              {webhookStatus.message}
+            </div>
+          )}
+
+          {/* Submit Button */}
+          {isMasterAdmin && (
+            <button 
+              type="submit" 
+              disabled={isSavingWebhooks}
+              style={{
+                alignSelf: "flex-end",
+                padding: "10px 24px",
+                background: "var(--primary)",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontWeight: "bold",
+                cursor: "pointer",
+                fontSize: "0.85rem",
+                transition: "all 0.2s",
+                opacity: isSavingWebhooks ? 0.7 : 1
+              }}
+            >
+              {isSavingWebhooks ? "กำลังบันทึก..." : "💾 บันทึกการตั้งค่า Webhook"}
+            </button>
+          )}
+        </form>
       </section>
 
       {/* Gallery Modal */}

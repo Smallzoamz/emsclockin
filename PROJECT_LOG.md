@@ -100,5 +100,8 @@
 
 ## [2026-05-21 06:19] | File: multiple | Line: 1 | Keyword: Fix SessionProvider Crash and Redirect Logic for Discord Admins | Status: ✅ Complete | Change: Fixed frontend crashes and routing bugs for Discord-based admins: (1) In `src/app/dashboard/page.tsx`, updated the redirect check to only send credentials-based admins (those with `role === 'admin' && !discordId`) to the admin page, allowing Discord-based admins to load the clock-in/out dashboard. (2) In `src/app/dashboard/admin/page.tsx`, replaced `useSession` hook with async `getSession()` inside `useEffect` hook to prevent React Context crash caused by missing `SessionProvider`. Next.js build verified clean.
 
+## [2026-05-21 06:25] | File: multiple | Line: 1 | Keyword: Database Discord Webhook Settings | Status: ✅ Complete | Change: Transitioned Discord Webhook configurations from environment variables to database-backed system settings: (1) Updated `src/lib/discord-webhook.ts`, `src/lib/op-discord-sync.ts`, `src/app/api/op/send-discord/route.ts`, and `src/app/api/admin/bonus-history/[id]/publish/route.ts` to retrieve `discord_webhook_url` and `discord_op_webhook_url` settings dynamically from database with fallback to process.env. (2) Restricted modification of these webhook keys in `src/app/api/admin/settings/route.ts` to Master Admin only. (3) Added Webhook Settings UI block in `src/app/dashboard/admin/page.tsx` displaying inputs, validation state and warnings for Master Admin control. Next.js build verified.
+
+
 
 

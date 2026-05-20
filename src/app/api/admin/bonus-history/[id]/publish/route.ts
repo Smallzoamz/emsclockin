@@ -31,7 +31,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     // 2. Send Discord Webhook (Optional)
-    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+    let webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+    try {
+      const { data: genUrlData } = await supabase.from("system_settings").select("value").eq("key", "discord_webhook_url").single();
+      if (genUrlData?.value) {
+        webhookUrl = genUrlData.value;
+      }
+    } catch (dbErr) {
+      console.error("[Publish Bonus API] Failed to query webhook settings:", dbErr);
+    }
+
     if (webhookUrl) {
       try {
         await fetch(webhookUrl, {

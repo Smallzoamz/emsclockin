@@ -5,12 +5,6 @@ import { formatThaiDate } from "@/lib/utils";
  * Automatically compiles the doctor queue groups and edits/sends the single Discord Webhook message.
  */
 export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate = false) {
-  const webhookUrl = process.env.DISCORD_OP_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
-  if (!webhookUrl) {
-    console.warn("[OP Sync] No Discord webhook URL configured, skipping sync.");
-    return;
-  }
-
   try {
     // 1. Fetch system settings
     const { data: settingsData } = await supabase
@@ -21,6 +15,15 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
       acc[curr.key] = curr.value;
       return acc;
     }, {});
+
+    const dbWebhookOp = settings.discord_op_webhook_url;
+    const dbWebhookGeneral = settings.discord_webhook_url;
+    const webhookUrl = dbWebhookOp || dbWebhookGeneral || process.env.DISCORD_OP_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
+
+    if (!webhookUrl) {
+      console.warn("[OP Sync] No Discord webhook URL configured, skipping sync.");
+      return;
+    }
 
     const opActive = settings.op_active === true;
     const existingMessageId = settings.op_discord_message_id;
@@ -248,12 +251,6 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
 }
 
 export async function teardownOpQueue() {
-  const webhookUrl = process.env.DISCORD_OP_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
-  if (!webhookUrl) {
-    console.warn("[OP Teardown] No Discord webhook URL configured, skipping.");
-    return;
-  }
-
   try {
     // 1. Fetch system settings
     const { data: settingsData } = await supabase
@@ -264,6 +261,15 @@ export async function teardownOpQueue() {
       acc[curr.key] = curr.value;
       return acc;
     }, {});
+
+    const dbWebhookOp = settings.discord_op_webhook_url;
+    const dbWebhookGeneral = settings.discord_webhook_url;
+    const webhookUrl = dbWebhookOp || dbWebhookGeneral || process.env.DISCORD_OP_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
+
+    if (!webhookUrl) {
+      console.warn("[OP Teardown] No Discord webhook URL configured, skipping.");
+      return;
+    }
 
     const existingMessageId = settings.op_discord_message_id;
     const registeredDoctors = settings.registered_doctors || [];

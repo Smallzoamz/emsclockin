@@ -9,11 +9,27 @@ interface WebhookPayload {
   avatarUrl?: string;
 }
 
+import { supabase } from "@/lib/supabase";
+
+async function getWebhookUrl(): Promise<string | undefined> {
+  try {
+    const { data } = await supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "discord_webhook_url")
+      .single();
+    if (data?.value) return data.value;
+  } catch (err) {
+    console.error("[Discord Webhook] Failed to fetch url from db:", err);
+  }
+  return process.env.DISCORD_WEBHOOK_URL;
+}
+
 export async function sendDiscordWebhook(
   payload: WebhookPayload,
   existingMessageId?: string
 ): Promise<string | undefined> {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  const webhookUrl = await getWebhookUrl();
 
   if (!webhookUrl) {
     console.warn("[Discord Webhook] No webhook URL configured, skipping...");

@@ -41,7 +41,19 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { notice, activeList, skippedList, storyList, inactiveList } = body;
 
-    const webhookUrl = process.env.DISCORD_OP_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
+    // Fetch Webhook URLs from settings
+    let dbWebhookOp = null;
+    let dbWebhookGeneral = null;
+    try {
+      const { data: opUrlData } = await supabase.from("system_settings").select("value").eq("key", "discord_op_webhook_url").single();
+      dbWebhookOp = opUrlData?.value;
+      const { data: genUrlData } = await supabase.from("system_settings").select("value").eq("key", "discord_webhook_url").single();
+      dbWebhookGeneral = genUrlData?.value;
+    } catch (dbErr) {
+      console.error("[send-discord API] Failed to query webhook settings:", dbErr);
+    }
+
+    const webhookUrl = dbWebhookOp || dbWebhookGeneral || process.env.DISCORD_OP_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
     if (!webhookUrl) {
       return NextResponse.json({ error: "Discord webhook URL is not configured." }, { status: 500 });
     }
