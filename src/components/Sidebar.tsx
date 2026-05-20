@@ -39,6 +39,16 @@ export function Sidebar({ user }: SidebarProps) {
           </Link>
         )}
 
+        {user.role === "admin" && !user.discordId && (
+          <Link
+            href="/dashboard/admin/settings"
+            className={`nav-link ${pathname === "/dashboard/admin/settings" ? "active" : ""}`}
+          >
+            <span>⚙️</span>
+            ตั้งค่าระบบ
+          </Link>
+        )}
+
         {(user.role !== "admin" || !!user.discordId) && (
           <Link
             href="/dashboard"

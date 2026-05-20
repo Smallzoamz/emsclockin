@@ -15,6 +15,13 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; di
         </Link>
       )}
 
+      {user?.role === "admin" && !user?.discordId && (
+        <Link href="/dashboard/admin/settings" className={pathname === "/dashboard/admin/settings" ? "active" : ""}>
+          <span style={{ fontSize: "1.2rem" }}>⚙️</span>
+          ตั้งค่า
+        </Link>
+      )}
+
       {(user?.role !== "admin" || !!user?.discordId) && (
         <Link href="/dashboard" className={pathname === "/dashboard" ? "active" : ""}>
           <span style={{ fontSize: "1.2rem" }}>⏰</span>

@@ -1,0 +1,540 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { getSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+
+interface AdminOverviewEntry {
+  email: string;
+  name: string;
+  discordUsername: string;
+  totalHours: number;
+  status: "active" | "completed";
+  lastClockIn: string;
+}
+
+export default function AdminSettingsPage() {
+  const router = useRouter();
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
+  // Webhook Configuration State
+  const [discordWebhookUrl, setDiscordWebhookUrl] = useState("");
+  const [discordOpWebhookUrl, setDiscordOpWebhookUrl] = useState("");
+  const [isSavingWebhooks, setIsSavingWebhooks] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
+
+  // Admin Management State
+  const [adminCredentials, setAdminCredentials] = useState<Array<{ username: string, name: string, password?: string }>>([]);
+  const [adminDiscord, setAdminDiscord] = useState<Array<{ email?: string, username?: string, name: string }>>([]);
+  
+  // New Admin Form State
+  const [newCredUsername, setNewCredUsername] = useState("");
+  const [newCredPassword, setNewCredPassword] = useState("");
+  const [newCredName, setNewCredName] = useState("");
+  
+  const [newDiscordEmail, setNewDiscordEmail] = useState("");
+  const [newDiscordUsername, setNewDiscordUsername] = useState("");
+  const [newDiscordName, setNewDiscordName] = useState("");
+  const [discordAddMode, setDiscordAddMode] = useState<"email" | "username">("email");
+
+  useEffect(() => {
+    // Get Session and determine Master Admin
+    getSession().then((session) => {
+      const user = session?.user as any;
+      if (user && user.role === "admin" && !user.discordId) {
+        setIsMasterAdmin(true);
+        setLoadingAuth(false);
+      } else {
+        // Redirection for unauthorized users
+        router.replace("/dashboard");
+      }
+    });
+
+    // Fetch Settings
+    fetch("/api/admin/settings")
+      .then(res => res.json())
+      .then(data => {
+        if (data.settings?.admin_credentials_accounts) {
+          setAdminCredentials(data.settings.admin_credentials_accounts);
+        }
+        if (data.settings?.admin_discord_accounts) {
+          setAdminDiscord(data.settings.admin_discord_accounts);
+        }
+        if (data.settings?.discord_webhook_url) {
+          setDiscordWebhookUrl(data.settings.discord_webhook_url);
+        }
+        if (data.settings?.discord_op_webhook_url) {
+          setDiscordOpWebhookUrl(data.settings.discord_op_webhook_url);
+        }
+      })
+      .catch(err => console.error("Failed to load settings:", err));
+  }, [router]);
+
+  const handleSaveWebhooks = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isMasterAdmin) return;
+    setIsSavingWebhooks(true);
+    setWebhookStatus(null);
+
+    try {
+      // Save general webhook
+      const res1 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "discord_webhook_url", value: discordWebhookUrl }),
+      });
+      // Save OP webhook
+      const res2 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "discord_op_webhook_url", value: discordOpWebhookUrl }),
+      });
+
+      if (res1.ok && res2.ok) {
+        setWebhookStatus({ message: "บันทึกข้อมูล Discord Webhook เรียบร้อยแล้วค่ะ", type: "success" });
+      } else {
+        const d1 = await res1.json();
+        const d2 = await res2.json();
+        setWebhookStatus({ message: d1.error || d2.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
+      }
+    } catch (err) {
+      setWebhookStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    } finally {
+      setIsSavingWebhooks(false);
+      setTimeout(() => setWebhookStatus(null), 4000);
+    }
+  };
+
+  const handleAddCredAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isMasterAdmin) return;
+
+    if (!newCredUsername || !newCredPassword || !newCredName) {
+      alert("กรุณากรอกข้อมูลให้ครบถ้วนค่ะ");
+      return;
+    }
+
+    if (newCredUsername.toLowerCase() === "admin") {
+      alert("ไม่สามารถใช้ชื่อผู้ใช้ 'admin' ได้เนื่องจากเป็นบัญชีมาสเตอร์ของระบบค่ะ");
+      return;
+    }
+
+    if (adminCredentials.some(acc => acc.username.toLowerCase() === newCredUsername.toLowerCase())) {
+      alert("มีชื่อผู้ใช้นี้ในระบบแล้วค่ะ");
+      return;
+    }
+
+    const updated = [...adminCredentials, { username: newCredUsername, password: newCredPassword, name: newCredName }];
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "admin_credentials_accounts", value: updated })
+      });
+      if (res.ok) {
+        setAdminCredentials(updated);
+        setNewCredUsername("");
+        setNewCredPassword("");
+        setNewCredName("");
+        alert("เพิ่มบัญชีผู้ดูแลระบบสำเร็จแล้วค่ะ");
+      } else {
+        alert("ไม่สามารถเพิ่มบัญชีผู้ดูแลระบบได้");
+      }
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
+  };
+
+  const handleAddDiscordAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isMasterAdmin) return;
+
+    if (discordAddMode === "email" && !newDiscordEmail) {
+      alert("กรุณากรอกอีเมล Discord ค่ะ");
+      return;
+    }
+    if (discordAddMode === "username" && !newDiscordUsername) {
+      alert("กรุณากรอกชื่อผู้ใช้ Discord ค่ะ");
+      return;
+    }
+    if (!newDiscordName) {
+      alert("กรุณากรอกชื่อแสดงค่ะ");
+      return;
+    }
+
+    const newAdmin: any = { name: newDiscordName };
+    if (discordAddMode === "email") {
+      newAdmin.email = newDiscordEmail;
+      if (newDiscordEmail.toLowerCase() === "lneeobee@gmail.com") {
+        alert("ไม่จำเป็นต้องเพิ่มอีเมลนี้เนื่องจากได้รับสิทธิ์นักพัฒนาของระบบแล้วค่ะ");
+        return;
+      }
+      if (adminDiscord.some(acc => acc.email?.toLowerCase() === newDiscordEmail.toLowerCase())) {
+        alert("มีอีเมลนี้ในระบบแล้วค่ะ");
+        return;
+      }
+    } else {
+      newAdmin.username = newDiscordUsername;
+      if (adminDiscord.some(acc => acc.username?.toLowerCase() === newDiscordUsername.toLowerCase())) {
+        alert("มีชื่อผู้ใช้นี้ในระบบแล้วค่ะ");
+        return;
+      }
+    }
+
+    const updated = [...adminDiscord, newAdmin];
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "admin_discord_accounts", value: updated })
+      });
+      if (res.ok) {
+        setAdminDiscord(updated);
+        setNewDiscordEmail("");
+        setNewDiscordUsername("");
+        setNewDiscordName("");
+        alert("เพิ่มสิทธิ์แอดมิน Discord สำเร็จแล้วค่ะ");
+      } else {
+        alert("ไม่สามารถบันทึกข้อมูลได้");
+      }
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
+  };
+
+  const handleDeleteCredAdmin = async (username: string) => {
+    if (!isMasterAdmin) return;
+    if (!confirm(`ยืนยันต้องการลบแอดมิน "${username}" หรือไม่?`)) return;
+
+    const updated = adminCredentials.filter(acc => acc.username !== username);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "admin_credentials_accounts", value: updated })
+      });
+      if (res.ok) {
+        setAdminCredentials(updated);
+        alert("ลบบัญชีแอดมินสำเร็จ");
+      }
+    } catch (err) {
+      alert("ลบไม่สำเร็จ");
+    }
+  };
+
+  const handleDeleteDiscordAdmin = async (adminObj: any) => {
+    if (!isMasterAdmin) return;
+    const displayName = adminObj.email ? adminObj.email : `@${adminObj.username}`;
+    if (!confirm(`ยืนยันต้องการลบสิทธิ์แอดมินของ "${displayName}" หรือไม่?`)) return;
+    
+    const updated = adminDiscord.filter(acc => 
+      !(acc.email === adminObj.email && acc.username === adminObj.username)
+    );
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "admin_discord_accounts", value: updated })
+      });
+      if (res.ok) {
+        setAdminDiscord(updated);
+        alert("ลบสิทธิ์แอดมิน Discord สำเร็จ");
+      }
+    } catch (err) {
+      alert("ลบไม่สำเร็จ");
+    }
+  };
+
+  if (loadingAuth) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh", color: "var(--text-secondary)" }}>
+        กำลังยืนยันสิทธิ์ Master Admin...
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px", display: "flex", flexDirection: "column", gap: "32px" }}>
+      
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px" }}>
+        <div>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--text-primary)", margin: 0 }}>⚙️ ตั้งค่าระบบผู้ดูแลหลัก</h1>
+          <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>จัดการสิทธิ์แอดมินของเว็บไซต์และตั้งค่าการเชื่อมต่อ Discord Webhook</p>
+        </div>
+      </div>
+
+      {/* Webhook Configuration */}
+      <section className="card" style={{ padding: "24px" }}>
+        <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
+          <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+            📢 ตั้งค่า Discord Webhook (Webhook Settings)
+          </h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
+            ตั้งค่า URL สำหรับส่ง log การ เข้า-ออกเวร และรายงานกลุ่มแพทย์เวร (OP) ไปยัง Discord Channel
+          </p>
+        </div>
+
+        <form onSubmit={handleSaveWebhooks} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px" }}>
+            
+            {/* Input 1: General Webhook */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                🔗 Webhook แจ้งเตือนทั่วไป (General Log Webhook)
+              </label>
+              <input 
+                type="url" 
+                placeholder="https://discord.com/api/webhooks/..." 
+                value={discordWebhookUrl}
+                onChange={e => setDiscordWebhookUrl(e.target.value.trim())}
+                style={{ width: "100%", padding: "10px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem" }}
+              />
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                ใช้ส่งข้อมูลบันทึกเข้างาน-ออกงานของแพทย์ทั่วไป และประกาศโบนัสประจำสัปดาห์
+              </span>
+            </div>
+
+            {/* Input 2: OP Webhook */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                🔗 Webhook คิวหมอเวร OP (OP Queue Webhook)
+              </label>
+              <input 
+                type="url" 
+                placeholder="https://discord.com/api/webhooks/..." 
+                value={discordOpWebhookUrl}
+                onChange={e => setDiscordOpWebhookUrl(e.target.value.trim())}
+                style={{ width: "100%", padding: "10px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem" }}
+              />
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                ใช้รายงานคิวแพทย์เวร (OP) และสถานะคิวเคสแบบอัปเดตเรียลไทม์ (ถ้าปล่อยว่างไว้จะใช้ร่วมกับตัวแจ้งเตือนทั่วไปด้านซ้าย)
+              </span>
+            </div>
+
+          </div>
+
+          {/* Status Message */}
+          {webhookStatus && (
+            <div style={{
+              padding: "10px 14px",
+              borderRadius: "6px",
+              fontSize: "0.85rem",
+              background: webhookStatus.type === "success" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+              border: `1px solid ${webhookStatus.type === "success" ? "var(--success)" : "var(--danger)"}`,
+              color: webhookStatus.type === "success" ? "var(--success)" : "var(--danger)"
+            }}>
+              {webhookStatus.message}
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <button 
+            type="submit" 
+            disabled={isSavingWebhooks}
+            style={{
+              alignSelf: "flex-end",
+              padding: "10px 24px",
+              background: "var(--primary)",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              opacity: isSavingWebhooks ? 0.7 : 1
+            }}
+          >
+            {isSavingWebhooks ? "กำลังบันทึก..." : "💾 บันทึกการตั้งค่า Webhook"}
+          </button>
+        </form>
+      </section>
+
+      {/* Admin Management */}
+      <section className="card" style={{ padding: "24px" }}>
+        <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
+          <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+            👥 จัดการสิทธิ์ผู้ดูแลระบบ (Admin Management)
+          </h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
+            จัดการบัญชีผู้ดูแลระบบ (ทั้งแบบ Login ด้วย Username และเชื่อมสิทธิ์ Discord Account)
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(450px, 1fr))", gap: "32px" }}>
+          
+          {/* Left Side: Credentials Admin */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <h3 style={{ fontSize: "1rem", color: "var(--text-primary)", margin: 0, paddingBottom: "8px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              🔒 แอดมินล็อกอินด้วย Username
+            </h3>
+            
+            {/* List */}
+            <div style={{ background: "var(--bg-secondary)", borderRadius: "8px", padding: "16px", minHeight: "150px", display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                <span>ชื่อผู้ใช้</span>
+                <span>ชื่อแสดง</span>
+                <span>การจัดการ</span>
+              </div>
+              
+              {/* Default Master */}
+              <div style={{ padding: "10px 12px", background: "var(--bg-card)", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: "4px solid var(--primary)" }}>
+                <span style={{ fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: "bold" }}>admin</span>
+                <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Master Admin (ระบบหลัก)</span>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic" }}>ลบไม่ได้</span>
+              </div>
+
+              {adminCredentials.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", fontSize: "0.85rem" }}>ไม่มีแอดมินเพิ่มเติม</div>
+              ) : (
+                adminCredentials.map((acc, idx) => (
+                  <div key={idx} style={{ padding: "10px 12px", background: "var(--bg-card)", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.85rem", color: "var(--text-primary)" }}>{acc.username}</span>
+                    <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{acc.name}</span>
+                    <button 
+                      onClick={() => handleDeleteCredAdmin(acc.username)}
+                      style={{ padding: "4px 8px", background: "rgba(239,68,68,0.1)", color: "var(--danger)", border: "1px solid var(--danger)", borderRadius: "4px", fontSize: "0.75rem", cursor: "pointer" }}
+                    >
+                      ลบออก
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Add Form */}
+            <form onSubmit={handleAddCredAdmin} style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "16px", border: "1px dashed var(--border)", borderRadius: "8px" }}>
+              <h4 style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-primary)" }}>➕ เพิ่มบัญชีผู้ดูแลระบบ (Credentials)</h4>
+              
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <input 
+                  type="text" 
+                  placeholder="ชื่อผู้ใช้ (Username)" 
+                  value={newCredUsername}
+                  onChange={e => setNewCredUsername(e.target.value.replace(/\s+/g, ""))}
+                  style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                  required
+                />
+                <input 
+                  type="password" 
+                  placeholder="รหัสผ่าน (Password)" 
+                  value={newCredPassword}
+                  onChange={e => setNewCredPassword(e.target.value.trim())}
+                  style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                  required
+                />
+              </div>
+
+              <input 
+                type="text" 
+                placeholder="ชื่อแสดง (เช่น หมอสมศักดิ์ แอดมิน)" 
+                value={newCredName}
+                onChange={e => setNewCredName(e.target.value)}
+                style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                required
+              />
+
+              <button type="submit" style={{ padding: "8px", background: "var(--primary)", color: "white", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", fontSize: "0.85rem", marginTop: "4px" }}>
+                สร้างบัญชีผู้ดูแลระบบ
+              </button>
+            </form>
+          </div>
+
+          {/* Right Side: Discord Authorization Admin */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <h3 style={{ fontSize: "1rem", color: "var(--text-primary)", margin: 0, paddingBottom: "8px", borderBottom: "1px solid var(--border-subtle)" }}>
+              👾 แอดมินได้รับสิทธิ์ผ่าน Discord
+            </h3>
+            
+            {/* List */}
+            <div style={{ background: "var(--bg-secondary)", borderRadius: "8px", padding: "16px", minHeight: "150px", display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                <span>สิทธิ์อ้างอิง Discord</span>
+                <span>ชื่อแสดง</span>
+                <span>การจัดการ</span>
+              </div>
+              
+              {/* Default Dev */}
+              <div style={{ padding: "10px 12px", background: "var(--bg-card)", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: "4px solid var(--success)" }}>
+                <span style={{ fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: "bold" }}>lneeobee@gmail.com</span>
+                <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Developer (ระบบหลัก)</span>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic" }}>ลบไม่ได้</span>
+              </div>
+
+              {adminDiscord.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", fontSize: "0.85rem" }}>ไม่มีแอดมิน Discord เพิ่มเติม</div>
+              ) : (
+                adminDiscord.map((acc, idx) => (
+                  <div key={idx} style={{ padding: "10px 12px", background: "var(--bg-card)", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.85rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>
+                      {acc.email ? acc.email : `@${acc.username}`}
+                    </span>
+                    <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{acc.name}</span>
+                    <button 
+                      onClick={() => handleDeleteDiscordAdmin(acc)}
+                      style={{ padding: "4px 8px", background: "rgba(239,68,68,0.1)", color: "var(--danger)", border: "1px solid var(--danger)", borderRadius: "4px", fontSize: "0.75rem", cursor: "pointer" }}
+                    >
+                      ลบออก
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Add Form */}
+            <form onSubmit={handleAddDiscordAdmin} style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "16px", border: "1px dashed var(--border)", borderRadius: "8px" }}>
+              <h4 style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-primary)" }}>➕ มอบสิทธิ์ผู้ดูแลระบบให้กับ Discord Account</h4>
+              
+              <div style={{ display: "flex", gap: "12px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
+                <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" }}>
+                  <input type="radio" checked={discordAddMode === "email"} onChange={() => setDiscordAddMode("email")} />
+                  ระบุด้วย Email Discord
+                </label>
+                <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" }}>
+                  <input type="radio" checked={discordAddMode === "username"} onChange={() => setDiscordAddMode("username")} />
+                  ระบุด้วย Username Discord
+                </label>
+              </div>
+
+              {discordAddMode === "email" ? (
+                <input 
+                  type="email" 
+                  placeholder="อีเมล Discord (เช่น test@gmail.com)" 
+                  value={newDiscordEmail}
+                  onChange={e => setNewDiscordEmail(e.target.value.trim())}
+                  style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                  required
+                />
+              ) : (
+                <input 
+                  type="text" 
+                  placeholder="ชื่อผู้ใช้ Discord (เช่น test_username)" 
+                  value={newDiscordUsername}
+                  onChange={e => setNewDiscordUsername(e.target.value.trim())}
+                  style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                  required
+                />
+              )}
+
+              <input 
+                type="text" 
+                placeholder="ชื่อแสดง (เช่น หมอสมพงษ์ แอดมินร่วม)" 
+                value={newDiscordName}
+                onChange={e => setNewDiscordName(e.target.value)}
+                style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                required
+              />
+              
+              <button type="submit" style={{ padding: "8px", background: "var(--primary)", color: "white", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", fontSize: "0.85rem", marginTop: "4px" }}>
+                มอบสิทธิ์แอดมิน
+              </button>
+            </form>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  );
+}
