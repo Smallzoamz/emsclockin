@@ -13,17 +13,49 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       id: "admin-login",
       name: "Admin Login",
       credentials: {
+        username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (credentials?.password === process.env.ADMIN_PASSWORD) {
+        const username = credentials?.username as string;
+        const password = credentials?.password as string;
+
+        // 1. Check master admin config from environment
+        if (username === "admin" && password === process.env.ADMIN_PASSWORD) {
           return {
-            id: "admin-lneeobee",
-            name: "Admin",
+            id: "admin-master",
+            name: "Master Admin",
             email: "lneeobee@gmail.com",
             role: "admin",
           };
         }
+
+        // 2. Check database for custom admin credentials accounts
+        try {
+          const { data: settingsData } = await supabase
+            .from("system_settings")
+            .select("value")
+            .eq("key", "admin_credentials_accounts")
+            .single();
+
+          const adminAccounts = settingsData?.value || [];
+          if (Array.isArray(adminAccounts)) {
+            const matched = adminAccounts.find(
+              (acc: any) => acc.username === username && acc.password === password
+            );
+            if (matched) {
+              return {
+                id: `admin-${matched.username}`,
+                name: matched.name || matched.username,
+                email: matched.email || `${matched.username}@local.admin`,
+                role: "admin",
+              };
+            }
+          }
+        } catch (err) {
+          console.error("Credentials authorize DB error:", err);
+        }
+
         return null;
       },
     }),
@@ -45,9 +77,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.discordUsername = (profile as Record<string, unknown>)?.username as string;
         token.discordAvatar = (profile as Record<string, unknown>)?.avatar as string;
         
-        // Auto assign admin if discord email matches
+        // Auto assign admin if discord email matches default master email
         if (user?.email === "lneeobee@gmail.com") {
           token.role = "admin";
+        } else {
+          // Check database for registered Discord admins (by email or username)
+          try {
+            const { data: discAdminsData } = await supabase
+              .from("system_settings")
+              .select("value")
+              .eq("key", "admin_discord_accounts")
+              .single();
+
+            const discordAdmins = discAdminsData?.value || [];
+            if (Array.isArray(discordAdmins)) {
+              const isDiscordAdmin = discordAdmins.some(
+                (adm: any) =>
+                  (adm.email && typeof user.email === "string" && adm.email.toLowerCase() === user.email.toLowerCase()) ||
+                  (adm.username && typeof token.discordUsername === "string" && adm.username.toLowerCase() === (token.discordUsername as string).toLowerCase())
+              );
+              if (isDiscordAdmin) {
+                token.role = "admin";
+              }
+            }
+          } catch (dbErr) {
+            console.error("[Auth Discord Admin Check] Error:", dbErr);
+          }
         }
         
         const avatarUrl = token.discordAvatar 

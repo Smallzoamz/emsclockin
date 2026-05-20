@@ -19,6 +19,7 @@ export default async function LoginPage() {
           action={async (formData: FormData) => {
             "use server";
             await signIn("admin-login", { 
+              username: formData.get("username") as string,
               password: formData.get("password") as string,
               redirectTo: "/dashboard" 
             });
@@ -40,14 +41,15 @@ export default async function LoginPage() {
             >
               🔒 เข้าสู่ระบบสำหรับ Admin
             </summary>
-            <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
+            <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
               <input 
-                type="password" 
-                name="password" 
-                placeholder="รหัสผ่าน Admin"
+                type="text" 
+                name="username" 
+                placeholder="ชื่อผู้ใช้ Admin (เช่น admin)"
+                defaultValue="admin"
                 required
                 style={{ 
-                  flex: 1, 
+                  width: "100%",
                   padding: "10px 14px", 
                   borderRadius: "var(--radius)", 
                   border: "1px solid var(--border)", 
@@ -56,13 +58,30 @@ export default async function LoginPage() {
                   outline: "none"
                 }} 
               />
-              <button 
-                type="submit" 
-                className="login-btn" 
-                style={{ width: "auto", padding: "0 20px", margin: 0 }}
-              >
-                เข้าสู่ระบบ
-              </button>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input 
+                  type="password" 
+                  name="password" 
+                  placeholder="รหัสผ่าน Admin"
+                  required
+                  style={{ 
+                    flex: 1, 
+                    padding: "10px 14px", 
+                    borderRadius: "var(--radius)", 
+                    border: "1px solid var(--border)", 
+                    background: "var(--bg-dark)",
+                    color: "white",
+                    outline: "none"
+                  }} 
+                />
+                <button 
+                  type="submit" 
+                  className="login-btn" 
+                  style={{ width: "auto", padding: "0 20px", margin: 0 }}
+                >
+                  เข้าสู่ระบบ
+                </button>
+              </div>
             </div>
           </details>
         </form>

@@ -49,6 +49,20 @@ export default function AdminDashboardPage() {
   const [isSyncingNicknames, setIsSyncingNicknames] = useState(false);
   const [isSavingOpSettings, setIsSavingOpSettings] = useState(false);
 
+  // Admin Management State
+  const [adminCredentials, setAdminCredentials] = useState<Array<{ username: string, name: string, password?: string }>>([]);
+  const [adminDiscord, setAdminDiscord] = useState<Array<{ email?: string, username?: string, name: string }>>([]);
+  
+  // New Admin Form State
+  const [newCredUsername, setNewCredUsername] = useState("");
+  const [newCredPassword, setNewCredPassword] = useState("");
+  const [newCredName, setNewCredName] = useState("");
+  
+  const [newDiscordEmail, setNewDiscordEmail] = useState("");
+  const [newDiscordUsername, setNewDiscordUsername] = useState("");
+  const [newDiscordName, setNewDiscordName] = useState("");
+  const [discordAddMode, setDiscordAddMode] = useState<"email" | "username">("email");
+
   useEffect(() => {
     // Fetch Settings
     fetch("/api/admin/settings")
@@ -59,6 +73,12 @@ export default function AdminDashboardPage() {
         }
         if (data.settings?.daily_min_hours) {
           setDailyMinHours(Number(data.settings.daily_min_hours));
+        }
+        if (data.settings?.admin_credentials_accounts) {
+          setAdminCredentials(data.settings.admin_credentials_accounts);
+        }
+        if (data.settings?.admin_discord_accounts) {
+          setAdminDiscord(data.settings.admin_discord_accounts);
         }
       })
       .catch(err => console.error("Failed to load settings:", err));
@@ -280,6 +300,142 @@ export default function AdminDashboardPage() {
       );
     } catch (err: any) {
       alert(err.message);
+    }
+  };
+
+  const handleAddCredAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCredUsername || !newCredPassword || !newCredName) {
+      alert("กรุณากรอกข้อมูลให้ครบถ้วนค่ะ");
+      return;
+    }
+
+    if (newCredUsername.toLowerCase() === "admin") {
+      alert("ไม่สามารถใช้ชื่อผู้ใช้ 'admin' ได้เนื่องจากเป็นบัญชีมาสเตอร์ของระบบค่ะ");
+      return;
+    }
+
+    // Check duplicate
+    if (adminCredentials.some(acc => acc.username.toLowerCase() === newCredUsername.toLowerCase())) {
+      alert("มีชื่อผู้ใช้นี้ในระบบแล้วค่ะ");
+      return;
+    }
+
+    const updated = [...adminCredentials, { username: newCredUsername, password: newCredPassword, name: newCredName }];
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "admin_credentials_accounts", value: updated })
+      });
+      if (res.ok) {
+        setAdminCredentials(updated);
+        setNewCredUsername("");
+        setNewCredPassword("");
+        setNewCredName("");
+        alert("เพิ่มบัญชีผู้ดูแลระบบสำเร็จแล้วค่ะ");
+      } else {
+        alert("ไม่สามารถเพิ่มบัญชีผู้ดูแลระบบได้");
+      }
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
+  };
+
+  const handleAddDiscordAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (discordAddMode === "email" && !newDiscordEmail) {
+      alert("กรุณากรอกอีเมล Discord ค่ะ");
+      return;
+    }
+    if (discordAddMode === "username" && !newDiscordUsername) {
+      alert("กรุณากรอกชื่อผู้ใช้ Discord ค่ะ");
+      return;
+    }
+    if (!newDiscordName) {
+      alert("กรุณากรอกชื่อแสดงค่ะ");
+      return;
+    }
+
+    const newAdmin: any = { name: newDiscordName };
+    if (discordAddMode === "email") {
+      newAdmin.email = newDiscordEmail;
+      if (newDiscordEmail.toLowerCase() === "lneeobee@gmail.com") {
+        alert("ไม่จำเป็นต้องเพิ่มอีเมลนี้เนื่องจากได้รับสิทธิ์นักพัฒนาของระบบแล้วค่ะ");
+        return;
+      }
+      // Duplicate check
+      if (adminDiscord.some(acc => acc.email?.toLowerCase() === newDiscordEmail.toLowerCase())) {
+        alert("มีอีเมลนี้ในระบบแล้วค่ะ");
+        return;
+      }
+    } else {
+      newAdmin.username = newDiscordUsername;
+      // Duplicate check
+      if (adminDiscord.some(acc => acc.username?.toLowerCase() === newDiscordUsername.toLowerCase())) {
+        alert("มีชื่อผู้ใช้นี้ในระบบแล้วค่ะ");
+        return;
+      }
+    }
+
+    const updated = [...adminDiscord, newAdmin];
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "admin_discord_accounts", value: updated })
+      });
+      if (res.ok) {
+        setAdminDiscord(updated);
+        setNewDiscordEmail("");
+        setNewDiscordUsername("");
+        setNewDiscordName("");
+        alert("เพิ่มสิทธิ์แอดมิน Discord สำเร็จแล้วค่ะ");
+      } else {
+        alert("ไม่สามารถบันทึกข้อมูลได้");
+      }
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
+  };
+
+  const handleDeleteCredAdmin = async (username: string) => {
+    if (!confirm(`ยืนยันต้องการลบแอดมิน "${username}" หรือไม่?`)) return;
+    const updated = adminCredentials.filter(acc => acc.username !== username);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "admin_credentials_accounts", value: updated })
+      });
+      if (res.ok) {
+        setAdminCredentials(updated);
+        alert("ลบบัญชีแอดมินสำเร็จ");
+      }
+    } catch (err) {
+      alert("ลบไม่สำเร็จ");
+    }
+  };
+
+  const handleDeleteDiscordAdmin = async (adminObj: any) => {
+    const displayName = adminObj.email ? adminObj.email : `@${adminObj.username}`;
+    if (!confirm(`ยืนยันต้องการลบสิทธิ์แอดมินของ "${displayName}" หรือไม่?`)) return;
+    
+    const updated = adminDiscord.filter(acc => 
+      !(acc.email === adminObj.email && acc.username === adminObj.username)
+    );
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "admin_discord_accounts", value: updated })
+      });
+      if (res.ok) {
+        setAdminDiscord(updated);
+        alert("ลบสิทธิ์แอดมิน Discord สำเร็จ");
+      }
+    } catch (err) {
+      alert("ลบไม่สำเร็จ");
     }
   };
 
@@ -650,6 +806,197 @@ export default function AdminDashboardPage() {
               );
             })}
           </div>
+        </div>
+      </section>
+
+      {/* Section: Admin Management */}
+      <section className="card" style={{ marginTop: "32px", padding: "24px" }}>
+        <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
+          <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+            👥 จัดการสิทธิ์ผู้ดูแลระบบ (Admin Management)
+          </h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
+            จัดการบัญชีผู้ดูแลระบบ ทั้งแบบป้อนรหัสผ่านตรง (Credentials) และแบบมอบสิทธิ์ผ่านบัญชี Discord
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px" }}>
+          
+          {/* Column 1: Credentials Admin Accounts */}
+          <div style={{ background: "var(--bg-secondary)", padding: "20px", borderRadius: "10px", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <h3 style={{ fontSize: "1rem", color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+              🔑 บัญชีแอดมินทั่วไป (Credentials)
+            </h3>
+            
+            {/* List */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1, maxHeight: "250px", overflowY: "auto", paddingRight: "4px" }}>
+              {/* Default Master Admin is always implicit and cannot be deleted */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-card)", padding: "10px 14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                <div>
+                  <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-primary)" }}>Master Admin (admin)</div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>บัญชีหลักจากระบบ (.env)</div>
+                </div>
+                <span style={{ fontSize: "0.7rem", background: "rgba(16, 185, 129, 0.15)", color: "var(--success)", padding: "2px 8px", borderRadius: "12px", fontWeight: "bold" }}>ระบบ</span>
+              </div>
+
+              {adminCredentials.length === 0 ? (
+                <div style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)", fontSize: "0.8rem", border: "1px dashed var(--border)", borderRadius: "8px" }}>
+                  ยังไม่มีบัญชีทั่วไปเพิ่มเติม
+                </div>
+              ) : (
+                adminCredentials.map((acc) => (
+                  <div key={acc.username} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-card)", padding: "10px 14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                    <div>
+                      <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-primary)" }}>{acc.name} ({acc.username})</div>
+                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>สิทธิ์: แอดมินทั่วไป</div>
+                    </div>
+                    <button 
+                      onClick={() => handleDeleteCredAdmin(acc.username)}
+                      style={{ background: "rgba(239, 68, 68, 0.15)", color: "var(--danger)", border: "none", borderRadius: "4px", padding: "4px 8px", fontSize: "0.8rem", cursor: "pointer", transition: "0.2s" }}
+                      onMouseOver={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)"}
+                      onMouseOut={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)"}
+                    >
+                      ลบ 🚫
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleAddCredAdmin} style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)" }}>➕ เพิ่มบัญชีทั่วไป</div>
+              <input 
+                type="text" 
+                placeholder="ชื่อผู้ใช้ (Username)" 
+                value={newCredUsername}
+                onChange={e => setNewCredUsername(e.target.value.trim())}
+                style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                required
+              />
+              <input 
+                type="password" 
+                placeholder="รหัสผ่าน (Password)" 
+                value={newCredPassword}
+                onChange={e => setNewCredPassword(e.target.value)}
+                style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                required
+              />
+              <input 
+                type="text" 
+                placeholder="ชื่อแสดง (Display Name)" 
+                value={newCredName}
+                onChange={e => setNewCredName(e.target.value)}
+                style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                required
+              />
+              <button type="submit" style={{ padding: "8px", background: "var(--primary)", color: "white", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", fontSize: "0.85rem", marginTop: "4px" }}>
+                เพิ่มบัญชีแอดมิน
+              </button>
+            </form>
+          </div>
+
+          {/* Column 2: Discord Admin Accounts */}
+          <div style={{ background: "var(--bg-secondary)", padding: "20px", borderRadius: "10px", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <h3 style={{ fontSize: "1rem", color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+              🌐 มอบสิทธิ์ผ่าน Discord
+            </h3>
+
+            {/* List */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1, maxHeight: "250px", overflowY: "auto", paddingRight: "4px" }}>
+              {/* Default lneeobee developer account is always implicit and cannot be deleted */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-card)", padding: "10px 14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                <div>
+                  <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-primary)" }}>Developer Account</div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>lneeobee@gmail.com</div>
+                </div>
+                <span style={{ fontSize: "0.7rem", background: "rgba(16, 185, 129, 0.15)", color: "var(--success)", padding: "2px 8px", borderRadius: "12px", fontWeight: "bold" }}>ระบบ</span>
+              </div>
+
+              {adminDiscord.length === 0 ? (
+                <div style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)", fontSize: "0.8rem", border: "1px dashed var(--border)", borderRadius: "8px" }}>
+                  ยังไม่มีสิทธิ์ผ่าน Discord เพิ่มเติม
+                </div>
+              ) : (
+                adminDiscord.map((acc, index) => (
+                  <div key={index} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-card)", padding: "10px 14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                    <div>
+                      <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-primary)" }}>{acc.name}</div>
+                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                        {acc.email ? `อีเมล: ${acc.email}` : `ชื่อผู้ใช้: @${acc.username}`}
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleDeleteDiscordAdmin(acc)}
+                      style={{ background: "rgba(239, 68, 68, 0.15)", color: "var(--danger)", border: "none", borderRadius: "4px", padding: "4px 8px", fontSize: "0.8rem", cursor: "pointer", transition: "0.2s" }}
+                      onMouseOver={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)"}
+                      onMouseOut={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)"}
+                    >
+                      ลบ 🚫
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleAddDiscordAdmin} style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)" }}>➕ มอบสิทธิ์ Discord</span>
+                {/* Select Mode */}
+                <div style={{ display: "flex", gap: "4px", background: "var(--bg-card)", padding: "2px", borderRadius: "4px", border: "1px solid var(--border)" }}>
+                  <button 
+                    type="button" 
+                    onClick={() => setDiscordAddMode("email")}
+                    style={{ background: discordAddMode === "email" ? "var(--primary)" : "transparent", color: discordAddMode === "email" ? "white" : "var(--text-secondary)", border: "none", padding: "2px 8px", borderRadius: "3px", fontSize: "0.7rem", fontWeight: "bold", cursor: "pointer" }}
+                  >
+                    ระบุเมล
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setDiscordAddMode("username")}
+                    style={{ background: discordAddMode === "username" ? "var(--primary)" : "transparent", color: discordAddMode === "username" ? "white" : "var(--text-secondary)", border: "none", padding: "2px 8px", borderRadius: "3px", fontSize: "0.7rem", fontWeight: "bold", cursor: "pointer" }}
+                  >
+                    ระบุชื่อเล่น
+                  </button>
+                </div>
+              </div>
+
+              {discordAddMode === "email" ? (
+                <input 
+                  type="email" 
+                  placeholder="อีเมล Discord (เช่น test@gmail.com)" 
+                  value={newDiscordEmail}
+                  onChange={e => setNewDiscordEmail(e.target.value.trim())}
+                  style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                  required
+                />
+              ) : (
+                <input 
+                  type="text" 
+                  placeholder="ชื่อผู้ใช้ Discord (เช่น test_username)" 
+                  value={newDiscordUsername}
+                  onChange={e => setNewDiscordUsername(e.target.value.trim())}
+                  style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                  required
+                />
+              )}
+
+              <input 
+                type="text" 
+                placeholder="ชื่อแสดง (เช่น หมอสมพงษ์ แอดมินร่วม)" 
+                value={newDiscordName}
+                onChange={e => setNewDiscordName(e.target.value)}
+                style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                required
+              />
+              
+              <button type="submit" style={{ padding: "8px", background: "var(--primary)", color: "white", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", fontSize: "0.85rem", marginTop: "4px" }}>
+                มอบสิทธิ์แอดมิน
+              </button>
+            </form>
+          </div>
+
         </div>
       </section>
 
