@@ -38,6 +38,15 @@ export default function AdminSettingsPage() {
   const [newDiscordName, setNewDiscordName] = useState("");
   const [discordAddMode, setDiscordAddMode] = useState<"email" | "username">("email");
 
+  // Branding & Theme State
+  const [themeAccentColor, setThemeAccentColor] = useState("#10b981");
+  const [themeLogoUrl, setThemeLogoUrl] = useState("");
+  const [themeBgOpacity, setThemeBgOpacity] = useState(5); // 1-40%
+  const [themeBgStyle, setThemeBgStyle] = useState<"contain" | "cover">("contain");
+  const [isSavingTheme, setIsSavingTheme] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [themeStatus, setThemeStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
+
   useEffect(() => {
     // Get Session and determine Master Admin
     getSession().then((session) => {
@@ -66,6 +75,19 @@ export default function AdminSettingsPage() {
         }
         if (data.settings?.discord_op_webhook_url) {
           setDiscordOpWebhookUrl(data.settings.discord_op_webhook_url);
+        }
+        if (data.settings?.theme_accent_color) {
+          setThemeAccentColor(data.settings.theme_accent_color);
+        }
+        if (data.settings?.theme_logo_url) {
+          setThemeLogoUrl(data.settings.theme_logo_url);
+        }
+        if (data.settings?.theme_bg_opacity !== undefined) {
+          // Database stores decimal, convert to percentage e.g. 0.05 -> 5
+          setThemeBgOpacity(Math.round(Number(data.settings.theme_bg_opacity) * 100));
+        }
+        if (data.settings?.theme_bg_style) {
+          setThemeBgStyle(data.settings.theme_bg_style);
         }
       })
       .catch(err => console.error("Failed to load settings:", err));
@@ -246,6 +268,114 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const handleSaveTheme = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isMasterAdmin) return;
+    setIsSavingTheme(true);
+    setThemeStatus(null);
+
+    try {
+      // Save accent color
+      const resColor = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "theme_accent_color", value: themeAccentColor }),
+      });
+
+      // Save opacity (stored as decimal in database: e.g. 15% -> 0.15)
+      const opacityDecimal = themeBgOpacity / 100;
+      const resOpacity = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "theme_bg_opacity", value: opacityDecimal }),
+      });
+
+      // Save background style
+      const resStyle = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "theme_bg_style", value: themeBgStyle }),
+      });
+
+      if (resColor.ok && resOpacity.ok && resStyle.ok) {
+        setThemeStatus({ message: "บันทึกการตั้งค่าธีมและโลโก้เมืองเรียบร้อยแล้วค่ะ", type: "success" });
+        router.refresh();
+      } else {
+        const d1 = await resColor.json();
+        const d2 = await resOpacity.json();
+        const d3 = await resStyle.json();
+        setThemeStatus({ message: d1.error || d2.error || d3.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
+      }
+    } catch (err) {
+      setThemeStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    } finally {
+      setIsSavingTheme(false);
+      setTimeout(() => setThemeStatus(null), 4000);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !isMasterAdmin) return;
+
+    setIsUploadingLogo(true);
+    setThemeStatus(null);
+
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    try {
+      const res = await fetch("/api/admin/upload-logo", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setThemeLogoUrl(data.logoUrl);
+        setThemeStatus({ message: "อัปโหลดโลโก้เมืองเรียบร้อยแล้วค่ะ", type: "success" });
+        router.refresh();
+      } else {
+        setThemeStatus({ message: data.error || "อัปโหลดรูปภาพไม่สำเร็จ", type: "error" });
+      }
+    } catch (err) {
+      setThemeStatus({ message: "เกิดข้อผิดพลาดในการอัปโหลดไฟล์", type: "error" });
+    } finally {
+      setIsUploadingLogo(false);
+      setTimeout(() => setThemeStatus(null), 4000);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!isMasterAdmin) return;
+    if (!confirm("ยืนยันว่าต้องการลบโลโก้เมืองและกลับไปใช้โลโก้เริ่มต้นของระบบหรือไม่?")) return;
+
+    setIsUploadingLogo(true);
+    setThemeStatus(null);
+
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "theme_logo_url", value: "" }),
+      });
+
+      if (res.ok) {
+        setThemeLogoUrl("");
+        setThemeStatus({ message: "ลบโลโก้เมืองและคืนค่าเริ่มต้นเรียบร้อยแล้วค่ะ", type: "success" });
+        router.refresh();
+      } else {
+        const data = await res.json();
+        setThemeStatus({ message: data.error || "เกิดข้อผิดพลาดในการลบโลโก้", type: "error" });
+      }
+    } catch (err) {
+      setThemeStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    } finally {
+      setIsUploadingLogo(false);
+      setTimeout(() => setThemeStatus(null), 4000);
+    }
+  };
+
   if (loadingAuth) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh", color: "var(--text-secondary)" }}>
@@ -264,6 +394,319 @@ export default function AdminSettingsPage() {
           <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>จัดการสิทธิ์แอดมินของเว็บไซต์และตั้งค่าการเชื่อมต่อ Discord Webhook</p>
         </div>
       </div>
+
+      {/* Branding & Theme Customization */}
+      <section className="card" style={{ padding: "24px" }}>
+        <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
+          <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+            🎨 ตั้งค่าธีมและโลโก้เมือง (Branding & Theme Settings)
+          </h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
+            ปรับแต่งโทนสีหลักของเว็บไซต์ และอัปโหลดภาพโลโก้เมืองเพื่อแสดงเป็นภาพพื้นหลังและบนส่วนหัวของเมนูข้าง
+          </p>
+        </div>
+
+        <form onSubmit={handleSaveTheme} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "32px" }}>
+            
+            {/* Left Side: Accent Color & Background Properties */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              {/* Accent Color Section */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                  🎨 สีหลักของระบบ (Accent Color)
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                  {/* Preset Colors */}
+                  {[
+                    { hex: "#10b981", name: "Emerald Green" },
+                    { hex: "#3b82f6", name: "Sky Blue" },
+                    { hex: "#ef4444", name: "Crimson Red" },
+                    { hex: "#8b5cf6", name: "Amethyst Purple" },
+                    { hex: "#f59e0b", name: "Sunset Gold" },
+                  ].map((color) => (
+                    <button
+                      key={color.hex}
+                      type="button"
+                      onClick={() => setThemeAccentColor(color.hex)}
+                      title={color.name}
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "50%",
+                        background: color.hex,
+                        border: themeAccentColor.toLowerCase() === color.hex.toLowerCase() ? "3px solid white" : "1px solid rgba(255,255,255,0.2)",
+                        boxShadow: themeAccentColor.toLowerCase() === color.hex.toLowerCase() ? `0 0 10px ${color.hex}` : "none",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                        position: "relative"
+                      }}
+                    >
+                      {themeAccentColor.toLowerCase() === color.hex.toLowerCase() && (
+                        <span style={{ color: "white", fontSize: "12px", fontWeight: "bold", position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>✓</span>
+                      )}
+                    </button>
+                  ))}
+                  
+                  {/* Custom Picker Container */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "12px" }}>
+                    <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>ระบุเอง:</span>
+                    <input
+                      type="color"
+                      value={themeAccentColor}
+                      onChange={(e) => setThemeAccentColor(e.target.value)}
+                      style={{
+                        width: "36px",
+                        height: "32px",
+                        border: "1px solid var(--border)",
+                        background: "none",
+                        cursor: "pointer",
+                        borderRadius: "4px",
+                        padding: 0
+                      }}
+                    />
+                    <input
+                      type="text"
+                      maxLength={7}
+                      value={themeAccentColor}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val.startsWith("#") && val.length <= 7) {
+                          setThemeAccentColor(val);
+                        } else if (!val.startsWith("#") && val.length <= 6) {
+                          setThemeAccentColor("#" + val);
+                        }
+                      }}
+                      style={{
+                        width: "80px",
+                        padding: "6px 10px",
+                        background: "var(--bg-secondary)",
+                        border: "1px solid var(--border)",
+                        color: "var(--text-primary)",
+                        borderRadius: "6px",
+                        fontSize: "0.8rem",
+                        fontFamily: "var(--font-mono)"
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Opacity Slider */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                    ☀️ ความโปร่งใสโลโก้พื้นหลัง (Background Opacity)
+                  </label>
+                  <span style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--accent)" }}>
+                    {themeBgOpacity}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="40"
+                  value={themeBgOpacity}
+                  onChange={(e) => setThemeBgOpacity(Number(e.target.value))}
+                  style={{
+                    width: "100%",
+                    accentColor: "var(--accent)",
+                    background: "var(--bg-secondary)",
+                    height: "6px",
+                    borderRadius: "3px",
+                    outline: "none",
+                    cursor: "pointer"
+                  }}
+                />
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  ระดับความจางของโลโก้พื้นหลังไม่ให้บดบังเนื้อหา (แนะนำ: 3% - 15%)
+                </span>
+              </div>
+
+              {/* Background Style Toggle */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                  📐 รูปแบบการจัดวางพื้นหลัง (Background Style)
+                </label>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setThemeBgStyle("contain")}
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      background: themeBgStyle === "contain" ? "rgba(16, 185, 129, 0.15)" : "var(--bg-secondary)",
+                      border: `1px solid ${themeBgStyle === "contain" ? "var(--accent)" : "var(--border)"}`,
+                      color: themeBgStyle === "contain" ? "var(--accent-light)" : "var(--text-secondary)",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      fontSize: "0.85rem",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    📦 Centered Watermark
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setThemeBgStyle("cover")}
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      background: themeBgStyle === "cover" ? "rgba(16, 185, 129, 0.15)" : "var(--bg-secondary)",
+                      border: `1px solid ${themeBgStyle === "cover" ? "var(--accent)" : "var(--border)"}`,
+                      color: themeBgStyle === "cover" ? "var(--accent-light)" : "var(--text-secondary)",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      fontSize: "0.85rem",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    🖼️ Full Cover (เต็มจอ)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side: Logo Upload & Preview */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", height: "100%" }}>
+                <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                  🏙️ โลโก้เมือง (City Logo Image)
+                </label>
+                
+                {/* Upload / Preview Card */}
+                <div style={{
+                  flex: 1,
+                  minHeight: "180px",
+                  background: "var(--bg-secondary)",
+                  border: "2px dashed var(--border)",
+                  borderRadius: "12px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "20px",
+                  position: "relative",
+                  gap: "12px",
+                  overflow: "hidden"
+                }}>
+                  {themeLogoUrl ? (
+                    <>
+                      {/* Logo Preview */}
+                      <img
+                        src={themeLogoUrl}
+                        alt="Uploaded Logo Preview"
+                        style={{
+                          maxHeight: "120px",
+                          maxWidth: "100%",
+                          objectFit: "contain",
+                          filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))"
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        disabled={isUploadingLogo}
+                        style={{
+                          padding: "6px 12px",
+                          background: "rgba(239, 68, 68, 0.15)",
+                          border: "1px solid var(--danger)",
+                          color: "var(--danger)",
+                          borderRadius: "6px",
+                          fontSize: "0.8rem",
+                          fontWeight: "bold",
+                          cursor: "pointer",
+                          transition: "all 0.2s"
+                        }}
+                      >
+                        🗑️ ลบโลโก้เมือง
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: "2rem" }}>🏢</div>
+                      <div style={{ textAlign: "center" }}>
+                        <p style={{ fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: "500" }}>
+                          ยังไม่มีโลโก้เมืองผู้จัดตั้ง
+                        </p>
+                        <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                          รูปภาพจะแสดงในหน้าล็อกอิน เมนูด้านข้าง และเป็นภาพลายน้ำพื้นหลัง
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* File Input */}
+                  <div style={{ marginTop: "8px", width: "100%", display: "flex", justifyContent: "center" }}>
+                    <label style={{
+                      padding: "8px 16px",
+                      background: "rgba(16, 185, 129, 0.1)",
+                      border: "1px solid var(--border-glow)",
+                      color: "var(--accent-light)",
+                      borderRadius: "8px",
+                      fontSize: "0.8rem",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "all 0.2s",
+                      opacity: isUploadingLogo ? 0.6 : 1
+                    }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        disabled={isUploadingLogo}
+                        style={{ display: "none" }}
+                      />
+                      {isUploadingLogo ? "กำลังอัปโหลด..." : "📤 อัปโหลดโลโก้ใหม่"}
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Status Alert */}
+          {themeStatus && (
+            <div style={{
+              padding: "10px 14px",
+              borderRadius: "6px",
+              fontSize: "0.85rem",
+              background: themeStatus.type === "success" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+              border: `1px solid ${themeStatus.type === "success" ? "var(--success)" : "var(--danger)"}`,
+              color: themeStatus.type === "success" ? "var(--success)" : "var(--danger)"
+            }}>
+              {themeStatus.message}
+            </div>
+          )}
+
+          {/* Save Button */}
+          <button
+            type="submit"
+            disabled={isSavingTheme}
+            style={{
+              alignSelf: "flex-end",
+              padding: "10px 24px",
+              background: "var(--primary)",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              opacity: isSavingTheme ? 0.7 : 1,
+              transition: "all 0.2s"
+            }}
+          >
+            {isSavingTheme ? "กำลังบันทึก..." : "💾 บันทึกการตั้งค่าธีม"}
+          </button>
+        </form>
+      </section>
 
       {/* Webhook Configuration */}
       <section className="card" style={{ padding: "24px" }}>

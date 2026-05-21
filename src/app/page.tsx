@@ -1,14 +1,37 @@
 import { auth, signIn } from "@/auth";
 import { redirect } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
   const session = await auth();
   if (session?.user) redirect("/dashboard");
 
+  let logoUrl = "";
+  try {
+    const { data: logoSetting } = await supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "theme_logo_url")
+      .single();
+    if (logoSetting?.value) {
+      logoUrl = logoSetting.value;
+    }
+  } catch (err) {
+    console.error("[LoginPage Logo Fetch] Error:", err);
+  }
+
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-icon">🏥</div>
+        <div className="login-icon" style={{ background: logoUrl ? "transparent" : undefined, boxShadow: logoUrl ? "none" : undefined }}>
+          {logoUrl ? (
+            <img src={logoUrl} alt="City Logo" style={{ width: "70px", height: "70px", objectFit: "contain" }} />
+          ) : (
+            "🏥"
+          )}
+        </div>
         <h1 className="login-title">EMS Hospital</h1>
         <p className="login-subtitle">
           ระบบบันทึกเวรสำหรับแพทย์ FiveM<br />

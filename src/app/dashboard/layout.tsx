@@ -12,31 +12,38 @@ export default async function DashboardLayout({
   const session = await auth();
   if (!session?.user) redirect("/");
 
-  // Determine if the user is an OP for today
+  // Determine if the user is an OP for today and fetch theme settings
   const user = session.user as any;
   let isOp = user.role === "admin";
   const discordUsername = user.discordUsername;
+  let logoUrl = "";
 
-  if (!isOp && discordUsername) {
-    try {
-      const { data: scheduleData } = await supabase
-        .from("system_settings")
-        .select("value")
-        .eq("key", "op_schedule")
-        .single();
+  try {
+    const { data: settingsData } = await supabase
+      .from("system_settings")
+      .select("key, value")
+      .in("key", ["op_schedule", "theme_logo_url"]);
 
-      if (scheduleData?.value) {
-        // Calculate current day of the week in GMT+7
-        const thaiTime = new Date(new Date().getTime() + (7 * 60 * 60 * 1000));
-        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        const currentDay = dayNames[thaiTime.getUTCDay()];
+    const settings = (settingsData || []).reduce((acc: any, curr: any) => {
+      acc[curr.key] = curr.value;
+      return acc;
+    }, {});
 
-        const todayOPs = scheduleData.value[currentDay] || [];
-        isOp = todayOPs.includes(discordUsername);
-      }
-    } catch (err) {
-      console.error("[DashboardLayout OP Check] Error:", err);
+    if (settings.theme_logo_url) {
+      logoUrl = settings.theme_logo_url;
     }
+
+    if (!isOp && discordUsername && settings.op_schedule) {
+      // Calculate current day of the week in GMT+7
+      const thaiTime = new Date(new Date().getTime() + (7 * 60 * 60 * 1000));
+      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const currentDay = dayNames[thaiTime.getUTCDay()];
+
+      const todayOPs = settings.op_schedule[currentDay] || [];
+      isOp = todayOPs.includes(discordUsername);
+    }
+  } catch (err) {
+    console.error("[DashboardLayout OP/Logo Check] Error:", err);
   }
 
   const userWithOp = {
@@ -46,7 +53,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="app-layout">
-      <Sidebar user={userWithOp as any} />
+      <Sidebar user={userWithOp as any} logoUrl={logoUrl} />
       <main className="main-content">{children}</main>
       <MobileNav user={userWithOp as any} />
     </div>

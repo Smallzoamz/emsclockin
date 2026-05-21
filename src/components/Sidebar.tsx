@@ -13,15 +13,42 @@ interface SidebarProps {
     isOp?: boolean | null;
     discordId?: string | null;
   };
+  logoUrl?: string;
 }
 
-export function Sidebar({ user }: SidebarProps) {
+export function Sidebar({ user, logoUrl }: SidebarProps) {
   const pathname = usePathname();
 
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <div className="logo-icon">🏥</div>
+        <div 
+          className="logo-icon" 
+          style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            width: "40px", 
+            height: "40px", 
+            padding: logoUrl ? "4px" : "0", 
+            background: logoUrl ? "var(--bg-glass)" : undefined,
+            border: logoUrl ? "1px solid var(--border-subtle)" : undefined
+          }}
+        >
+          {logoUrl ? (
+            <img 
+              src={logoUrl} 
+              alt="City Logo" 
+              style={{ 
+                maxWidth: "100%", 
+                maxHeight: "100%", 
+                objectFit: "contain" 
+              }} 
+            />
+          ) : (
+            "🏥"
+          )}
+        </div>
         <div>
           <h1>EMS Clock-in</h1>
           <span>FiveM Hospital System</span>

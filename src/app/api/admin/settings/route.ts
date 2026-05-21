@@ -58,6 +58,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "เฉพาะบัญชีผู้ดูแลระบบหลักของเว็บ (Master Admin) เท่านั้นที่สามารถจัดการสิทธิ์ผู้ดูแลระบบได้" }, { status: 403 });
     }
 
+    // Restrict theme customization keys to Master Admin (credentials-based admins, i.e., no discordId)
+    const isThemeKey = ["theme_accent_color", "theme_logo_url", "theme_bg_opacity", "theme_bg_style"].includes(key);
+    if (isThemeKey && user.discordId) {
+      return NextResponse.json(
+        { error: "เฉพาะบัญชีผู้ดูแลระบบหลัก (Master Admin) เท่านั้นที่สามารถปรับแต่งธีมระบบได้ค่ะ" },
+        { status: 403 }
+      );
+    }
+
     const { error } = await supabase
       .from("system_settings")
       .upsert({ key, value, updated_at: new Date().toISOString() });
