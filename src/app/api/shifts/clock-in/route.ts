@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
 import { sendDiscordWebhook } from "@/lib/discord-webhook";
 import { formatThaiDate } from "@/lib/utils";
-import { syncOpQueueToDiscord } from "@/lib/op-discord-sync";
+import { queueSyncOpQueueToDiscord } from "@/lib/op-discord-sync";
 
 export async function POST() {
   const session = await auth();
@@ -75,8 +75,8 @@ export async function POST() {
       await supabase.from("shifts").update({ discord_message_id: messageId }).eq("id", newShift.id);
     }
 
-    // Update OP Discord queue message in real-time
-    syncOpQueueToDiscord().catch(err => console.error("OP Discord sync error:", err));
+    // Update OP Discord queue message in real-time (via coalesced queue)
+    queueSyncOpQueueToDiscord();
 
     return NextResponse.json({
       success: true,

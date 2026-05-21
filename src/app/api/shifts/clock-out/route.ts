@@ -8,7 +8,7 @@ import {
   calcDurationMinutes,
   getCurrentWeekRange,
 } from "@/lib/utils";
-import { syncOpQueueToDiscord, teardownOpQueue } from "@/lib/op-discord-sync";
+import { queueSyncOpQueueToDiscord, teardownOpQueue } from "@/lib/op-discord-sync";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -169,8 +169,8 @@ export async function POST(req: Request) {
       // clear op_queue_state, delete queue message and post daily summary.
       teardownOpQueue().catch(err => console.error("OP Teardown error:", err));
     } else {
-      // Otherwise, update OP Discord queue message normally in real-time
-      syncOpQueueToDiscord().catch(err => console.error("OP Discord sync error:", err));
+      // Otherwise, update OP Discord queue message normally in real-time (via coalesced queue)
+      queueSyncOpQueueToDiscord();
     }
 
     return NextResponse.json({

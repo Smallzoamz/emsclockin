@@ -1,37 +1,44 @@
 import { supabase } from "@/lib/supabase";
 import { formatThaiDate } from "@/lib/utils";
 
-// Module-level debounce state for Discord sync
-let syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-let syncDebounceResolvers: Array<() => void> = [];
+// Module-level state for Discord sync queue
+let isSyncing = false;
+let hasPendingSync = false;
+let pendingSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
- * Debounced version of syncOpQueueToDiscord.
- * Coalesces rapid queue updates into a single Discord API call.
- * Waits `delay` ms after the last call before syncing.
+ * Queues a Discord sync task.
+ * If a sync is already running, it schedules a pending sync.
+ * Ensures only one sync executes at a time and consecutive syncs are spaced by at least 1.2 seconds.
  */
-export function debouncedSyncOpQueueToDiscord(delay = 1500): Promise<void> {
-  return new Promise<void>((resolve) => {
-    syncDebounceResolvers.push(resolve);
+export function queueSyncOpQueueToDiscord() {
+  if (isSyncing) {
+    hasPendingSync = true;
+    return;
+  }
 
-    if (syncDebounceTimer) {
-      clearTimeout(syncDebounceTimer);
-    }
+  isSyncing = true;
+  hasPendingSync = false;
 
-    syncDebounceTimer = setTimeout(async () => {
-      syncDebounceTimer = null;
-      const resolvers = [...syncDebounceResolvers];
-      syncDebounceResolvers = [];
+  // Clear any existing timer to be safe
+  if (pendingSyncTimer) {
+    clearTimeout(pendingSyncTimer);
+    pendingSyncTimer = null;
+  }
 
-      try {
-        await syncOpQueueToDiscord();
-      } catch (err) {
-        console.error("[OP Sync Debounced] Error:", err);
+  // Run the sync
+  syncOpQueueToDiscord()
+    .catch((err) => console.error("[Queue Sync] Error:", err))
+    .finally(() => {
+      isSyncing = false;
+      if (hasPendingSync) {
+        // Space out consecutive requests by 1.2 seconds to respect Discord rate limits
+        pendingSyncTimer = setTimeout(() => {
+          pendingSyncTimer = null;
+          queueSyncOpQueueToDiscord();
+        }, 1200);
       }
-
-      resolvers.forEach(r => r());
-    }, delay);
-  });
+    });
 }
 
 /**

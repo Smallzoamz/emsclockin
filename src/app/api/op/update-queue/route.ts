@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
-import { debouncedSyncOpQueueToDiscord } from "@/lib/op-discord-sync";
+import { queueSyncOpQueueToDiscord } from "@/lib/op-discord-sync";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -54,8 +54,8 @@ export async function POST(req: Request) {
 
     if (error) throw error;
 
-    // Trigger debounced async sync to Discord message (coalesces rapid updates)
-    debouncedSyncOpQueueToDiscord().catch(err => console.error("Discord sync error:", err));
+    // Queue the sync to Discord (non-blocking, rate-limit friendly, and serialized)
+    queueSyncOpQueueToDiscord();
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
