@@ -5,7 +5,9 @@ import { th } from "date-fns/locale";
  * Format date to Thai locale string
  */
 export function formatThaiDate(date: Date): string {
-  return format(date, "d MMM yyyy HH:mm น.", { locale: th });
+  // Convert date to Asia/Bangkok timezone representation
+  const tzDate = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+  return format(tzDate, "d MMM yyyy HH:mm น.", { locale: th });
 }
 
 /**
