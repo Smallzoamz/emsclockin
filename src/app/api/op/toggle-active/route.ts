@@ -91,10 +91,9 @@ export async function POST(req: Request) {
       // Stopping OP: Update database status first so embeds will render as CLOSED
       await Promise.all([
         supabase.from("system_settings").upsert({ key: "op_active", value: false }, { onConflict: "key" }),
-        supabase.from("system_settings").upsert({ key: "op_opened_by", value: null }, { onConflict: "key" })
       ]);
 
-      // Teardown: Delete queue message, send summary report, clear op_queue_state & message ID
+      // Teardown: Delete queue message, send summary report, clear op_queue_state, message ID & OP owner
       await teardownOpQueue();
     }
 

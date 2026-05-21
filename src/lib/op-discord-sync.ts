@@ -333,10 +333,32 @@ export async function teardownOpQueue() {
 
     // Filter recent shifts by opOpenedAt in memory
     const opOpenedAt = settings.op_opened_at;
+    const opOpenedBy = settings.op_opened_by;
+
     let recentShifts: any[] = [];
     if (opOpenedAt && recentShiftsRes.data) {
       recentShifts = recentShiftsRes.data.filter((shift: any) => shift.clock_out >= opOpenedAt);
     }
+
+    const opOpenerEmail = opOpenedBy?.email;
+    const opOpenerDoc = registeredDoctors.find((d: any) => d.email === opOpenerEmail);
+    const opOpenerName = opOpenerDoc?.name || opOpenedBy?.discordUsername || "ไม่ระบุ";
+
+    const opOpenerMention = opOpenerDoc?.discordId
+      ? `<@${opOpenerDoc.discordId}>`
+      : (opOpenedBy?.discordUsername ? `\`@${opOpenedBy.discordUsername}\`` : "");
+
+    // Fallback: calculate today's day & scheduled OPs if opener not set
+    const opSchedule = settings.op_schedule || {};
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const currentDay = dayNames[new Date(new Date().getTime() + 7 * 60 * 60 * 1000).getUTCDay()];
+    const todayOps = opSchedule[currentDay] || [];
+    const fallbackOpNames = todayOps.map((username: string) => {
+      const doc = registeredDoctors.find((d: any) => d.discordUsername === username);
+      return doc ? doc.name : `@${username}`;
+    }).join(", ") || "ไม่ระบุ";
+
+    const opDisplayNames = opOpenerName !== "ไม่ระบุ" ? opOpenerName : fallbackOpNames;
 
     // Format lists of doctors
     const formatActiveList = () => {
@@ -363,9 +385,10 @@ export async function teardownOpQueue() {
       title: "📋 สรุปรายงานเวรแพทย์ — EMS Hospital",
       color: 0xef4444, // Red / Closed color
       description: [
+        `**👤 ผู้ปฏิบัติหน้าที่ OP:** ${opOpenerMention ? `${opOpenerMention} (${opOpenerName})` : `\`${opDisplayNames}\``}`,
         `**📅 วันที่/เวลาปิดเวร:** \`${formatThaiDate(now)}\``,
         `**🏥 สถานะระบบ OP:** \`🔴 ปิดปฏิบัติงานจัดคิว OP แล้ว\``,
-      ].join("\n"),
+      ].filter(Boolean).join("\n"),
       fields: [
         {
           name: "🟢 แพทย์ที่ยังเข้าเวรอยู่ (On Duty)",
@@ -419,10 +442,11 @@ export async function teardownOpQueue() {
       console.error(`[OP Teardown] Discord API returned ${postRes.status} for summary: ${errText}`);
     }
 
-    // 7. Clear state and message ID
+    // 7. Clear state, message ID, and OP owner
     await Promise.all([
       supabase.from("system_settings").upsert({ key: "op_discord_message_id", value: null }, { onConflict: "key" }),
-      supabase.from("system_settings").upsert({ key: "op_queue_state", value: {} }, { onConflict: "key" })
+      supabase.from("system_settings").upsert({ key: "op_queue_state", value: {} }, { onConflict: "key" }),
+      supabase.from("system_settings").upsert({ key: "op_opened_by", value: null }, { onConflict: "key" })
     ]);
   } catch (err: any) {
     console.error("[OP Teardown] Error in teardownOpQueue:", err);
