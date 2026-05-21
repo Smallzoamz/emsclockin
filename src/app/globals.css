@@ -1485,23 +1485,46 @@ body::before {
 }
 
 /* ===== Spreadsheet Responsive Rules ===== */
-@media (max-width: 1100px) {
+@media (max-width: 1400px) {
   .spreadsheet-toolbar {
-    flex-direction: column;
-    align-items: stretch;
+    flex-wrap: wrap;
     gap: 16px;
     padding: 16px 20px;
   }
   
-  .spreadsheet-toolbar .toolbar-group {
+  .spreadsheet-toolbar .toolbar-group:not(.right) {
+    flex: 0 1 auto;
+  }
+  
+  .spreadsheet-toolbar .toolbar-group.right {
+    flex: 1 0 100%;
+    width: 100%;
+    margin-top: 4px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px !important;
+  }
+  
+  .summary-box {
+    align-items: center;
+    text-align: center;
+    padding: 10px;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 960px) {
+  .spreadsheet-toolbar .toolbar-group:not(.right) {
     width: 100%;
     justify-content: space-between;
   }
   
   .spreadsheet-toolbar .toolbar-group.right {
-    justify-content: space-between;
-    gap: 16px !important;
-    width: 100%;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .summary-remaining {
+    grid-column: span 2;
   }
 }
 
@@ -1529,24 +1552,6 @@ body::before {
     font-size: 0.95rem;
   }
   
-  .spreadsheet-toolbar .toolbar-group.right {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px !important;
-    width: 100%;
-  }
-  
-  .summary-box {
-    align-items: center;
-    text-align: center;
-    padding: 10px;
-    min-width: 0;
-  }
-  
-  .summary-remaining {
-    grid-column: span 2;
-  }
-  
   .btn-manage-ranks {
     width: 100%;
     justify-content: center;
@@ -1554,7 +1559,7 @@ body::before {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 540px) {
   .spreadsheet-toolbar .toolbar-group.right {
     grid-template-columns: 1fr;
   }
