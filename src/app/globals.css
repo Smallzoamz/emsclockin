@@ -1309,9 +1309,9 @@ body::before {
 .toggle-switch-wrap {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 14px;
-  border-radius: 8px;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 6px;
   background: rgba(0,0,0,0.2);
   border: 1px solid var(--border-subtle);
   transition: all 0.3s ease;
@@ -1325,8 +1325,8 @@ body::before {
 
 .toggle-switch {
   position: relative;
-  width: 44px;
-  height: 24px;
+  width: 36px;
+  height: 20px;
   flex-shrink: 0;
 }
 
@@ -1346,15 +1346,15 @@ body::before {
   bottom: 0;
   background: var(--bg-tertiary, rgba(55, 65, 81, 0.6));
   border: 1px solid var(--border-subtle);
-  border-radius: 24px;
+  border-radius: 20px;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .toggle-slider::before {
   position: absolute;
   content: "";
-  height: 18px;
-  width: 18px;
+  height: 14px;
+  width: 14px;
   left: 2px;
   bottom: 2px;
   background: var(--text-secondary);
@@ -1370,7 +1370,7 @@ body::before {
 }
 
 .toggle-switch input:checked + .toggle-slider::before {
-  transform: translateX(20px);
+  transform: translateX(18px);
   background: var(--accent);
   box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
 }
@@ -1381,7 +1381,7 @@ body::before {
 }
 
 .toggle-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-secondary);
   line-height: 1.3;
