@@ -73,6 +73,7 @@ export default function BonusCalculatorPage() {
   const [showRankModal, setShowRankModal] = useState(false);
   const [rankForm, setRankForm] = useState<DoctorRank>({ id: "", name: "", rate: 50000 });
   const [bonusThreshold, setBonusThreshold] = useState<number>(20);
+  const [fiftyPercentMode, setFiftyPercentMode] = useState<boolean>(false);
 
   // Dates
   const now = new Date();
@@ -104,6 +105,7 @@ export default function BonusCalculatorPage() {
            if (settingsData.settings.user_ranks) setUserRanks(settingsData.settings.user_ranks);
            if (settingsData.settings.user_names) setUserNames(settingsData.settings.user_names);
            if (settingsData.settings.bonus_threshold) setBonusThreshold(Number(settingsData.settings.bonus_threshold));
+           if (settingsData.settings.bonus_50_percent_mode !== undefined) setFiftyPercentMode(!!settingsData.settings.bonus_50_percent_mode);
         }
         
         setLoading(false);
@@ -138,8 +140,15 @@ export default function BonusCalculatorPage() {
       });
 
       const grandTotal = snapshotDataWithRanks.reduce((acc, curr) => {
-        if (curr.totalHours < bonusThreshold) return acc; // Exclude unpaid
-        return acc + (Math.floor(curr.totalHours) * (curr.appliedRate || 0)) + (curr.carriedOverBonus || 0);
+        const baseBonus = Math.floor(curr.totalHours) * (curr.appliedRate || 0);
+        const carried = curr.carriedOverBonus || 0;
+        if (curr.totalHours < bonusThreshold) {
+          if (fiftyPercentMode) {
+            return acc + Math.floor(baseBonus * 0.5) + carried;
+          }
+          return acc; // Exclude unpaid (carried over to next week)
+        }
+        return acc + baseBonus + carried;
       }, 0);
 
       const res = await fetch("/api/admin/bonus-history", {
@@ -310,17 +319,24 @@ export default function BonusCalculatorPage() {
   const totalHoursAll = activeData.reduce((acc, curr) => acc + curr.totalHours, 0);
   
   const totalBonusAll = activeData.reduce((acc, curr) => {
-    if (curr.totalHours < bonusThreshold) return acc; // Exclude from hospital fund deduction
-    
+    let rate = 0;
     if (isLive) {
       const rankId = curr.email ? userRanks[curr.email] : undefined;
       const rank = doctorRanks.find(r => r.id === rankId);
-      const rate = rank ? rank.rate : 0;
-      return acc + (Math.floor(curr.totalHours) * rate) + (curr.carriedOverBonus || 0);
+      rate = rank ? rank.rate : 0;
     } else {
-      // Historical data has appliedRate
-      return acc + (Math.floor(curr.totalHours) * (curr.appliedRate || curr.bonus_rate || 0)) + (curr.carriedOverBonus || 0);
+      rate = curr.appliedRate || curr.bonus_rate || 0;
     }
+    const baseBonus = Math.floor(curr.totalHours) * rate;
+    const carried = curr.carriedOverBonus || 0;
+
+    if (curr.totalHours < bonusThreshold) {
+      if (fiftyPercentMode) {
+        return acc + Math.floor(baseBonus * 0.5) + carried;
+      }
+      return acc; // Exclude from hospital fund deduction
+    }
+    return acc + baseBonus + carried;
   }, 0);
   
   const remainingFund = activeFund - totalBonusAll;
@@ -406,6 +422,36 @@ export default function BonusCalculatorPage() {
             />
           </div>
         </div>
+        <div className={`toggle-switch-wrap${fiftyPercentMode ? ' active' : ''}`}>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={fiftyPercentMode}
+              onChange={(e) => {
+                const newVal = e.target.checked;
+                setFiftyPercentMode(newVal);
+                fetch("/api/admin/settings", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ key: "bonus_50_percent_mode", value: newVal })
+                });
+              }}
+            />
+            <span className="toggle-slider"></span>
+          </label>
+          <span className="toggle-label" onClick={() => {
+            const newVal = !fiftyPercentMode;
+            setFiftyPercentMode(newVal);
+            fetch("/api/admin/settings", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ key: "bonus_50_percent_mode", value: newVal })
+            });
+          }}>
+            โหมด 50%
+            {fiftyPercentMode && <span className="toggle-badge">ON</span>}
+          </span>
+        </div>
         
         <div className="toolbar-group right">
           <div className="summary-box summary-initial">
@@ -478,7 +524,9 @@ export default function BonusCalculatorPage() {
 
                 const baseBonus = Math.floor(entry.totalHours) * appliedRate;
                 const carriedOverBonus = entry.carriedOverBonus || 0;
-                const bonusAmount = baseBonus + carriedOverBonus;
+                const isBelowThreshold = entry.totalHours < bonusThreshold;
+                const effectiveBaseBonus = (isBelowThreshold && fiftyPercentMode) ? Math.floor(baseBonus * 0.5) : baseBonus;
+                const bonusAmount = isBelowThreshold && !fiftyPercentMode ? 0 : effectiveBaseBonus + carriedOverBonus;
                 
                 return (
                   <tr key={idx}>
@@ -538,12 +586,29 @@ export default function BonusCalculatorPage() {
                     <td 
                       className="cell number highlight-cell" 
                       style={{ 
-                        color: entry.totalHours < bonusThreshold ? "#ef4444" : "var(--accent)" 
+                        color: isBelowThreshold
+                          ? (fiftyPercentMode ? "#f59e0b" : "#ef4444")
+                          : "var(--accent)" 
                       }}
-                      title={entry.totalHours < bonusThreshold ? `ชั่วโมงไม่ถึงเกณฑ์ (ขั้นต่ำ ${bonusThreshold} ชม.)` : ""}
+                      title={isBelowThreshold ? (
+                        fiftyPercentMode
+                          ? `ชั่วโมงไม่ถึงเกณฑ์ (${bonusThreshold} ชม.) — ได้รับ 50%`
+                          : `ชั่วโมงไม่ถึงเกณฑ์ (ขั้นต่ำ ${bonusThreshold} ชม.) — ยกไปสัปดาห์หน้า`
+                      ) : ""}
                     >
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-                        <span>$ {bonusAmount.toLocaleString("en-US")}</span>
+                        {isBelowThreshold && !fiftyPercentMode ? (
+                          <span style={{ color: "#ef4444", fontSize: "0.85rem" }}>— ยกยอด</span>
+                        ) : (
+                          <>
+                            <span>$ {bonusAmount.toLocaleString("en-US")}</span>
+                            {isBelowThreshold && fiftyPercentMode && (
+                              <span style={{ fontSize: "0.7rem", color: "#f59e0b", fontWeight: 600 }}>
+                                (50% ลดจาก ${(baseBonus + carriedOverBonus).toLocaleString()})
+                              </span>
+                            )}
+                          </>
+                        )}
                         {carriedOverBonus > 0 && (
                           <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                             (ยกยอดมา $ {carriedOverBonus.toLocaleString()})
@@ -554,7 +619,6 @@ export default function BonusCalculatorPage() {
                     {!isLive && (
                       <td className="cell" style={{ textAlign: "center" }}>
                         {(() => {
-                          const isBelowThreshold = entry.totalHours < bonusThreshold;
                           const isPaid = entry.email ? !!payoutMap[entry.email] : false;
                           const isPaying = payingEmail === entry.email;
                           const windowStatus = getPayoutWindowStatus(selectedHistoryId);
@@ -571,7 +635,7 @@ export default function BonusCalculatorPage() {
                               }}>✅ จ่ายแล้ว</span>
                             );
                           }
-                          if (isBelowThreshold) {
+                          if (isBelowThreshold && !fiftyPercentMode) {
                             return (
                               <span style={{
                                 background: "rgba(107, 114, 128, 0.15)",
@@ -579,7 +643,7 @@ export default function BonusCalculatorPage() {
                                 padding: "6px 12px",
                                 borderRadius: "6px",
                                 fontSize: "0.8rem",
-                              }} title={`ชั่วโมงไม่ถึง ${bonusThreshold} ชม.`}>—</span>
+                              }} title={`ชั่วโมงไม่ถึง ${bonusThreshold} ชม. — ยกยอดไปสัปดาห์หน้า`}>—</span>
                             );
                           }
                           if (!windowStatus.canPay) {
