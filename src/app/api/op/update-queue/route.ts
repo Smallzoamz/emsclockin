@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
-import { queueSyncOpQueueToDiscord } from "@/lib/op-discord-sync";
+import { syncOpQueueToDiscord } from "@/lib/op-discord-sync";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -54,8 +54,8 @@ export async function POST(req: Request) {
 
     if (error) throw error;
 
-    // Queue the sync to Discord (non-blocking, rate-limit friendly, and serialized)
-    queueSyncOpQueueToDiscord();
+    // Sync to Discord immediately and await completion (critical in Serverless environments)
+    await syncOpQueueToDiscord();
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
