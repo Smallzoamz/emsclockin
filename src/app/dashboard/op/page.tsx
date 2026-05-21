@@ -436,7 +436,7 @@ export default function OpQueuePage() {
                 padding: "2px 8px",
                 borderRadius: "12px",
                 border: "1px solid " + (opActive ? "transparent" : "var(--border)"),
-                boxShadow: opActive ? "0 0 8px rgba(16, 185, 129, 0.4)" : "none"
+                boxShadow: opActive ? "0 0 8px var(--accent-glow)" : "none"
               }}
             >
               {opActive ? "🟢 OP กำลังปฏิบัติงาน" : "🔴 ปิดปฏิบัติงาน OP"}
@@ -460,7 +460,7 @@ export default function OpQueuePage() {
               cursor: (opActive && !isOpOwner && !isUserAdmin) ? "not-allowed" : "pointer",
               fontWeight: "bold",
               fontSize: "0.9rem",
-              boxShadow: (opActive && !isOpOwner && !isUserAdmin) ? "none" : opActive ? "0 4px 6px rgba(239, 68, 68, 0.25)" : "0 4px 6px rgba(16, 185, 129, 0.25)",
+              boxShadow: (opActive && !isOpOwner && !isUserAdmin) ? "none" : opActive ? "0 4px 6px rgba(239, 68, 68, 0.25)" : "0 4px 6px color-mix(in srgb, var(--accent) 25%, transparent)",
               transition: "all 0.2s"
             }}
           >
@@ -692,7 +692,7 @@ export default function OpQueuePage() {
                     background: "var(--bg-card)",
                     padding: "12px 14px",
                     borderRadius: "10px",
-                    border: `1px solid ${isCompleted ? "var(--border)" : "rgba(16, 185, 129, 0.3)"}`,
+                    border: `1px solid ${isCompleted ? "var(--border)" : "color-mix(in srgb, var(--accent) 30%, transparent)"}`,
                     display: "flex",
                     alignItems: "center",
                     gap: "10px",
@@ -706,7 +706,7 @@ export default function OpQueuePage() {
                   ) : (
                     <div style={{
                       width: "34px", height: "34px", borderRadius: "50%",
-                      background: isCompleted ? "var(--bg-secondary)" : "rgba(16, 185, 129, 0.15)",
+                      background: isCompleted ? "var(--bg-secondary)" : "color-mix(in srgb, var(--accent) 15%, transparent)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: "0.9rem",
                       color: isCompleted ? "var(--text-muted)" : "var(--success)",
@@ -904,7 +904,7 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
                 borderRadius: "3px",
                 fontWeight: "bold",
                 flexShrink: 0,
-                boxShadow: "0 0 6px rgba(16, 185, 129, 0.4)"
+                boxShadow: "0 0 6px var(--accent-glow)"
               }}>
                 รับเคส
               </span>
@@ -945,8 +945,8 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
                 style={{
                   width: "28px",
                   height: "28px",
-                  background: "rgba(16, 185, 129, 0.1)",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
+                  background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
                   borderRadius: "6px",
                   cursor: "pointer",
                   display: "flex",
@@ -955,8 +955,8 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
                   fontSize: "0.9rem",
                   transition: "all 0.15s"
                 }}
-                onMouseOver={e => e.currentTarget.style.background = "rgba(16, 185, 129, 0.25)"}
-                onMouseOut={e => e.currentTarget.style.background = "rgba(16, 185, 129, 0.1)"}
+                onMouseOver={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 25%, transparent)"}
+                onMouseOut={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 10%, transparent)"}
               >
                 🟢
               </button>
@@ -1042,8 +1042,8 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
               style={{
                 width: "28px",
                 height: "28px",
-                background: "rgba(16, 185, 129, 0.1)",
-                border: "1px solid rgba(16, 185, 129, 0.2)",
+                background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
                 borderRadius: "6px",
                 cursor: "pointer",
                 display: "flex",
@@ -1052,8 +1052,8 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
                 fontSize: "0.9rem",
                 transition: "all 0.15s"
               }}
-              onMouseOver={e => e.currentTarget.style.background = "rgba(16, 185, 129, 0.25)"}
-              onMouseOut={e => e.currentTarget.style.background = "rgba(16, 185, 129, 0.1)"}
+              onMouseOver={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 25%, transparent)"}
+              onMouseOut={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 10%, transparent)"}
             >
               🟢
             </button>
@@ -1067,8 +1067,8 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
               style={{
                 width: "28px",
                 height: "28px",
-                background: "rgba(16, 185, 129, 0.1)",
-                border: "1px solid rgba(16, 185, 129, 0.2)",
+                background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
                 borderRadius: "6px",
                 cursor: "pointer",
                 display: "flex",
@@ -1077,8 +1077,8 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
                 fontSize: "0.9rem",
                 transition: "all 0.15s"
               }}
-              onMouseOver={e => e.currentTarget.style.background = "rgba(16, 185, 129, 0.25)"}
-              onMouseOut={e => e.currentTarget.style.background = "rgba(16, 185, 129, 0.1)"}
+              onMouseOver={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 25%, transparent)"}
+              onMouseOut={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 10%, transparent)"}
             >
               🟢
             </button>

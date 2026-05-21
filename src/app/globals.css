@@ -7,13 +7,14 @@
   --bg-card: rgba(15, 23, 42, 0.7);
   --bg-card-hover: rgba(20, 30, 55, 0.8);
   --bg-glass: rgba(15, 23, 42, 0.5);
-  --border-subtle: rgba(56, 189, 148, 0.12);
-  --border-glow: rgba(16, 185, 129, 0.3);
+  --border-subtle: color-mix(in srgb, var(--accent) 12%, transparent);
+  --border-glow: color-mix(in srgb, var(--accent) 30%, transparent);
 
   --accent: #10b981;
-  --accent-light: #34d399;
-  --accent-glow: rgba(16, 185, 129, 0.4);
-  --bg-glow-color: rgba(16, 185, 129, 0.06);
+  --accent-light: color-mix(in srgb, var(--accent) 80%, white);
+  --accent-glow: color-mix(in srgb, var(--accent) 40%, transparent);
+  --bg-glow-color: color-mix(in srgb, var(--accent) 6%, transparent);
+  --success: var(--accent);
   --danger: #ef4444;
   --danger-glow: rgba(239, 68, 68, 0.4);
   --warning: #f59e0b;
@@ -149,7 +150,7 @@ body::before {
 }
 
 .nav-link.active {
-  background: rgba(16, 185, 129, 0.1);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--accent-light);
   border-color: var(--border-glow);
 }
@@ -227,7 +228,7 @@ body::before {
   height: 220px;
   border-radius: var(--radius-full);
   border: 3px solid var(--accent);
-  background: radial-gradient(circle at center, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--accent) 15%, transparent) 0%, transparent 70%);
   color: var(--accent-light);
   font-family: var(--font-ui);
   font-size: 1.2rem;
@@ -240,12 +241,12 @@ body::before {
   justify-content: center;
   gap: 8px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 30px var(--accent-glow), inset 0 0 30px rgba(16, 185, 129, 0.05);
+  box-shadow: 0 0 30px var(--accent-glow), inset 0 0 30px color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
 .clock-btn:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 50px var(--accent-glow), inset 0 0 40px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 50px var(--accent-glow), inset 0 0 40px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .clock-btn:active {
@@ -329,7 +330,7 @@ body::before {
 }
 
 .status-badge.on-duty {
-  background: rgba(16, 185, 129, 0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
   color: var(--accent-light);
   border: 1px solid var(--border-glow);
 }
@@ -427,7 +428,7 @@ body::before {
 }
 
 .chart-bar.bonus {
-  background: linear-gradient(to top, #10b981, #34d399);
+  background: linear-gradient(to top, var(--accent), var(--accent-light));
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
@@ -731,7 +732,7 @@ body::before {
 }
 
 .toast.success {
-  background: rgba(16, 185, 129, 0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
   border: 1px solid var(--border-glow);
   color: var(--accent-light);
 }
@@ -854,7 +855,7 @@ body::before {
 }
 
 .bonus-badge.eligible {
-  background: rgba(16, 185, 129, 0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
   color: var(--accent-light);
   border: 1px solid var(--border-glow);
 }

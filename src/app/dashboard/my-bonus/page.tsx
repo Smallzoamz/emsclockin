@@ -107,13 +107,13 @@ export default function MyBonusPage() {
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
-                  background: "rgba(16, 185, 129, 0.1)",
-                  color: "#10b981",
+                  background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                  color: "var(--accent-light)",
                   padding: "6px 14px",
                   borderRadius: "20px",
                   fontSize: "0.8rem",
                   fontWeight: "bold",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
+                  border: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
                 }}>
                   ✅ ได้รับโบนัสแล้ว
                   {bonus.paid_at && (
@@ -181,10 +181,10 @@ export default function MyBonusPage() {
                   </div>
 
                   <div style={{ 
-                    background: bonus.is_below_threshold ? "rgba(239, 68, 68, 0.1)" : bonus.is_paid ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.1)", 
+                    background: bonus.is_below_threshold ? "rgba(239, 68, 68, 0.1)" : bonus.is_paid ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "rgba(245, 158, 11, 0.1)", 
                     padding: "16px 24px", 
                     borderRadius: "12px", 
-                    border: bonus.is_below_threshold ? "1px solid rgba(239, 68, 68, 0.2)" : bonus.is_paid ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(245, 158, 11, 0.2)", 
+                    border: bonus.is_below_threshold ? "1px solid rgba(239, 68, 68, 0.2)" : bonus.is_paid ? "1px solid color-mix(in srgb, var(--accent) 30%, transparent)" : "1px solid rgba(245, 158, 11, 0.2)", 
                     textAlign: "right", 
                     minWidth: "200px",
                     display: "flex",
@@ -195,7 +195,7 @@ export default function MyBonusPage() {
                     <div style={{ 
                       fontSize: "2rem", 
                       fontWeight: "800", 
-                      color: bonus.is_below_threshold ? "#ef4444" : bonus.is_paid ? "#10b981" : "#f59e0b", 
+                      color: bonus.is_below_threshold ? "#ef4444" : bonus.is_paid ? "var(--accent-light)" : "#f59e0b", 
                       fontFamily: "var(--font-mono)" 
                     }}>
                       $ {bonus.my_bonus.toLocaleString("en-US")}

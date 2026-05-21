@@ -535,7 +535,7 @@ export default function AdminSettingsPage() {
                     style={{
                       flex: 1,
                       padding: "10px",
-                      background: themeBgStyle === "contain" ? "rgba(16, 185, 129, 0.15)" : "var(--bg-secondary)",
+                      background: themeBgStyle === "contain" ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "var(--bg-secondary)",
                       border: `1px solid ${themeBgStyle === "contain" ? "var(--accent)" : "var(--border)"}`,
                       color: themeBgStyle === "contain" ? "var(--accent-light)" : "var(--text-secondary)",
                       borderRadius: "8px",
@@ -553,7 +553,7 @@ export default function AdminSettingsPage() {
                     style={{
                       flex: 1,
                       padding: "10px",
-                      background: themeBgStyle === "cover" ? "rgba(16, 185, 129, 0.15)" : "var(--bg-secondary)",
+                      background: themeBgStyle === "cover" ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "var(--bg-secondary)",
                       border: `1px solid ${themeBgStyle === "cover" ? "var(--accent)" : "var(--border)"}`,
                       color: themeBgStyle === "cover" ? "var(--accent-light)" : "var(--text-secondary)",
                       borderRadius: "8px",
@@ -642,7 +642,7 @@ export default function AdminSettingsPage() {
                   <div style={{ marginTop: "8px", width: "100%", display: "flex", justifyContent: "center" }}>
                     <label style={{
                       padding: "8px 16px",
-                      background: "rgba(16, 185, 129, 0.1)",
+                      background: "color-mix(in srgb, var(--accent) 10%, transparent)",
                       border: "1px solid var(--border-glow)",
                       color: "var(--accent-light)",
                       borderRadius: "8px",
@@ -677,7 +677,7 @@ export default function AdminSettingsPage() {
               padding: "10px 14px",
               borderRadius: "6px",
               fontSize: "0.85rem",
-              background: themeStatus.type === "success" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+              background: themeStatus.type === "success" ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "rgba(239, 68, 68, 0.1)",
               border: `1px solid ${themeStatus.type === "success" ? "var(--success)" : "var(--danger)"}`,
               color: themeStatus.type === "success" ? "var(--success)" : "var(--danger)"
             }}>
@@ -764,7 +764,7 @@ export default function AdminSettingsPage() {
               padding: "10px 14px",
               borderRadius: "6px",
               fontSize: "0.85rem",
-              background: webhookStatus.type === "success" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+              background: webhookStatus.type === "success" ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "rgba(239, 68, 68, 0.1)",
               border: `1px solid ${webhookStatus.type === "success" ? "var(--success)" : "var(--danger)"}`,
               color: webhookStatus.type === "success" ? "var(--success)" : "var(--danger)"
             }}>

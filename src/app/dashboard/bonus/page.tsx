@@ -452,7 +452,7 @@ export default function BonusCalculatorPage() {
             <span className="summary-label" style={{ color: "var(--text-secondary)" }}>หักโบนัสสัปดาห์นี้</span>
             <span className="summary-value" style={{ color: "#ef4444" }}>- $ {totalBonusAll.toLocaleString("en-US")}</span>
           </div>
-          <div className="summary-box" style={{ background: "rgba(16, 185, 129, 0.15)", borderColor: "rgba(16, 185, 129, 0.4)", padding: "8px 20px" }}>
+          <div className="summary-box" style={{ background: "color-mix(in srgb, var(--accent) 15%, transparent)", borderColor: "color-mix(in srgb, var(--accent) 40%, transparent)", padding: "8px 20px" }}>
             <span className="summary-label" style={{ color: "var(--text-primary)", fontWeight: "bold" }}>คงเหลือเข้าโรงพยาบาล</span>
             <span className="summary-value" style={{ fontSize: "1.4rem", color: "var(--accent)" }}>$ {remainingFund.toLocaleString("en-US")}</span>
           </div>
@@ -616,8 +616,8 @@ export default function BonusCalculatorPage() {
                           if (isPaid) {
                             return (
                               <span style={{
-                                background: "rgba(16, 185, 129, 0.15)",
-                                color: "#10b981",
+                                background: "color-mix(in srgb, var(--accent) 15%, transparent)",
+                                color: "var(--accent-light)",
                                 padding: "6px 12px",
                                 borderRadius: "6px",
                                 fontSize: "0.8rem",
@@ -652,9 +652,9 @@ export default function BonusCalculatorPage() {
                               onClick={() => handlePayout(entry, bonusAmount, customName)}
                               disabled={isPaying}
                               style={{
-                                background: isPaying ? "var(--border-subtle)" : "rgba(16, 185, 129, 0.2)",
-                                color: isPaying ? "var(--text-muted)" : "#10b981",
-                                border: "1px solid rgba(16, 185, 129, 0.3)",
+                                background: isPaying ? "var(--border-subtle)" : "color-mix(in srgb, var(--accent) 20%, transparent)",
+                                color: isPaying ? "var(--text-muted)" : "var(--accent-light)",
+                                border: "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
                                 padding: "6px 14px",
                                 borderRadius: "6px",
                                 cursor: isPaying ? "not-allowed" : "pointer",
