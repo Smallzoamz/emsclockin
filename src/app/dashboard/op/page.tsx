@@ -32,6 +32,7 @@ export default function OpQueuePage() {
   const [isPosting, setIsPosting] = useState(false);
   const [isSavingQueue, setIsSavingQueue] = useState(false);
   const [opActive, setOpActive] = useState(false);
+  const [opOpenedBy, setOpOpenedBy] = useState<{ email: string; discordUsername: string } | null>(null);
   const [isTogglingActive, setIsTogglingActive] = useState(false);
   const [isSavingNotice, setIsSavingNotice] = useState(false);
 
@@ -48,6 +49,7 @@ export default function OpQueuePage() {
       setOpSchedule(data.opSchedule || {});
       setOpQueueState(data.opQueueState || {});
       setOpActive(data.opActive === true);
+      setOpOpenedBy(data.opOpenedBy || null);
       setRegisteredDoctors(data.registeredDoctors || []);
       if (data.opNotice) {
         setNotice(data.opNotice);
@@ -138,6 +140,13 @@ export default function OpQueuePage() {
     const isUserAdmin = session?.user?.role === "admin";
     const isUserClockedIn = doctors.some(d => d.email === session?.user?.email && d.status === "active");
 
+    // Check: Only the opener (or Admin) can close OP
+    if (opActive && !isUserAdmin && opOpenedBy && opOpenedBy.email !== session?.user?.email) {
+      const openerName = opOpenedBy.discordUsername || opOpenedBy.email;
+      alert(`🔒 เฉพาะ ${openerName} (คนเปิดเวร OP) เท่านั้นที่สามารถปิดเวร OP ได้ค่ะ`);
+      return;
+    }
+
     if (!opActive && !isUserAdmin && !isUserClockedIn) {
       alert("❌ คุณต้องกดเข้าเวรก่อน จึงจะสามารถเปิดระบบ OP ได้ค่ะ");
       return;
@@ -156,6 +165,7 @@ export default function OpQueuePage() {
         throw new Error(data.error || "ดำเนินการไม่สำเร็จ");
       }
       setOpActive(data.active);
+      if (!data.active) setOpOpenedBy(null);
       await fetchOpData(session);
       alert(data.active ? "🟢 เปิดเวร OP และส่งข้อความแท็กแจ้งเตือนไปยัง Discord เรียบร้อยแล้วค่ะ!" : "🔴 ปิดเวร OP เรียบร้อยแล้วค่ะ!");
     } catch (err: any) {
@@ -403,6 +413,11 @@ export default function OpQueuePage() {
     Sunday: "วันอาทิตย์"
   };
 
+  // Computed: ownership check for toggle button
+  const isUserAdmin = session?.user?.role === "admin";
+  const isOpOwner = opOpenedBy ? opOpenedBy.email === session?.user?.email : true; // if no opener stored, allow
+
+
   return (
     <div className="page-container">
       <header className="page-header" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
@@ -434,21 +449,22 @@ export default function OpQueuePage() {
           </span>
           <button
             onClick={handleToggleOpActive}
-            disabled={isTogglingActive}
+            disabled={isTogglingActive || (opActive && !isOpOwner && !isUserAdmin)}
+            title={opActive && !isOpOwner && !isUserAdmin && opOpenedBy ? `🔒 เฉพาะ ${opOpenedBy.discordUsername || opOpenedBy.email} เท่านั้นที่ปิดเวร OP ได้` : undefined}
             style={{
               padding: "10px 20px",
-              background: opActive ? "var(--danger)" : "var(--success)",
-              color: "white",
-              border: "none",
+              background: (opActive && !isOpOwner && !isUserAdmin) ? "var(--bg-secondary)" : opActive ? "var(--danger)" : "var(--success)",
+              color: (opActive && !isOpOwner && !isUserAdmin) ? "var(--text-muted)" : "white",
+              border: (opActive && !isOpOwner && !isUserAdmin) ? "1px solid var(--border)" : "none",
               borderRadius: "8px",
-              cursor: "pointer",
+              cursor: (opActive && !isOpOwner && !isUserAdmin) ? "not-allowed" : "pointer",
               fontWeight: "bold",
               fontSize: "0.9rem",
-              boxShadow: opActive ? "0 4px 6px rgba(239, 68, 68, 0.25)" : "0 4px 6px rgba(16, 185, 129, 0.25)",
+              boxShadow: (opActive && !isOpOwner && !isUserAdmin) ? "none" : opActive ? "0 4px 6px rgba(239, 68, 68, 0.25)" : "0 4px 6px rgba(16, 185, 129, 0.25)",
               transition: "all 0.2s"
             }}
           >
-            {isTogglingActive ? "กำลังสลับเวร..." : opActive ? "🔴 ปิดเวร OP" : "🟢 เปิดเวร OP"}
+            {isTogglingActive ? "กำลังสลับเวร..." : (opActive && !isOpOwner && !isUserAdmin) ? "🔒 ล็อค — ปิดได้เฉพาะคนเปิด" : opActive ? "🔴 ปิดเวร OP" : "🟢 เปิดเวร OP"}
           </button>
           {opActive && (
             <button
@@ -472,6 +488,27 @@ export default function OpQueuePage() {
           )}
         </div>
       </header>
+
+      {/* Ownership banner: show when OP is active and current user is not the opener */}
+      {opActive && opOpenedBy && !isOpOwner && !isUserAdmin && (
+        <div style={{
+          background: "rgba(245, 158, 11, 0.1)",
+          border: "1px solid rgba(245, 158, 11, 0.3)",
+          borderRadius: "10px",
+          padding: "12px 16px",
+          marginBottom: "16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          fontSize: "0.85rem",
+          color: "#f59e0b"
+        }}>
+          <span style={{ fontSize: "1.2rem" }}>🔒</span>
+          <span>
+            <strong>{opOpenedBy.discordUsername || opOpenedBy.email}</strong> เป็นคนเปิดเวร OP — เฉพาะเขาเท่านั้นที่สามารถปิดเวร OP ได้ คุณยังสามารถจัดการคิวหมอได้ตามปกติค่ะ
+          </span>
+        </div>
+      )}
 
       {/* Editor warnings */}
       <section className="card" style={{ marginBottom: "24px", padding: "20px" }}>

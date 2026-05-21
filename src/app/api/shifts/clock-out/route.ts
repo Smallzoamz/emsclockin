@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     const { data: opActiveData } = await supabase
       .from("system_settings")
       .select("key, value")
-      .in("key", ["op_active", "op_schedule"]);
+      .in("key", ["op_active", "op_schedule", "op_opened_by"]);
 
     const opSettings = (opActiveData || []).reduce((acc: any, curr: any) => {
       acc[curr.key] = curr.value;
@@ -51,19 +51,15 @@ export async function POST(req: Request) {
     }, {});
 
     const isOpActive = opSettings.op_active === true;
-    if (isOpActive) {
-      const opSchedule = opSettings.op_schedule || {};
-      const thaiTime = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
-      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const currentDay = dayNames[thaiTime.getUTCDay()];
-      const todayOPs = opSchedule[currentDay] || [];
+    const opOpenedBy = opSettings.op_opened_by || null;
 
-      if (discordUsername && todayOPs.includes(discordUsername)) {
-        return NextResponse.json(
-          { error: "กรุณากดปิดระบบ OP บนหน้า OP Dashboard ก่อน จึงจะสามารถออกเวรได้ค่ะ" },
-          { status: 400 }
-        );
-      }
+    // Only the OP opener is blocked from clocking out while OP is active
+    // Other OP doctors can clock out freely (e.g. Sup who stepped in temporarily)
+    if (isOpActive && opOpenedBy && opOpenedBy.email === userEmail) {
+      return NextResponse.json(
+        { error: "กรุณากดปิดระบบ OP บนหน้า OP Dashboard ก่อน จึงจะสามารถออกเวรได้ค่ะ" },
+        { status: 400 }
+      );
     }
 
     // Process FormData
@@ -165,16 +161,11 @@ export async function POST(req: Request) {
       avatarUrl,
     }, activeShift.discord_message_id);
 
-    // Check if the user who clocked out is today's scheduled OP doctor
-    const opSchedule = opSettings.op_schedule || {};
-    const thaiTime = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const currentDay = dayNames[thaiTime.getUTCDay()];
-    const todayOPs = opSchedule[currentDay] || [];
-    const isOPUser = discordUsername && todayOPs.includes(discordUsername);
+    // Check if the user who clocked out is the OP opener
+    const isOpOwner = opOpenedBy && opOpenedBy.email === userEmail;
 
-    if (isOPUser) {
-      // If OP user clocks out, perform complete queue teardown:
+    if (isOpOwner) {
+      // If OP opener clocks out, perform complete queue teardown:
       // clear op_queue_state, delete queue message and post daily summary.
       teardownOpQueue().catch(err => console.error("OP Teardown error:", err));
     } else {

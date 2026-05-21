@@ -57,20 +57,42 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. Perform DB updates
+    // 3. Ownership check: Only the opener (or Admin) can close OP
+    if (!active && !isAdmin) {
+      const { data: openerData } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "op_opened_by")
+        .single();
+
+      const opener = openerData?.value;
+      if (opener && opener.email !== session.user.email) {
+        const openerName = opener.discordUsername || opener.email;
+        return NextResponse.json(
+          { error: `เฉพาะ ${openerName} (คนเปิดเวร OP) เท่านั้นที่สามารถปิดเวร OP ได้ค่ะ` },
+          { status: 403 }
+        );
+      }
+    }
+
+    // 4. Perform DB updates
     if (active) {
-      // Starting OP: Keep the existing message ID if present to edit it instead of sending new
+      // Starting OP: Store opener identity + keep the existing message ID if present
       await Promise.all([
         supabase.from("system_settings").upsert({ key: "op_active", value: true }, { onConflict: "key" }),
         supabase.from("system_settings").upsert({ key: "op_notice", value: notice || "" }, { onConflict: "key" }),
-        supabase.from("system_settings").upsert({ key: "op_opened_at", value: new Date().toISOString() }, { onConflict: "key" })
+        supabase.from("system_settings").upsert({ key: "op_opened_at", value: new Date().toISOString() }, { onConflict: "key" }),
+        supabase.from("system_settings").upsert({ key: "op_opened_by", value: { email: session.user.email, discordUsername: discordUsername || "" } }, { onConflict: "key" })
       ]);
 
       // Call sync with forceNewMessage = true to signal activation (will tag OP, but still PATCH if existing)
       await syncOpQueueToDiscord(true);
     } else {
       // Stopping OP: Update database status first so embeds will render as CLOSED
-      await supabase.from("system_settings").upsert({ key: "op_active", value: false }, { onConflict: "key" });
+      await Promise.all([
+        supabase.from("system_settings").upsert({ key: "op_active", value: false }, { onConflict: "key" }),
+        supabase.from("system_settings").upsert({ key: "op_opened_by", value: null }, { onConflict: "key" })
+      ]);
 
       // Teardown: Delete queue message, send summary report, clear op_queue_state & message ID
       await teardownOpQueue();

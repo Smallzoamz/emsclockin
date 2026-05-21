@@ -42,6 +42,7 @@ export async function GET() {
     const opActive = settings["op_active"] === true;
     const opNotice = settings["op_notice"] || "⚠️ คำเตือน: รบกวนหมอเวรทุกคนเปิดวิทยุช่องหลัก และรายงานตัวทันทีเมื่อเข้าพื้นที่เวร!";
     const opOpenedAt = settings["op_opened_at"];
+    const opOpenedBy = settings["op_opened_by"] || null;
 
     // 3. Get recently completed shifts (clocked out after op_opened_at if set)
     let recentShifts: any[] = [];
@@ -72,6 +73,7 @@ export async function GET() {
       currentDay,
       opActive,
       opNotice,
+      opOpenedBy,
     });
   } catch (error: any) {
     console.error("[OP Status API] Error:", error);
