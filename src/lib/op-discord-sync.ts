@@ -1,6 +1,39 @@
 import { supabase } from "@/lib/supabase";
 import { formatThaiDate } from "@/lib/utils";
 
+// Module-level debounce state for Discord sync
+let syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let syncDebounceResolvers: Array<() => void> = [];
+
+/**
+ * Debounced version of syncOpQueueToDiscord.
+ * Coalesces rapid queue updates into a single Discord API call.
+ * Waits `delay` ms after the last call before syncing.
+ */
+export function debouncedSyncOpQueueToDiscord(delay = 1500): Promise<void> {
+  return new Promise<void>((resolve) => {
+    syncDebounceResolvers.push(resolve);
+
+    if (syncDebounceTimer) {
+      clearTimeout(syncDebounceTimer);
+    }
+
+    syncDebounceTimer = setTimeout(async () => {
+      syncDebounceTimer = null;
+      const resolvers = [...syncDebounceResolvers];
+      syncDebounceResolvers = [];
+
+      try {
+        await syncOpQueueToDiscord();
+      } catch (err) {
+        console.error("[OP Sync Debounced] Error:", err);
+      }
+
+      resolvers.forEach(r => r());
+    }, delay);
+  });
+}
+
 /**
  * Automatically compiles the doctor queue groups and edits/sends the single Discord Webhook message.
  */
