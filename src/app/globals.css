@@ -1150,6 +1150,57 @@ body::before {
 }
 
 /* ===== Spreadsheet Bonus Table (Dark Mode) ===== */
+.bonus-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.history-select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  padding: 8px 16px;
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.history-select:hover {
+  border-color: var(--border-glow);
+  background: var(--bg-card-hover);
+}
+
+.btn-manage-ranks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-manage-ranks:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-glow);
+}
+
 .spreadsheet-toolbar {
   background: rgba(30, 41, 59, 0.5);
   border: 1px solid var(--border-subtle);
@@ -1168,6 +1219,10 @@ body::before {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.toolbar-group.right {
+  gap: 24px;
 }
 
 .toolbar-label {
@@ -1217,6 +1272,7 @@ body::before {
   padding: 8px 16px;
   border-radius: 8px;
   border: 1px solid var(--border-subtle);
+  min-width: 140px;
 }
 
 .summary-label {
@@ -1233,6 +1289,22 @@ body::before {
   color: var(--accent-light);
 }
 
+.summary-initial {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.summary-deducted {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.summary-remaining {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  padding: 8px 20px;
+}
+
 /* Spreadsheet Table Layout */
 .spreadsheet-container {
   background: var(--bg-card);
@@ -1241,6 +1313,32 @@ body::before {
   border-bottom-right-radius: var(--radius);
   overflow-x: auto;
   box-shadow: var(--shadow-subtle);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Branded high-fidelity custom scrollbar */
+.spreadsheet-container::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.spreadsheet-container::-webkit-scrollbar-track {
+  background: rgba(12, 18, 32, 0.5);
+  border-bottom-left-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+}
+
+.spreadsheet-container::-webkit-scrollbar-thumb {
+  background: var(--border-glow);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.spreadsheet-container::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .spreadsheet-table {
@@ -1256,6 +1354,39 @@ body::before {
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 10px 14px;
   white-space: nowrap;
+}
+
+/* Form controls styling inside spreadsheet cells */
+.spreadsheet-table td input[type="text"],
+.spreadsheet-table td select {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  outline: none;
+  transition: all 0.2s ease;
+  width: 100%;
+  max-width: 100%;
+}
+
+.spreadsheet-table td input[type="text"] {
+  background: transparent;
+  border: 1px dashed transparent;
+  max-width: 180px;
+}
+
+.spreadsheet-table td input[type="text"]:focus {
+  border-color: var(--accent);
+  background: var(--bg-secondary);
+  box-shadow: 0 0 0 2px rgba(56, 189, 148, 0.15);
+}
+
+.spreadsheet-table td select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(56, 189, 148, 0.15);
 }
 
 /* Headers */
@@ -1351,6 +1482,105 @@ body::before {
 }
 .spreadsheet-table tbody tr:hover .highlight-cell {
   background: rgba(56, 189, 148, 0.15);
+}
+
+/* ===== Spreadsheet Responsive Rules ===== */
+@media (max-width: 1100px) {
+  .spreadsheet-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+  
+  .spreadsheet-toolbar .toolbar-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .spreadsheet-toolbar .toolbar-group.right {
+    justify-content: space-between;
+    gap: 16px !important;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .bonus-page-header {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 20px;
+  }
+  
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .history-select,
+  .save-snapshot-btn,
+  .share-bonus-btn {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    padding: 12px 16px !important;
+    font-size: 0.95rem;
+  }
+  
+  .spreadsheet-toolbar .toolbar-group.right {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px !important;
+    width: 100%;
+  }
+  
+  .summary-box {
+    align-items: center;
+    text-align: center;
+    padding: 10px;
+    min-width: 0;
+  }
+  
+  .summary-remaining {
+    grid-column: span 2;
+  }
+  
+  .btn-manage-ranks {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .spreadsheet-toolbar .toolbar-group.right {
+    grid-template-columns: 1fr;
+  }
+  
+  .summary-remaining {
+    grid-column: span 1;
+  }
+  
+  .spreadsheet-toolbar .toolbar-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .spreadsheet-toolbar .toolbar-label {
+    text-align: left;
+    margin-bottom: 2px;
+  }
+  
+  .spreadsheet-toolbar .input-with-icon {
+    width: 100%;
+  }
+  
+  .spreadsheet-toolbar .rate-input {
+    width: 100% !important;
+  }
 }
 
 /* ===== Premium Pulsing Animations ===== */

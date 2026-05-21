@@ -327,7 +327,7 @@ export default function BonusCalculatorPage() {
 
   return (
     <div className="page-container">
-      <header className="page-header" style={{ marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+      <header className="page-header bonus-page-header">
         <div>
           <h1 className="page-title">💰 ตารางคำนวณโบนัส</h1>
           <p className="page-subtitle">
@@ -335,19 +335,11 @@ export default function BonusCalculatorPage() {
           </p>
         </div>
         
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+        <div className="header-actions">
           <select 
             value={selectedHistoryId}
             onChange={e => setSelectedHistoryId(e.target.value)}
-            style={{
-              background: "var(--bg-secondary)",
-              border: "1px solid var(--border-subtle)",
-              color: "var(--text-primary)",
-              padding: "8px 16px",
-              borderRadius: "8px",
-              outline: "none",
-              cursor: "pointer"
-            }}
+            className="history-select"
           >
             <option value="live">🔴 สัปดาห์ปัจจุบัน (Live)</option>
             {historyList.map(h => (
@@ -361,18 +353,9 @@ export default function BonusCalculatorPage() {
             <button 
               onClick={handleSaveSnapshot}
               disabled={isSaving}
-              className="btn btn-primary"
+              className="btn btn-primary save-snapshot-btn"
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px 16px",
-                background: saveSuccess ? "var(--success)" : "var(--primary)",
-                border: "none",
-                borderRadius: "8px",
-                color: "white",
-                fontWeight: "600",
-                cursor: isSaving ? "not-allowed" : "pointer"
+                background: saveSuccess ? "var(--success)" : "var(--primary)"
               }}
             >
               {isSaving ? "กำลังบันทึก..." : saveSuccess ? "✅ บันทึกแล้ว" : "💾 บันทึกประวัติสัปดาห์นี้"}
@@ -383,17 +366,9 @@ export default function BonusCalculatorPage() {
              <button 
                onClick={handlePublish}
                disabled={isPublishing || historyList.find(h => h.id === selectedHistoryId)?.is_published}
-               className="btn btn-primary"
+               className="btn btn-primary share-bonus-btn"
                style={{
-                 display: "flex",
-                 alignItems: "center",
-                 gap: "8px",
-                 padding: "8px 16px",
                  background: historyList.find(h => h.id === selectedHistoryId)?.is_published ? "var(--border-subtle)" : "#8b5cf6",
-                 border: "none",
-                 borderRadius: "8px",
-                 color: "white",
-                 fontWeight: "600",
                  cursor: (isPublishing || historyList.find(h => h.id === selectedHistoryId)?.is_published) ? "not-allowed" : "pointer"
                }}
              >
@@ -409,18 +384,7 @@ export default function BonusCalculatorPage() {
           {isLive && (
             <button 
               onClick={() => setShowRankModal(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px 16px",
-                background: "var(--bg-card)",
-                border: "1px solid var(--border-subtle)",
-                borderRadius: "8px",
-                color: "var(--text-primary)",
-                fontWeight: "600",
-                cursor: "pointer"
-              }}
+              className="btn-manage-ranks"
             >
               ⭐ จัดการยศและเรทโบนัส
             </button>
@@ -443,16 +407,16 @@ export default function BonusCalculatorPage() {
           </div>
         </div>
         
-        <div className="toolbar-group right" style={{ gap: "24px" }}>
-          <div className="summary-box" style={{ background: "rgba(245, 158, 11, 0.1)", borderColor: "rgba(245, 158, 11, 0.3)" }}>
+        <div className="toolbar-group right">
+          <div className="summary-box summary-initial">
             <span className="summary-label" style={{ color: "var(--text-secondary)" }}>ยอดกองกลางตั้งต้น</span>
             <span className="summary-value" style={{ color: "#f59e0b" }}>$ {activeFund.toLocaleString("en-US")}</span>
           </div>
-          <div className="summary-box" style={{ background: "rgba(239, 68, 68, 0.1)", borderColor: "rgba(239, 68, 68, 0.3)" }}>
+          <div className="summary-box summary-deducted">
             <span className="summary-label" style={{ color: "var(--text-secondary)" }}>หักโบนัสสัปดาห์นี้</span>
             <span className="summary-value" style={{ color: "#ef4444" }}>- $ {totalBonusAll.toLocaleString("en-US")}</span>
           </div>
-          <div className="summary-box" style={{ background: "color-mix(in srgb, var(--accent) 15%, transparent)", borderColor: "color-mix(in srgb, var(--accent) 40%, transparent)", padding: "8px 20px" }}>
+          <div className="summary-box summary-remaining">
             <span className="summary-label" style={{ color: "var(--text-primary)", fontWeight: "bold" }}>คงเหลือเข้าโรงพยาบาล</span>
             <span className="summary-value" style={{ fontSize: "1.4rem", color: "var(--accent)" }}>$ {remainingFund.toLocaleString("en-US")}</span>
           </div>
@@ -538,16 +502,6 @@ export default function BonusCalculatorPage() {
                               body: JSON.stringify({ key: "user_names", value: { ...userNames } })
                             });
                           }}
-                          style={{
-                            background: "transparent",
-                            border: "1px dashed transparent",
-                            color: "var(--text-primary)",
-                            width: "100%",
-                            padding: "4px",
-                            outline: "none",
-                            transition: "0.2s"
-                          }}
-                          onFocus={e => e.currentTarget.style.border = "1px dashed var(--border-subtle)"}
                           placeholder="ชื่อในเกม..."
                         />
                       ) : (
@@ -567,14 +521,6 @@ export default function BonusCalculatorPage() {
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ key: "user_ranks", value: newRanks })
                             });
-                          }}
-                          style={{
-                            background: "var(--bg-secondary)",
-                            border: "1px solid var(--border-subtle)",
-                            color: "var(--text-primary)",
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                            outline: "none"
                           }}
                         >
                           <option value="">-- เลือกยศ --</option>
