@@ -32,11 +32,11 @@ export function queueSyncOpQueueToDiscord() {
     .finally(() => {
       isSyncing = false;
       if (hasPendingSync) {
-        // Space out consecutive requests by 1.2 seconds to respect Discord rate limits
+        // Coalesce rapid actions with a very brief 100ms window before the next execution
         pendingSyncTimer = setTimeout(() => {
           pendingSyncTimer = null;
           queueSyncOpQueueToDiscord();
-        }, 1200);
+        }, 100);
       }
     });
 }
@@ -46,12 +46,25 @@ export function queueSyncOpQueueToDiscord() {
  */
 export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate = false) {
   try {
-    // 1. Fetch system settings
-    const { data: settingsData } = await supabase
-      .from("system_settings")
-      .select("key, value");
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const settings = (settingsData || []).reduce((acc: any, curr: any) => {
+    // 1. Fetch system settings, active shifts, and recent shifts in parallel
+    const [settingsRes, activeShiftsRes, recentShiftsRes] = await Promise.all([
+      supabase.from("system_settings").select("key, value"),
+      supabase
+        .from("shifts")
+        .select("user_email, user_name, discord_username")
+        .is("clock_out", null)
+        .order("clock_in", { ascending: true }),
+      supabase
+        .from("shifts")
+        .select("user_email, user_name, discord_username, clock_out")
+        .not("clock_out", "is", null)
+        .gte("clock_out", oneDayAgo)
+        .order("clock_out", { ascending: false })
+    ]);
+
+    const settings = (settingsRes.data || []).reduce((acc: any, curr: any) => {
       acc[curr.key] = curr.value;
       return acc;
     }, {});
@@ -77,24 +90,13 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
       return;
     }
 
-    // 2. Fetch current active shifts (clocked in)
-    const { data: activeShifts } = await supabase
-      .from("shifts")
-      .select("user_email, user_name, discord_username")
-      .is("clock_out", null)
-      .order("clock_in", { ascending: true });
+    const activeShifts = activeShiftsRes.data;
 
-    // 3. Fetch recent shifts (clocked out after op_opened_at if set)
+    // Filter recent shifts by opOpenedAt in memory to preserve correctness without sequential DB trips
     const opOpenedAt = settings.op_opened_at;
     let recentShifts: any[] = [];
-    if (opOpenedAt) {
-      const { data: fetchedRecent } = await supabase
-        .from("shifts")
-        .select("user_email, user_name, discord_username")
-        .not("clock_out", "is", null)
-        .gte("clock_out", opOpenedAt)
-        .order("clock_out", { ascending: false });
-      recentShifts = fetchedRecent || [];
+    if (opOpenedAt && recentShiftsRes.data) {
+      recentShifts = recentShiftsRes.data.filter((shift: any) => shift.clock_out >= opOpenedAt);
     }
 
     // 4. Group doctors
@@ -292,12 +294,25 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
 
 export async function teardownOpQueue() {
   try {
-    // 1. Fetch system settings
-    const { data: settingsData } = await supabase
-      .from("system_settings")
-      .select("key, value");
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const settings = (settingsData || []).reduce((acc: any, curr: any) => {
+    // 1. Fetch system settings, active shifts, and recent shifts in parallel
+    const [settingsRes, activeShiftsRes, recentShiftsRes] = await Promise.all([
+      supabase.from("system_settings").select("key, value"),
+      supabase
+        .from("shifts")
+        .select("user_email, user_name, discord_username, clock_in")
+        .is("clock_out", null)
+        .order("clock_in", { ascending: true }),
+      supabase
+        .from("shifts")
+        .select("user_email, user_name, discord_username, clock_in, clock_out, duration_minutes")
+        .not("clock_out", "is", null)
+        .gte("clock_out", oneDayAgo)
+        .order("clock_out", { ascending: false })
+    ]);
+
+    const settings = (settingsRes.data || []).reduce((acc: any, curr: any) => {
       acc[curr.key] = curr.value;
       return acc;
     }, {});
@@ -314,24 +329,13 @@ export async function teardownOpQueue() {
     const existingMessageId = settings.op_discord_message_id;
     const registeredDoctors = settings.registered_doctors || [];
 
-    // 2. Fetch current active shifts (clocked in)
-    const { data: activeShifts } = await supabase
-      .from("shifts")
-      .select("user_email, user_name, discord_username, clock_in")
-      .is("clock_out", null)
-      .order("clock_in", { ascending: true });
+    const activeShifts = activeShiftsRes.data;
 
-    // 3. Fetch recent shifts (clocked out after op_opened_at if set)
+    // Filter recent shifts by opOpenedAt in memory
     const opOpenedAt = settings.op_opened_at;
     let recentShifts: any[] = [];
-    if (opOpenedAt) {
-      const { data: fetchedRecent } = await supabase
-        .from("shifts")
-        .select("user_email, user_name, discord_username, clock_in, clock_out, duration_minutes")
-        .not("clock_out", "is", null)
-        .gte("clock_out", opOpenedAt)
-        .order("clock_out", { ascending: false });
-      recentShifts = fetchedRecent || [];
+    if (opOpenedAt && recentShiftsRes.data) {
+      recentShifts = recentShiftsRes.data.filter((shift: any) => shift.clock_out >= opOpenedAt);
     }
 
     // Format lists of doctors

@@ -15,7 +15,19 @@ export function getSupabase(): SupabaseClient {
     );
   }
 
-  _supabase = createClient(url, key);
+  _supabase = createClient(url, key, {
+    auth: {
+      persistSession: false,
+    },
+    global: {
+      fetch: (url, options) => {
+        return fetch(url, {
+          ...options,
+          cache: "no-store",
+        });
+      },
+    },
+  });
   return _supabase;
 }
 
