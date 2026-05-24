@@ -46,7 +46,13 @@ export async function GET() {
     const { data, error } = await supabase
       .from("system_settings")
       .select("key, value")
-      .in("key", ["announcement_categories", "announcement_templates", "blacklist_penalties"]);
+      .in("key", [
+        "announcement_categories",
+        "announcement_templates",
+        "blacklist_penalties",
+        "announcement_command_prefix",
+        "discord_announcement_webhook_url"
+      ]);
 
     if (error) throw error;
 
@@ -58,18 +64,24 @@ export async function GET() {
     const categories = settingsMap["announcement_categories"] || defaultCategories;
     const templates = settingsMap["announcement_templates"] || defaultTemplates;
     const penalties = settingsMap["blacklist_penalties"] || defaultPenalties;
+    const commandPrefix = settingsMap["announcement_command_prefix"] || "/ems";
+    const announcementWebhookUrl = settingsMap["discord_announcement_webhook_url"] || "";
 
     return NextResponse.json({
       categories,
       templates,
-      penalties
+      penalties,
+      commandPrefix,
+      announcementWebhookUrl
     });
   } catch (error) {
     console.error("[Announcements GET] Error:", error);
     return NextResponse.json({
       categories: defaultCategories,
       templates: defaultTemplates,
-      penalties: defaultPenalties
+      penalties: defaultPenalties,
+      commandPrefix: "/ems",
+      announcementWebhookUrl: ""
     });
   }
 }
@@ -86,7 +98,13 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { key, value } = body;
 
-    const allowedKeys = ["announcement_categories", "announcement_templates", "blacklist_penalties"];
+    const allowedKeys = [
+      "announcement_categories",
+      "announcement_templates",
+      "blacklist_penalties",
+      "announcement_command_prefix",
+      "discord_announcement_webhook_url"
+    ];
     if (!key || !allowedKeys.includes(key) || value === undefined) {
       return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
     }

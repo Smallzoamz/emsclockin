@@ -40,6 +40,8 @@ export default function UserAnnouncementsPage() {
   const [gang, setGang] = useState("");
   const [selectedPenaltyId, setSelectedPenaltyId] = useState("");
   const [multiplier, setMultiplier] = useState(1);
+  const [commandPrefix, setCommandPrefix] = useState("/ems");
+  const [useCommandPrefix, setUseCommandPrefix] = useState("/ems");
 
   // Actions states
   const [copySuccess, setCopySuccess] = useState(false);
@@ -69,6 +71,10 @@ export default function UserAnnouncementsPage() {
             if (data.penalties.length > 0) {
               setSelectedPenaltyId(data.penalties[0].id);
             }
+          }
+          if (data.commandPrefix) {
+            setCommandPrefix(data.commandPrefix);
+            setUseCommandPrefix(data.commandPrefix);
           }
           setLoading(false);
         })
@@ -120,6 +126,30 @@ export default function UserAnnouncementsPage() {
     text = text.replaceAll("[ค่าปรับ]", activePenalty ? `$${formattedFine}` : "________________");
     text = text.replaceAll("[ตัวคูณ]", multiplier > 1 ? `${multiplier}` : "1");
 
+    // Prepend command prefix if present
+    if (useCommandPrefix.trim()) {
+      text = `${useCommandPrefix.trim()} ${text}`;
+    }
+
+    return text;
+  };
+
+  // Render text content without prefix (specifically for Discord webhook logs)
+  const generateDiscordText = () => {
+    if (!activeTemplate) return "";
+    let text = activeTemplate.content;
+
+    const penaltyText = activePenalty ? activePenalty.name : "";
+    const formattedFine = activePenalty ? `${totalFine.toLocaleString()}` : "";
+
+    // Substitutions
+    text = text.replaceAll("[ชื่อคน]", name.trim() || "________________");
+    text = text.replaceAll("[เบอร์โทร]", phone.trim() || "________________");
+    text = text.replaceAll("[ชื่อแก๊ง]", gang.trim() || "________________");
+    text = text.replaceAll("[โทษ]", penaltyText || "________________");
+    text = text.replaceAll("[ค่าปรับ]", activePenalty ? `$${formattedFine}` : "________________");
+    text = text.replaceAll("[ตัวคูณ]", multiplier > 1 ? `${multiplier}` : "1");
+
     return text;
   };
 
@@ -138,7 +168,8 @@ export default function UserAnnouncementsPage() {
 
   // Discord Send Action
   const handleSendToDiscord = async () => {
-    if (!formattedResultText) return;
+    const discordText = generateDiscordText();
+    if (!discordText) return;
     setIsSendingDiscord(true);
     setDiscordStatus(null);
 
@@ -148,7 +179,7 @@ export default function UserAnnouncementsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: activeTemplate ? activeTemplate.title : "ประกาศด่วน",
-          content: formattedResultText
+          content: discordText
         })
       });
 
@@ -228,6 +259,21 @@ export default function UserAnnouncementsPage() {
                 ))}
               </select>
             )}
+          </div>
+
+          {/* 3. Command Prefix Selector */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>3. คำสั่งประกาศหน่วยงาน (Tag / Command Prefix)</label>
+            <input
+              type="text"
+              placeholder="เช่น /ems, /gov หรือเว้นว่างไว้"
+              value={useCommandPrefix}
+              onChange={(e) => setUseCommandPrefix(e.target.value)}
+              style={{ padding: "10px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem" }}
+            />
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "2px" }}>
+              ระบบจะนำตัวย่อนี้ไปเติมหน้าข้อความเมื่อคัดลอก (สำหรับพิมพ์ในแชทเกม FiveM)
+            </span>
           </div>
 
           {/* Dynamic Form Fields based on Template Content */}

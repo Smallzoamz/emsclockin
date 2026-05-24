@@ -54,6 +54,11 @@ export default function AdminAnnouncementsPage() {
   // Form States - Penalty
   const [newPenName, setNewPenName] = useState("");
   const [newPenFine, setNewPenFine] = useState<number>(0);
+  const [editingPenaltyId, setEditingPenaltyId] = useState<string | null>(null);
+
+  // General Settings States
+  const [announcementCommandPrefix, setAnnouncementCommandPrefix] = useState("/ems");
+  const [discordAnnouncementWebhookUrl, setDiscordAnnouncementWebhookUrl] = useState("");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -99,6 +104,8 @@ export default function AdminAnnouncementsPage() {
         if (data.categories) setCategories(data.categories);
         if (data.templates) setTemplates(data.templates);
         if (data.penalties) setPenalties(data.penalties);
+        if (data.commandPrefix) setAnnouncementCommandPrefix(data.commandPrefix);
+        if (data.announcementWebhookUrl) setDiscordAnnouncementWebhookUrl(data.announcementWebhookUrl);
         setLoadingData(false);
       })
       .catch((err) => {
@@ -232,18 +239,42 @@ export default function AdminAnnouncementsPage() {
     e.preventDefault();
     if (!newPenName || newPenFine < 0) return;
 
-    const newPenalty: Penalty = {
-      id: "pen_" + Date.now(),
-      name: newPenName,
-      fine: Number(newPenFine)
-    };
+    let updated: Penalty[];
+    if (editingPenaltyId) {
+      // Edit
+      updated = penalties.map((p) =>
+        p.id === editingPenaltyId
+          ? { ...p, name: newPenName, fine: Number(newPenFine) }
+          : p
+      );
+    } else {
+      // Add
+      const newPenalty: Penalty = {
+        id: "pen_" + Date.now(),
+        name: newPenName,
+        fine: Number(newPenFine)
+      };
+      updated = [...penalties, newPenalty];
+    }
 
-    const updated = [...penalties, newPenalty];
     setPenalties(updated);
     setNewPenName("");
     setNewPenFine(0);
+    setEditingPenaltyId(null);
 
-    await saveSetting("blacklist_penalties", updated, "เพิ่มโทษสำเร็จรูปเรียบร้อยแล้ว");
+    await saveSetting("blacklist_penalties", updated, editingPenaltyId ? "แก้ไขโทษสำเร็จรูปเรียบร้อยแล้ว" : "เพิ่มโทษสำเร็จรูปเรียบร้อยแล้ว");
+  };
+
+  const handleEditPenaltyClick = (pen: Penalty) => {
+    setEditingPenaltyId(pen.id);
+    setNewPenName(pen.name);
+    setNewPenFine(pen.fine);
+  };
+
+  const handleCancelEditPenalty = () => {
+    setEditingPenaltyId(null);
+    setNewPenName("");
+    setNewPenFine(0);
   };
 
   const handleDeletePenalty = async (id: string, name: string) => {
@@ -251,6 +282,10 @@ export default function AdminAnnouncementsPage() {
 
     const updated = penalties.filter((p) => p.id !== id);
     setPenalties(updated);
+
+    if (editingPenaltyId === id) {
+      handleCancelEditPenalty();
+    }
 
     await saveSetting("blacklist_penalties", updated, "ลบโทษสำเร็จรูปเรียบร้อยแล้ว");
   };
@@ -273,6 +308,77 @@ export default function AdminAnnouncementsPage() {
           <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>จัดการหมวดหมู่ รูปแบบเทมเพลตประกาศ และอัตราโทษปรับ Blacklist</p>
         </div>
       </div>
+
+      {/* General Settings */}
+      <section className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+        <h2 style={{ fontSize: "1.1rem", color: "var(--accent-light)", margin: 0, borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
+          ⚙️ ตั้งค่าทั่วไปสำหรับประกาศ (General Settings)
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>คำสั่งประกาศหน่วยงานเริ่มต้น</label>
+            <input
+              type="text"
+              placeholder="เช่น /ems, /gov"
+              value={announcementCommandPrefix}
+              onChange={(e) => setAnnouncementCommandPrefix(e.target.value)}
+              style={{ padding: "8px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem" }}
+            />
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>คำสั่งที่ระบบจะนำไปเติมข้างหน้าข้อความประกาศในหน้าแพทย์</span>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>Discord Webhook สำหรับส่งข้อความประกาศ</label>
+            <input
+              type="url"
+              placeholder="https://discord.com/api/webhooks/..."
+              value={discordAnnouncementWebhookUrl}
+              onChange={(e) => setDiscordAnnouncementWebhookUrl(e.target.value.trim())}
+              style={{ padding: "8px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem" }}
+            />
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>ใช้ส่งประกาศแบล็คลิสต์/แจ้งเคสแยกห้องต่างหาก (หากเว้นว่างจะใช้ Webhook ทั่วไป)</span>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "4px" }}>
+          <button
+            onClick={async () => {
+              setIsSaving(true);
+              try {
+                await Promise.all([
+                  fetch("/api/announcements/settings", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ key: "announcement_command_prefix", value: announcementCommandPrefix })
+                  }),
+                  fetch("/api/announcements/settings", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ key: "discord_announcement_webhook_url", value: discordAnnouncementWebhookUrl })
+                  })
+                ]);
+                showMessage("บันทึกการตั้งค่าทั่วไปเรียบร้อยแล้วค่ะ", "success");
+              } catch (err) {
+                showMessage("บันทึกไม่สำเร็จ", "error");
+              } finally {
+                setIsSaving(false);
+              }
+            }}
+            disabled={isSaving}
+            style={{
+              padding: "10px 20px",
+              background: "var(--primary)",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              fontWeight: "bold",
+              fontSize: "0.85rem",
+              cursor: "pointer"
+            }}
+          >
+            {isSaving ? "กำลังบันทึก..." : "💾 บันทึกการตั้งค่าทั่วไป"}
+          </button>
+        </div>
+      </section>
 
       {/* Status Bar */}
       {statusMessage && (
@@ -610,7 +716,7 @@ export default function AdminAnnouncementsPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px", alignItems: "start" }}>
               {/* Left Column: Create Form */}
               <form onSubmit={handleAddPenalty} className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>➕ เพิ่มความผิด / โทษปรับสำเร็จรูป</h3>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>{editingPenaltyId ? "✏️ แก้ไขความผิด / โทษปรับสำเร็จรูป" : "➕ เพิ่มความผิด / โทษปรับสำเร็จรูป"}</h3>
                 
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>ประเภทความผิด / โทษข้อหา</label>
@@ -637,13 +743,24 @@ export default function AdminAnnouncementsPage() {
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  style={{ alignSelf: "flex-end", padding: "10px 20px", background: "var(--primary)", border: "none", color: "white", borderRadius: "6px", cursor: "pointer", fontWeight: "bold", fontSize: "0.85rem" }}
-                >
-                  {isSaving ? "กำลังบันทึก..." : "➕ บันทึกอัตราโทษ"}
-                </button>
+                <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+                  {editingPenaltyId && (
+                    <button
+                      type="button"
+                      onClick={handleCancelEditPenalty}
+                      style={{ padding: "10px 16px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem" }}
+                    >
+                      ยกเลิก
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    style={{ padding: "10px 20px", background: "var(--primary)", border: "none", color: "white", borderRadius: "6px", cursor: "pointer", fontWeight: "bold", fontSize: "0.85rem" }}
+                  >
+                    {isSaving ? "กำลังบันทึก..." : editingPenaltyId ? "💾 อัปเดตข้อหา" : "➕ บันทึกอัตราโทษ"}
+                  </button>
+                </div>
               </form>
 
               {/* Right Column: List */}
@@ -664,12 +781,20 @@ export default function AdminAnnouncementsPage() {
                           </span>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleDeletePenalty(pen.id, pen.name)}
-                        style={{ padding: "6px 12px", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--danger)", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
-                      >
-                        ลบ 🗑️
-                      </button>
+                      <div style={{ display: "flex", gap: "6px" }}>
+                        <button
+                          onClick={() => handleEditPenaltyClick(pen)}
+                          style={{ padding: "6px 12px", background: "rgba(255, 255, 255, 0.05)", border: "1px solid var(--border-subtle)", color: "var(--text-secondary)", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
+                        >
+                          แก้ไข ✏️
+                        </button>
+                        <button
+                          onClick={() => handleDeletePenalty(pen.id, pen.name)}
+                          style={{ padding: "6px 12px", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--danger)", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
+                        >
+                          ลบ 🗑️
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}

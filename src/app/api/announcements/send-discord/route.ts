@@ -19,11 +19,15 @@ export async function POST(req: Request) {
     // Retrieve Webhook URL
     const { data: settingsData } = await supabase
       .from("system_settings")
-      .select("value")
-      .eq("key", "discord_webhook_url")
-      .single();
+      .select("key, value")
+      .in("key", ["discord_announcement_webhook_url", "discord_webhook_url"]);
 
-    const webhookUrl = settingsData?.value || process.env.DISCORD_WEBHOOK_URL;
+    const settingsMap = (settingsData || []).reduce((acc: Record<string, any>, curr) => {
+      acc[curr.key] = curr.value;
+      return acc;
+    }, {});
+
+    const webhookUrl = settingsMap["discord_announcement_webhook_url"] || settingsMap["discord_webhook_url"] || process.env.DISCORD_WEBHOOK_URL;
 
     if (!webhookUrl) {
       return NextResponse.json({ error: "ไม่ได้กำหนดตั้งค่า Discord Webhook ในระบบ กรุณาติดต่อแอดมินค่ะ" }, { status: 400 });

@@ -136,4 +136,7 @@
 
 ## [2026-05-25 04:24] | File: src/app/dashboard/admin/announcements/page.tsx | Line: 54 | Keyword: Clickable Placeholders | Status: ✅ Complete | Change: Converted static placeholder code snippets in template body creator into interactive buttons that insert the corresponding placeholder token at the textarea cursor position and restore focus. Next.js production build verified successful with 0 errors.
 
+## [2026-05-25 04:56] | File: multiple | Line: 1 | Keyword: Configurable Tag, Editable Penalties & Webhook | Status: ✅ Complete | Change: Added configurable prefix tags, editable penalties, and dedicated Discord webhook support. (1) Settings API GET/POST was updated to handle 'announcement_command_prefix' and 'discord_announcement_webhook_url' configurations. (2) Discord Send route was updated to fetch and resolve 'discord_announcement_webhook_url' with fallback to 'discord_webhook_url'. (3) Admin Page UI was added a general settings configuration card and Edit capabilities for predefined blacklist penalties. (4) User Page UI was added command tag selector, prepended tag to copied text, and stripped prefix tag for Discord webhooks. Next.js production build verified successful with 0 errors.
+
+
 
