@@ -55,35 +55,22 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
         </div>
       </div>
 
-      <nav>
-        {user.role === "admin" && (
-          <>
-            <Link
-              href="/dashboard/admin"
-              className={`nav-link ${pathname === "/dashboard/admin" ? "active" : ""}`}
-            >
-              <span>👑</span>
-              แดชบอร์ดแอดมิน
-            </Link>
-            <Link
-              href="/dashboard/admin/announcements"
-              className={`nav-link ${pathname === "/dashboard/admin/announcements" ? "active" : ""}`}
-            >
-              <span>📢</span>
-              ตั้งค่าข้อความประกาศ
-            </Link>
-          </>
-        )}
-
-        {user.role === "admin" && !user.discordId && (
-          <Link
-            href="/dashboard/admin/settings"
-            className={`nav-link ${pathname === "/dashboard/admin/settings" ? "active" : ""}`}
-          >
-            <span>⚙️</span>
-            ตั้งค่าระบบ
-          </Link>
-        )}
+      <nav style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+        {/* 1. สำหรับแพทย์ (Medical Staff Section) */}
+        <div style={{
+          fontSize: "0.68rem",
+          fontWeight: 700,
+          color: "var(--text-muted)",
+          textTransform: "uppercase",
+          letterSpacing: "1.2px",
+          padding: "8px 16px 6px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          opacity: 0.85
+        }}>
+          <span style={{ fontSize: "0.95rem" }}>🩺</span> สำหรับแพทย์
+        </div>
 
         {(user.role !== "admin" || !!user.discordId) && (
           <Link
@@ -102,13 +89,6 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
           <span>🏥</span>
           {(user.isOp || user.role === "admin") ? "ระบบจัดการคิว OP" : "ตารางเวร OP"}
         </Link>
-        <Link
-          href="/dashboard/ranking"
-          className={`nav-link ${pathname === "/dashboard/ranking" ? "active" : ""}`}
-        >
-          <span>🏆</span>
-          จัดอันดับสัปดาห์นี้
-        </Link>
 
         <Link
           href="/dashboard/announcements"
@@ -117,7 +97,15 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
           <span>📣</span>
           ข้อความประกาศ
         </Link>
-        
+
+        <Link
+          href="/dashboard/ranking"
+          className={`nav-link ${pathname === "/dashboard/ranking" ? "active" : ""}`}
+        >
+          <span>🏆</span>
+          จัดอันดับสัปดาห์นี้
+        </Link>
+
         {(user.role !== "admin" || !!user.discordId) && (
           <>
             <Link
@@ -137,14 +125,60 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
           </>
         )}
 
+        {/* 2. สำหรับผู้ดูแล (Admin Section) */}
         {user.role === "admin" && (
-          <Link
-            href="/dashboard/bonus"
-            className={`nav-link ${pathname === "/dashboard/bonus" ? "active" : ""}`}
-          >
-            <span>💰</span>
-            ตารางโบนัส
-          </Link>
+          <>
+            <div style={{
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              color: "var(--text-muted)",
+              textTransform: "uppercase",
+              letterSpacing: "1.2px",
+              padding: "16px 16px 6px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              borderTop: "1px solid rgba(255, 255, 255, 0.03)",
+              marginTop: "8px",
+              opacity: 0.85
+            }}>
+              <span style={{ fontSize: "0.95rem" }}>🛡️</span> สำหรับผู้ดูแล
+            </div>
+
+            <Link
+              href="/dashboard/admin"
+              className={`nav-link ${pathname === "/dashboard/admin" ? "active" : ""}`}
+            >
+              <span>👑</span>
+              แดชบอร์ดแอดมิน
+            </Link>
+
+            <Link
+              href="/dashboard/bonus"
+              className={`nav-link ${pathname === "/dashboard/bonus" ? "active" : ""}`}
+            >
+              <span>💰</span>
+              ตารางโบนัส
+            </Link>
+
+            <Link
+              href="/dashboard/admin/announcements"
+              className={`nav-link ${pathname === "/dashboard/admin/announcements" ? "active" : ""}`}
+            >
+              <span>📢</span>
+              ตั้งค่าข้อความประกาศ
+            </Link>
+
+            {!user.discordId && (
+              <Link
+                href="/dashboard/admin/settings"
+                className={`nav-link ${pathname === "/dashboard/admin/settings" ? "active" : ""}`}
+              >
+                <span>⚙️</span>
+                ตั้งค่าระบบ
+              </Link>
+            )}
+          </>
         )}
       </nav>
 
