@@ -57,13 +57,22 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
 
       <nav>
         {user.role === "admin" && (
-          <Link
-            href="/dashboard/admin"
-            className={`nav-link ${pathname === "/dashboard/admin" ? "active" : ""}`}
-          >
-            <span>👑</span>
-            แดชบอร์ดแอดมิน
-          </Link>
+          <>
+            <Link
+              href="/dashboard/admin"
+              className={`nav-link ${pathname === "/dashboard/admin" ? "active" : ""}`}
+            >
+              <span>👑</span>
+              แดชบอร์ดแอดมิน
+            </Link>
+            <Link
+              href="/dashboard/admin/announcements"
+              className={`nav-link ${pathname === "/dashboard/admin/announcements" ? "active" : ""}`}
+            >
+              <span>📢</span>
+              ตั้งค่าข้อความประกาศ
+            </Link>
+          </>
         )}
 
         {user.role === "admin" && !user.discordId && (
@@ -99,6 +108,14 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
         >
           <span>🏆</span>
           จัดอันดับสัปดาห์นี้
+        </Link>
+
+        <Link
+          href="/dashboard/announcements"
+          className={`nav-link ${pathname === "/dashboard/announcements" ? "active" : ""}`}
+        >
+          <span>📣</span>
+          ข้อความประกาศ
         </Link>
         
         {(user.role !== "admin" || !!user.discordId) && (

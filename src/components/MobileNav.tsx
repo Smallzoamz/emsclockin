@@ -37,6 +37,16 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; di
         <span style={{ fontSize: "1.2rem" }}>🏆</span>
         จัดอันดับ
       </Link>
+      <Link href="/dashboard/announcements" className={pathname === "/dashboard/announcements" ? "active" : ""}>
+        <span style={{ fontSize: "1.2rem" }}>📣</span>
+        ประกาศ
+      </Link>
+      {user?.role === "admin" && (
+        <Link href="/dashboard/admin/announcements" className={pathname === "/dashboard/admin/announcements" ? "active" : ""}>
+          <span style={{ fontSize: "1.2rem" }}>📢</span>
+          คุมประกาศ
+        </Link>
+      )}
       
       {(user?.role !== "admin" || !!user?.discordId) && (
         <>
