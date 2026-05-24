@@ -528,7 +528,10 @@ export default function AdminAnnouncementsPage() {
                         { label: "🏴‍☠️ [ชื่อแก๊ง]", placeholder: "[ชื่อแก๊ง]", desc: "ชื่อกลุ่ม/แก๊ง" },
                         { label: "⚖️ [โทษ]", placeholder: "[โทษ]", desc: "โทษสำเร็จรูป" },
                         { label: "💵 [ค่าปรับ]", placeholder: "[ค่าปรับ]", desc: "ค่าปรับ" },
-                        { label: "✖️ [ตัวคูณ]", placeholder: "[ตัวคูณ]", desc: "ตัวคูณโทษ" }
+                        { label: "✖️ [ตัวคูณ]", placeholder: "[ตัวคูณ]", desc: "ตัวคูณโทษ" },
+                        { label: "⏱️ [คูลดาวน์]", placeholder: "[คูลดาวน์]", desc: "คูลดาวน์ (นาที)" },
+                        { label: "🕒 [เวลาเริ่ม]", placeholder: "[เวลาเริ่ม]", desc: "เวลาเริ่มคูลดาวน์" },
+                        { label: "🕒 [เวลาจบ]", placeholder: "[เวลาจบ]", desc: "เวลาสิ้นสุดคูลดาวน์" }
                       ].map((item) => (
                         <button
                           key={item.placeholder}

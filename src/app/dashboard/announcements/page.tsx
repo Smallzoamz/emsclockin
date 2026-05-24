@@ -48,6 +48,11 @@ export default function UserAnnouncementsPage() {
   const [isSendingDiscord, setIsSendingDiscord] = useState(false);
   const [discordStatus, setDiscordStatus] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
+  // Cooldown states
+  const [cooldownMinutes, setCooldownMinutes] = useState(10);
+  const [fixedStartTime, setFixedStartTime] = useState<string | null>(null);
+  const [fixedEndTime, setFixedEndTime] = useState<string | null>(null);
+
   useEffect(() => {
     // Check if user is authenticated and fetch settings
     getSession().then((session) => {
@@ -97,6 +102,12 @@ export default function UserAnnouncementsPage() {
     }
   }, [selectedCatId, templates]);
 
+  // Reset frozen times when any of the form variables change
+  useEffect(() => {
+    setFixedStartTime(null);
+    setFixedEndTime(null);
+  }, [name, phone, gang, selectedPenaltyId, multiplier, cooldownMinutes, useCommandPrefix, selectedTplId]);
+
   const activeTemplate = templates.find((t) => t.id === selectedTplId);
 
   // Detect which placeholders are present in active template
@@ -111,12 +122,30 @@ export default function UserAnnouncementsPage() {
   const totalFine = baseFine * multiplier;
 
   // Render text content
-  const generateFormattedText = () => {
+  const generateFormattedText = (isDiscord = false, startStrOverride?: string, endStrOverride?: string) => {
     if (!activeTemplate) return "";
     let text = activeTemplate.content;
 
     const penaltyText = activePenalty ? activePenalty.name : "";
     const formattedFine = activePenalty ? `${totalFine.toLocaleString()}` : "";
+
+    let startStr = startStrOverride || fixedStartTime;
+    let endStr = endStrOverride || fixedEndTime;
+
+    if (!startStr || !endStr) {
+      // Live preview time calculation in Asia/Bangkok
+      const now = new Date();
+      const bkkNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+      const bkkEnd = new Date(bkkNow.getTime() + cooldownMinutes * 60 * 1000);
+      
+      const startH = bkkNow.getHours().toString().padStart(2, "0");
+      const startM = bkkNow.getMinutes().toString().padStart(2, "0");
+      startStr = `${startH}.${startM}`;
+
+      const endH = bkkEnd.getHours().toString().padStart(2, "0");
+      const endM = bkkEnd.getMinutes().toString().padStart(2, "0");
+      endStr = `${endH}.${endM}`;
+    }
 
     // Substitutions
     text = text.replaceAll("[ชื่อคน]", name.trim() || "________________");
@@ -126,39 +155,42 @@ export default function UserAnnouncementsPage() {
     text = text.replaceAll("[ค่าปรับ]", activePenalty ? `$${formattedFine}` : "________________");
     text = text.replaceAll("[ตัวคูณ]", multiplier > 1 ? `${multiplier}` : "1");
 
-    // Prepend command prefix if present
-    if (useCommandPrefix.trim()) {
+    // Cooldown Substitutions
+    text = text.replaceAll("[คูลดาวน์]", `${cooldownMinutes}`);
+    text = text.replaceAll("[เวลาเริ่ม]", startStr);
+    text = text.replaceAll("[เวลาจบ]", endStr);
+
+    // Prepend command prefix if present and not for Discord
+    if (!isDiscord && useCommandPrefix.trim()) {
       text = `${useCommandPrefix.trim()} ${text}`;
     }
 
     return text;
   };
 
-  // Render text content without prefix (specifically for Discord webhook logs)
-  const generateDiscordText = () => {
-    if (!activeTemplate) return "";
-    let text = activeTemplate.content;
-
-    const penaltyText = activePenalty ? activePenalty.name : "";
-    const formattedFine = activePenalty ? `${totalFine.toLocaleString()}` : "";
-
-    // Substitutions
-    text = text.replaceAll("[ชื่อคน]", name.trim() || "________________");
-    text = text.replaceAll("[เบอร์โทร]", phone.trim() || "________________");
-    text = text.replaceAll("[ชื่อแก๊ง]", gang.trim() || "________________");
-    text = text.replaceAll("[โทษ]", penaltyText || "________________");
-    text = text.replaceAll("[ค่าปรับ]", activePenalty ? `$${formattedFine}` : "________________");
-    text = text.replaceAll("[ตัวคูณ]", multiplier > 1 ? `${multiplier}` : "1");
-
-    return text;
-  };
-
-  const formattedResultText = generateFormattedText();
+  const formattedResultText = generateFormattedText(false);
 
   // Copy to Clipboard Action
   const handleCopyText = async () => {
     try {
-      await navigator.clipboard.writeText(formattedResultText);
+      const now = new Date();
+      const bkkNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+      const bkkEnd = new Date(bkkNow.getTime() + cooldownMinutes * 60 * 1000);
+      
+      const startH = bkkNow.getHours().toString().padStart(2, "0");
+      const startM = bkkNow.getMinutes().toString().padStart(2, "0");
+      const startStr = `${startH}.${startM}`;
+
+      const endH = bkkEnd.getHours().toString().padStart(2, "0");
+      const endM = bkkEnd.getMinutes().toString().padStart(2, "0");
+      const endStr = `${endH}.${endM}`;
+
+      setFixedStartTime(startStr);
+      setFixedEndTime(endStr);
+
+      const textToCopy = generateFormattedText(false, startStr, endStr);
+
+      await navigator.clipboard.writeText(textToCopy);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 3000);
     } catch (err) {
@@ -168,7 +200,27 @@ export default function UserAnnouncementsPage() {
 
   // Discord Send Action
   const handleSendToDiscord = async () => {
-    const discordText = generateDiscordText();
+    let startStr = fixedStartTime;
+    let endStr = fixedEndTime;
+
+    if (!startStr || !endStr) {
+      const now = new Date();
+      const bkkNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+      const bkkEnd = new Date(bkkNow.getTime() + cooldownMinutes * 60 * 1000);
+      
+      const startH = bkkNow.getHours().toString().padStart(2, "0");
+      const startM = bkkNow.getMinutes().toString().padStart(2, "0");
+      startStr = `${startH}.${startM}`;
+
+      const endH = bkkEnd.getHours().toString().padStart(2, "0");
+      const endM = bkkEnd.getMinutes().toString().padStart(2, "0");
+      endStr = `${endH}.${endM}`;
+
+      setFixedStartTime(startStr);
+      setFixedEndTime(endStr);
+    }
+
+    const discordText = generateFormattedText(true, startStr, endStr);
     if (!discordText) return;
     setIsSendingDiscord(true);
     setDiscordStatus(null);
@@ -379,6 +431,21 @@ export default function UserAnnouncementsPage() {
                     />
                   </div>
 
+                </div>
+              )}
+
+              {/* Cooldown Duration Input */}
+              {(hasPlaceholder("[คูลดาวน์]") || hasPlaceholder("[เวลาเริ่ม]") || hasPlaceholder("[เวลาจบ]")) && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>⏱️ เวลาคูลดาวน์ (นาที)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="ระบุระยะเวลาคูลดาวน์ เช่น 10, 15, 30"
+                    value={cooldownMinutes}
+                    onChange={(e) => setCooldownMinutes(Math.max(1, Number(e.target.value)))}
+                    style={{ padding: "8px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                  />
                 </div>
               )}
 
