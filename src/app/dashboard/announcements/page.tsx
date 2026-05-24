@@ -41,7 +41,6 @@ export default function UserAnnouncementsPage() {
   const [selectedPenaltyId, setSelectedPenaltyId] = useState("");
   const [multiplier, setMultiplier] = useState(1);
   const [commandPrefix, setCommandPrefix] = useState("/ems");
-  const [useCommandPrefix, setUseCommandPrefix] = useState("/ems");
 
   // Actions states
   const [copySuccess, setCopySuccess] = useState(false);
@@ -79,7 +78,6 @@ export default function UserAnnouncementsPage() {
           }
           if (data.commandPrefix) {
             setCommandPrefix(data.commandPrefix);
-            setUseCommandPrefix(data.commandPrefix);
           }
           setLoading(false);
         })
@@ -106,7 +104,7 @@ export default function UserAnnouncementsPage() {
   useEffect(() => {
     setFixedStartTime(null);
     setFixedEndTime(null);
-  }, [name, phone, gang, selectedPenaltyId, multiplier, cooldownMinutes, useCommandPrefix, selectedTplId]);
+  }, [name, phone, gang, selectedPenaltyId, multiplier, cooldownMinutes, commandPrefix, selectedTplId]);
 
   const activeTemplate = templates.find((t) => t.id === selectedTplId);
 
@@ -161,8 +159,8 @@ export default function UserAnnouncementsPage() {
     text = text.replaceAll("[เวลาจบ]", endStr);
 
     // Prepend command prefix if present and not for Discord
-    if (!isDiscord && useCommandPrefix.trim()) {
-      text = `${useCommandPrefix.trim()} ${text}`;
+    if (!isDiscord && commandPrefix.trim()) {
+      text = `${commandPrefix.trim()} ${text}`;
     }
 
     return text;
@@ -311,21 +309,6 @@ export default function UserAnnouncementsPage() {
                 ))}
               </select>
             )}
-          </div>
-
-          {/* 3. Command Prefix Selector */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>3. คำสั่งประกาศหน่วยงาน (Tag / Command Prefix)</label>
-            <input
-              type="text"
-              placeholder="เช่น /ems, /gov หรือเว้นว่างไว้"
-              value={useCommandPrefix}
-              onChange={(e) => setUseCommandPrefix(e.target.value)}
-              style={{ padding: "10px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem" }}
-            />
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "2px" }}>
-              ระบบจะนำตัวย่อนี้ไปเติมหน้าข้อความเมื่อคัดลอก (สำหรับพิมพ์ในแชทเกม FiveM)
-            </span>
           </div>
 
           {/* Dynamic Form Fields based on Template Content */}
