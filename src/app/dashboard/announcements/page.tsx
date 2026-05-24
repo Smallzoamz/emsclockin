@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getSession } from "next-auth/react";
+import { formatThaiDate } from "@/lib/utils";
 
 interface Category {
   id: string;
@@ -24,6 +25,14 @@ interface Penalty {
 
 export default function UserAnnouncementsPage() {
   const [loading, setLoading] = useState(true);
+
+  // Data States
+  const [blacklistHistory, setBlacklistHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [dbWarning, setDbWarning] = useState(false);
+  const [loggedBlacklistId, setLoggedBlacklistId] = useState<string | null>(null);
+  const [blacklistReleaseTemplate, setBlacklistReleaseTemplate] = useState("");
+  const [releasingId, setReleasingId] = useState<string | null>(null);
 
   // Data States
   const [categories, setCategories] = useState<Category[]>([]);
@@ -52,6 +61,22 @@ export default function UserAnnouncementsPage() {
   const [fixedStartTime, setFixedStartTime] = useState<string | null>(null);
   const [fixedEndTime, setFixedEndTime] = useState<string | null>(null);
 
+  const fetchBlacklistHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await fetch("/api/announcements/blacklist");
+      if (res.ok) {
+        const data = await res.json();
+        setBlacklistHistory(data.records || []);
+        setDbWarning(!!data.dbWarning);
+      }
+    } catch (err) {
+      console.error("Failed to fetch blacklist history:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   useEffect(() => {
     // Check if user is authenticated and fetch settings
     getSession().then((session) => {
@@ -79,6 +104,10 @@ export default function UserAnnouncementsPage() {
           if (data.commandPrefix) {
             setCommandPrefix(data.commandPrefix);
           }
+          if (data.blacklistReleaseTemplate) {
+            setBlacklistReleaseTemplate(data.blacklistReleaseTemplate);
+          }
+          fetchBlacklistHistory();
           setLoading(false);
         })
         .catch((err) => {
@@ -100,11 +129,12 @@ export default function UserAnnouncementsPage() {
     }
   }, [selectedCatId, templates]);
 
-  // Reset frozen times when any of the form variables change
+  // Reset frozen times and logged ID when any of the form variables change
   useEffect(() => {
     setFixedStartTime(null);
     setFixedEndTime(null);
-  }, [name, phone, gang, selectedPenaltyId, multiplier, cooldownMinutes, commandPrefix, selectedTplId]);
+    setLoggedBlacklistId(null);
+  }, [name, phone, gang, selectedPenaltyId, multiplier, cooldownMinutes, commandPrefix, selectedTplId, selectedCatId]);
 
   const activeTemplate = templates.find((t) => t.id === selectedTplId);
 
@@ -150,7 +180,7 @@ export default function UserAnnouncementsPage() {
     text = text.replaceAll("[เบอร์โทร]", phone.trim() || "________________");
     text = text.replaceAll("[ชื่อแก๊ง]", gang.trim() || "________________");
     text = text.replaceAll("[โทษ]", penaltyText || "________________");
-    text = text.replaceAll("[ค่าปรับ]", activePenalty ? `$${formattedFine}` : "________________");
+    text = text.replaceAll("[ค่าปรับ]", activePenalty ? `${formattedFine} IC` : "________________");
     text = text.replaceAll("[ตัวคูณ]", multiplier > 1 ? `${multiplier}` : "1");
 
     // Cooldown Substitutions
@@ -167,6 +197,38 @@ export default function UserAnnouncementsPage() {
   };
 
   const formattedResultText = generateFormattedText(false);
+
+  const saveOrUpdateBlacklistRecord = async () => {
+    if (selectedCatId !== "cat_blacklist" || !name.trim()) return;
+
+    try {
+      const activePenalty = penalties.find((p) => p.id === selectedPenaltyId);
+      const res = await fetch("/api/announcements/blacklist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: loggedBlacklistId || undefined,
+          name: name.trim(),
+          phone: phone.trim(),
+          gang: gang.trim(),
+          penalty: activePenalty ? activePenalty.name : "",
+          fine: totalFine,
+          multiplier: multiplier
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.record?.id) {
+          setLoggedBlacklistId(data.record.id);
+          // Reload the blacklist history
+          fetchBlacklistHistory();
+        }
+      }
+    } catch (err) {
+      console.error("Failed to log blacklist record:", err);
+    }
+  };
 
   // Copy to Clipboard Action
   const handleCopyText = async () => {
@@ -191,6 +253,9 @@ export default function UserAnnouncementsPage() {
       await navigator.clipboard.writeText(textToCopy);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 3000);
+
+      // Log/upsert blacklist record in database
+      await saveOrUpdateBlacklistRecord();
     } catch (err) {
       alert("ไม่สามารถคัดลอกข้อความได้โดยอัตโนมัติ กรุณาครอบดำข้อความแล้วคัดลอกเองค่ะ");
     }
@@ -236,6 +301,9 @@ export default function UserAnnouncementsPage() {
       const data = await res.json();
       if (res.ok) {
         setDiscordStatus({ message: "ส่งประกาศเข้าสู่ระบบ Discord เรียบร้อยแล้วค่ะ! 🚀", type: "success" });
+        
+        // Log/upsert blacklist record in database
+        await saveOrUpdateBlacklistRecord();
       } else {
         setDiscordStatus({ message: data.error || "เกิดข้อผิดพลาดในการส่ง", type: "error" });
       }
@@ -244,6 +312,68 @@ export default function UserAnnouncementsPage() {
     } finally {
       setIsSendingDiscord(false);
       setTimeout(() => setDiscordStatus(null), 5000);
+    }
+  };
+
+  const handleReleaseBlacklist = async (record: any) => {
+    if (!confirm(`ยืนยันการปลด Blacklist ของ "${record.name}" หรือไม่?`)) return;
+
+    setReleasingId(record.id);
+    try {
+      // Substitute placeholders in template
+      let text = blacklistReleaseTemplate || "**[ปลด Blacklist บุคคล]**\nชื่อ-นามสกุล: [ชื่อคน]\nเบอร์โทรศัพท์: [เบอร์โทร]\nชื่อกลุ่ม/แก๊ง: [ชื่อแก๊ง]\nสถานะ: ปลดแบล็คลิสต์ เรียบร้อยแล้วค่ะ";
+      text = text.replaceAll("[ชื่อคน]", record.name || "");
+      text = text.replaceAll("[เบอร์โทร]", record.phone || "-");
+      text = text.replaceAll("[ชื่อแก๊ง]", record.gang || "-");
+      text = text.replaceAll("[โทษ]", record.penalty || "");
+      text = text.replaceAll("[ค่าปรับ]", record.fine ? `${Number(record.fine).toLocaleString()} IC` : "0 IC");
+      text = text.replaceAll("[ตัวคูณ]", record.multiplier ? `${record.multiplier}` : "1");
+
+      // Prepend command prefix if configured
+      const clipboardText = commandPrefix.trim() 
+        ? `${commandPrefix.trim()} ${text}`
+        : text;
+
+      // Write to clipboard
+      await navigator.clipboard.writeText(clipboardText);
+
+      // Send stripped version to Discord
+      const discordRes = await fetch("/api/announcements/send-discord", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "แจ้งปลด Blacklist บุคคล",
+          content: text // prefix-stripped
+        })
+      });
+
+      if (!discordRes.ok) {
+        console.warn("Failed to send release announcement to Discord");
+      }
+
+      // Update DB status to released
+      const dbRes = await fetch("/api/announcements/blacklist", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: record.id })
+      });
+
+      if (dbRes.ok) {
+        setDiscordStatus({
+          message: `ปลดแบล็คลิสต์ "${record.name}" สำเร็จและคัดลอกประกาศเรียบร้อยแล้วค่ะ! 🔓`,
+          type: "success"
+        });
+        setTimeout(() => setDiscordStatus(null), 5000);
+        await fetchBlacklistHistory();
+      } else {
+        const errData = await dbRes.json();
+        alert(errData.error || "เกิดข้อผิดพลาดในการปลดแบล็คลิสต์");
+      }
+    } catch (err: any) {
+      console.error("Error releasing blacklist:", err);
+      alert("เกิดข้อผิดพลาด: " + (err.message || err));
+    } finally {
+      setReleasingId(null);
     }
   };
 
@@ -397,7 +527,7 @@ export default function UserAnnouncementsPage() {
                       display: "flex",
                       alignItems: "center"
                     }}>
-                      ${totalFine.toLocaleString()}
+                      {totalFine.toLocaleString()} IC
                     </div>
                   </div>
 
@@ -559,6 +689,141 @@ export default function UserAnnouncementsPage() {
 
         </div>
 
+      </div>
+
+      {/* Blacklist History Table Card */}
+      <div className="card" style={{ padding: "24px", marginTop: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
+          <h2 style={{ fontSize: "1.2rem", color: "var(--accent-light)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+            📋 ประวัติการติด Blacklist ในระบบ (Active Blacklists)
+          </h2>
+          {loadingHistory && <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>กำลังโหลดข้อมูล...</span>}
+        </div>
+
+        {dbWarning && (
+          <div style={{
+            padding: "12px 16px",
+            background: "rgba(245, 158, 11, 0.1)",
+            border: "1px solid rgba(245, 158, 11, 0.3)",
+            color: "var(--warning)",
+            borderRadius: "8px",
+            fontSize: "0.85rem"
+          }}>
+            ⚠️ ตารางฐานข้อมูลประวัติยังไม่ถูกติดตั้ง กรุณาแจ้งผู้ดูแลระบบให้รันไฟล์สคริปต์ <code>sql/create_blacklist_records.sql</code> บน Database ก่อนค่ะ
+          </div>
+        )}
+
+        {!dbWarning && (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", textAlign: "left" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--border)", color: "var(--text-secondary)" }}>
+                  <th style={{ padding: "12px 8px", fontWeight: "bold" }}>ชื่อ-นามสกุล</th>
+                  <th style={{ padding: "12px 8px", fontWeight: "bold" }}>เบอร์โทร</th>
+                  <th style={{ padding: "12px 8px", fontWeight: "bold" }}>แก๊ง/สังกัด</th>
+                  <th style={{ padding: "12px 8px", fontWeight: "bold" }}>ข้อหา/ความผิด</th>
+                  <th style={{ padding: "12px 8px", fontWeight: "bold" }}>ค่าปรับ</th>
+                  <th style={{ padding: "12px 8px", fontWeight: "bold" }}>ผู้ลงบันทึก</th>
+                  <th style={{ padding: "12px 8px", fontWeight: "bold" }}>วันที่บันทึก</th>
+                  <th style={{ padding: "12px 8px", fontWeight: "bold", textAlign: "right" }}>การจัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {blacklistHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ padding: "24px", textAlign: "center", color: "var(--text-muted)" }}>
+                      {loadingHistory ? "กำลังโหลดข้อมูล..." : "ไม่มีประวัติการติด Blacklist ที่มีผลใช้งานในขณะนี้"}
+                    </td>
+                  </tr>
+                ) : (
+                  blacklistHistory.map((record) => (
+                    <tr key={record.id} style={{ borderBottom: "1px solid var(--border-subtle)", color: "var(--text-primary)" }}>
+                      <td style={{ padding: "12px 8px", fontWeight: "bold" }}>{record.name}</td>
+                      <td style={{ padding: "12px 8px", fontFamily: "var(--font-mono)" }}>{record.phone || "-"}</td>
+                      <td style={{ padding: "12px 8px" }}>
+                        {record.gang ? (
+                          <span style={{
+                            padding: "2px 6px",
+                            background: "rgba(255, 255, 255, 0.05)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "4px",
+                            fontSize: "0.75rem"
+                          }}>
+                            {record.gang}
+                          </span>
+                        ) : "-"}
+                      </td>
+                      <td style={{ padding: "12px 8px" }}>
+                        <span style={{
+                          padding: "2px 6px",
+                          background: "rgba(239, 68, 68, 0.1)",
+                          border: "1px solid rgba(239, 68, 68, 0.2)",
+                          color: "var(--danger)",
+                          borderRadius: "4px",
+                          fontSize: "0.75rem",
+                          fontWeight: "bold"
+                        }}>
+                          {record.penalty || "-"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 8px", fontFamily: "var(--font-mono)" }}>
+                        <span style={{ color: "var(--accent-light)", fontWeight: "bold" }}>
+                          {(record.fine || 0).toLocaleString()} IC
+                        </span>
+                        {record.multiplier > 1 && (
+                          <span style={{
+                            marginLeft: "4px",
+                            padding: "1px 4px",
+                            background: "rgba(245, 158, 11, 0.15)",
+                            border: "1px solid rgba(245, 158, 11, 0.3)",
+                            color: "var(--warning)",
+                            borderRadius: "4px",
+                            fontSize: "0.7rem",
+                            fontWeight: "bold"
+                          }}>
+                            x{record.multiplier}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: "12px 8px", color: "var(--text-muted)" }}>{record.created_by?.split("@")[0]}</td>
+                      <td style={{ padding: "12px 8px", color: "var(--text-muted)" }}>
+                        {record.created_at ? formatThaiDate(new Date(record.created_at)) : "-"}
+                      </td>
+                      <td style={{ padding: "12px 8px", textAlign: "right" }}>
+                        <button
+                          onClick={() => handleReleaseBlacklist(record)}
+                          disabled={releasingId === record.id}
+                          style={{
+                            padding: "6px 12px",
+                            background: "var(--primary)",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "6px",
+                            fontWeight: "bold",
+                            fontSize: "0.75rem",
+                            cursor: releasingId === record.id ? "not-allowed" : "pointer",
+                            opacity: releasingId === record.id ? 0.6 : 1,
+                            transition: "all 0.2s"
+                          }}
+                          onMouseOver={(e) => {
+                            if (releasingId !== record.id) {
+                              e.currentTarget.style.boxShadow = "0 0 8px var(--accent-glow)";
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.boxShadow = "none";
+                          }}
+                        >
+                          {releasingId === record.id ? "กำลังปลด..." : "🔓 ปลด"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
     </div>

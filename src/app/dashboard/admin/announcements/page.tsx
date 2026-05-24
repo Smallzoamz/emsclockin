@@ -59,6 +59,7 @@ export default function AdminAnnouncementsPage() {
   // General Settings States
   const [announcementCommandPrefix, setAnnouncementCommandPrefix] = useState("/ems");
   const [discordAnnouncementWebhookUrl, setDiscordAnnouncementWebhookUrl] = useState("");
+  const [blacklistReleaseTemplate, setBlacklistReleaseTemplate] = useState("");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -106,6 +107,7 @@ export default function AdminAnnouncementsPage() {
         if (data.penalties) setPenalties(data.penalties);
         if (data.commandPrefix) setAnnouncementCommandPrefix(data.commandPrefix);
         if (data.announcementWebhookUrl) setDiscordAnnouncementWebhookUrl(data.announcementWebhookUrl);
+        if (data.blacklistReleaseTemplate) setBlacklistReleaseTemplate(data.blacklistReleaseTemplate);
         setLoadingData(false);
       })
       .catch((err) => {
@@ -339,6 +341,19 @@ export default function AdminAnnouncementsPage() {
             <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>ใช้ส่งประกาศแบล็คลิสต์/แจ้งเคสแยกห้องต่างหาก (หากเว้นว่างจะใช้ Webhook ทั่วไป)</span>
           </div>
         </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
+          <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>รูปแบบข้อความประกาศปลด Blacklist (Release Template)</label>
+          <textarea
+            placeholder="พิมพ์โครงสร้างประกาศปลดแบล็คลิสต์..."
+            value={blacklistReleaseTemplate}
+            onChange={(e) => setBlacklistReleaseTemplate(e.target.value)}
+            rows={4}
+            style={{ padding: "10px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem", fontFamily: "var(--font-mono)", resize: "vertical", lineHeight: "1.5" }}
+          />
+          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>โครงสร้างข้อความเมื่อแพทย์คลิกปลดแบล็คลิสต์ในระบบ (รองรับตัวแปร [ชื่อคน], [เบอร์โทร], [ชื่อแก๊ง], [โทษ], [ค่าปรับ], [ตัวคูณ])</span>
+        </div>
+
         <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "4px" }}>
           <button
             onClick={async () => {
@@ -354,6 +369,11 @@ export default function AdminAnnouncementsPage() {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ key: "discord_announcement_webhook_url", value: discordAnnouncementWebhookUrl })
+                  }),
+                  fetch("/api/announcements/settings", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ key: "blacklist_release_template", value: blacklistReleaseTemplate })
                   })
                 ]);
                 showMessage("บันทึกการตั้งค่าทั่วไปเรียบร้อยแล้วค่ะ", "success");
@@ -734,7 +754,7 @@ export default function AdminAnnouncementsPage() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>วงเงินค่าปรับตั้งต้น ($)</label>
+                  <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>วงเงินค่าปรับตั้งต้น (IC)</label>
                   <input
                     type="number"
                     min="0"
@@ -780,7 +800,7 @@ export default function AdminAnnouncementsPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
                           <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>ค่าปรับเริ่มต้น:</span>
                           <span style={{ fontSize: "0.95rem", fontWeight: "bold", color: "var(--accent-light)", fontFamily: "var(--font-mono)" }}>
-                            ${pen.fine.toLocaleString()}
+                            {pen.fine.toLocaleString()} IC
                           </span>
                         </div>
                       </div>

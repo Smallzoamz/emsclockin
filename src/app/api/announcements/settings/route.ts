@@ -51,7 +51,8 @@ export async function GET() {
         "announcement_templates",
         "blacklist_penalties",
         "announcement_command_prefix",
-        "discord_announcement_webhook_url"
+        "discord_announcement_webhook_url",
+        "blacklist_release_template"
       ]);
 
     if (error) throw error;
@@ -66,13 +67,15 @@ export async function GET() {
     const penalties = settingsMap["blacklist_penalties"] || defaultPenalties;
     const commandPrefix = settingsMap["announcement_command_prefix"] || "/ems";
     const announcementWebhookUrl = settingsMap["discord_announcement_webhook_url"] || "";
+    const blacklistReleaseTemplate = settingsMap["blacklist_release_template"] || "**[ปลด Blacklist บุคคล]**\nชื่อ-นามสกุล: [ชื่อคน]\nเบอร์โทรศัพท์: [เบอร์โทร]\nชื่อกลุ่ม/แก๊ง: [ชื่อแก๊ง]\nสถานะ: ปลดแบล็คลิสต์ เรียบร้อยแล้วค่ะ";
 
     return NextResponse.json({
       categories,
       templates,
       penalties,
       commandPrefix,
-      announcementWebhookUrl
+      announcementWebhookUrl,
+      blacklistReleaseTemplate
     });
   } catch (error) {
     console.error("[Announcements GET] Error:", error);
@@ -81,7 +84,8 @@ export async function GET() {
       templates: defaultTemplates,
       penalties: defaultPenalties,
       commandPrefix: "/ems",
-      announcementWebhookUrl: ""
+      announcementWebhookUrl: "",
+      blacklistReleaseTemplate: "**[ปลด Blacklist บุคคล]**\nชื่อ-นามสกุล: [ชื่อคน]\nเบอร์โทรศัพท์: [เบอร์โทร]\nชื่อกลุ่ม/แก๊ง: [ชื่อแก๊ง]\nสถานะ: ปลดแบล็คลิสต์ เรียบร้อยแล้วค่ะ"
     });
   }
 }
@@ -103,7 +107,8 @@ export async function POST(req: Request) {
       "announcement_templates",
       "blacklist_penalties",
       "announcement_command_prefix",
-      "discord_announcement_webhook_url"
+      "discord_announcement_webhook_url",
+      "blacklist_release_template"
     ];
     if (!key || !allowedKeys.includes(key) || value === undefined) {
       return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
