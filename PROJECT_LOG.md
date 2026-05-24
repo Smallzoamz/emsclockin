@@ -138,5 +138,8 @@
 
 ## [2026-05-25 04:56] | File: multiple | Line: 1 | Keyword: Configurable Tag, Editable Penalties & Webhook | Status: ✅ Complete | Change: Added configurable prefix tags, editable penalties, and dedicated Discord webhook support. (1) Settings API GET/POST was updated to handle 'announcement_command_prefix' and 'discord_announcement_webhook_url' configurations. (2) Discord Send route was updated to fetch and resolve 'discord_announcement_webhook_url' with fallback to 'discord_webhook_url'. (3) Admin Page UI was added a general settings configuration card and Edit capabilities for predefined blacklist penalties. (4) User Page UI was added command tag selector, prepended tag to copied text, and stripped prefix tag for Discord webhooks. Next.js production build verified successful with 0 errors.
 
+## [2026-05-25 04:59] | File: src/app/api/announcements/send-discord/route.ts | Line: 36 | Keyword: Discord Webhook Sender Identity | Status: ✅ Complete | Change: Customized the Discord Webhook sender profile dynamically. Overrides the webhook name and avatar URL using the logged-in doctor's Discord credentials (display name and profile picture), and appends clickable user tags/mentions (<@discordId>) inside the message or embed. Next.js production build verified successful with 0 errors.
+
+
 
 

@@ -33,26 +33,45 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "ไม่ได้กำหนดตั้งค่า Discord Webhook ในระบบ กรุณาติดต่อแอดมินค่ะ" }, { status: 400 });
     }
 
+    const user = session.user as any;
+    const isDiscordUser = !!user.discordId;
+
+    // Set customized profile for the webhook message
+    const senderName = user.name || "Announcement Bot";
+    const avatar_url = (isDiscordUser && user.avatar) 
+      ? user.avatar 
+      : "https://cdn-icons-png.flaticon.com/512/3199/3199859.png";
+
+    // Embed formatting
+    let footerText = `ส่งโดยแพทย์: ${user.name || user.email}`;
+    let descriptionText = content;
+
+    if (isDiscordUser) {
+      footerText = `ส่งโดยแพทย์: @${user.discordUsername}`;
+      // Add a mention block at the end of the announcement description
+      descriptionText = `${content}\n\n**ส่งโดย:** <@${user.discordId}>`;
+    }
+
     // Send to Discord
     const discordPayload = {
-      username: "Announcement Bot",
-      avatar_url: "https://cdn-icons-png.flaticon.com/512/3199/3199859.png",
-      content: content,
+      username: senderName,
+      avatar_url: avatar_url,
+      content: isDiscordUser ? `${content}\n\n*(ส่งโดย: <@${user.discordId}>)*` : content,
       embeds: title ? [
         {
           title: title,
           color: 0x10b981, // Emerald Green
-          description: content,
+          description: descriptionText,
           timestamp: new Date().toISOString(),
           footer: {
-            text: `ส่งโดยแพทย์: ${session.user.name || session.user.email}`
+            text: footerText
           }
         }
       ] : undefined
     };
 
     // If embeds are used, we don't duplicate content in the main text block
-    const payload = title ? { ...discordPayload, content: undefined } : { username: discordPayload.username, avatar_url: discordPayload.avatar_url, content: content };
+    const payload = title ? { ...discordPayload, content: undefined } : { username: discordPayload.username, avatar_url: discordPayload.avatar_url, content: discordPayload.content };
 
     const res = await fetch(webhookUrl, {
       method: "POST",
