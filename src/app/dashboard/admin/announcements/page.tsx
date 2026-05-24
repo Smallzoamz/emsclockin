@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -54,6 +54,31 @@ export default function AdminAnnouncementsPage() {
   // Form States - Penalty
   const [newPenName, setNewPenName] = useState("");
   const [newPenFine, setNewPenFine] = useState<number>(0);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertPlaceholder = (placeholder: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setTempContent((prev) => prev + placeholder);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const before = text.substring(0, start);
+    const after = text.substring(end, text.length);
+
+    const newContent = before + placeholder + after;
+    setTempContent(newContent);
+
+    // Reset cursor position to after the inserted placeholder
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + placeholder.length, start + placeholder.length);
+    }, 0);
+  };
 
   useEffect(() => {
     // Auth Guard check
@@ -377,6 +402,7 @@ export default function AdminAnnouncementsPage() {
                       <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>โครงสร้างข้อความประกาศ (Template Body)</label>
                     </div>
                     <textarea
+                      ref={textareaRef}
                       placeholder={`พิมพ์โครงสร้างข้อความประกาศที่ต้องการโดยใช้ตัวแปรเพื่อเว้นช่องให้แพทย์กรอก เช่น:\n\n**[แบล็คลิสต์]**\nชื่อ: [ชื่อคน]\nเบอร์โทร: [เบอร์โทร]\nสังกัด: [ชื่อแก๊ง]\nความผิด: [โทษ]\nค่าปรับ: [ค่าปรับ] ดับเบิ้ลปรับ x[ตัวคูณ]`}
                       value={tempContent}
                       onChange={(e) => setTempContent(e.target.value)}
@@ -386,16 +412,48 @@ export default function AdminAnnouncementsPage() {
                     />
                   </div>
 
-                  {/* Placeholder Cheat Sheet */}
+                  {/* Placeholder Buttons */}
                   <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border-subtle)", borderRadius: "6px", padding: "12px" }}>
-                    <div style={{ fontSize: "0.75rem", fontWeight: "bold", color: "var(--accent-light)", marginBottom: "6px" }}>💡 โทเค็นตัวแปรที่ระบบรองรับและจะสร้างช่องกรอกอัตโนมัติ:</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                      <div><code>[ชื่อคน]</code> = ช่องกรอกชื่อคนไข้</div>
-                      <div><code>[เบอร์โทร]</code> = ช่องกรอกเบอร์มือถือ</div>
-                      <div><code>[ชื่อแก๊ง]</code> = ช่องกรอกชื่อกลุ่ม/แก๊ง</div>
-                      <div><code>[โทษ]</code> = Dropdown เลือกโทษสำเร็จรูป</div>
-                      <div><code>[ค่าปรับ]</code> = แสดงค่าปรับ (คำนวณตามโทษ & ตัวคูณ)</div>
-                      <div><code>[ตัวคูณ]</code> = ช่องระบุจำนวนการทำซ้ำ (ตัวคูณโทษ)</div>
+                    <div style={{ fontSize: "0.75rem", fontWeight: "bold", color: "var(--accent-light)", marginBottom: "8px" }}>💡 คลิกที่ปุ่มด้านล่างเพื่อแทรกตัวแปรตรงตำแหน่งเคอร์เซอร์:</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                      {[
+                        { label: "👤 [ชื่อคน]", placeholder: "[ชื่อคน]", desc: "ชื่อคนไข้" },
+                        { label: "📞 [เบอร์โทร]", placeholder: "[เบอร์โทร]", desc: "เบอร์มือถือ" },
+                        { label: "🏴‍☠️ [ชื่อแก๊ง]", placeholder: "[ชื่อแก๊ง]", desc: "ชื่อกลุ่ม/แก๊ง" },
+                        { label: "⚖️ [โทษ]", placeholder: "[โทษ]", desc: "โทษสำเร็จรูป" },
+                        { label: "💵 [ค่าปรับ]", placeholder: "[ค่าปรับ]", desc: "ค่าปรับ" },
+                        { label: "✖️ [ตัวคูณ]", placeholder: "[ตัวคูณ]", desc: "ตัวคูณโทษ" }
+                      ].map((item) => (
+                        <button
+                          key={item.placeholder}
+                          type="button"
+                          onClick={() => insertPlaceholder(item.placeholder)}
+                          title={`คลิกเพื่อแทรก ${item.desc}`}
+                          style={{
+                            padding: "6px 10px",
+                            background: "var(--bg-secondary)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "6px",
+                            color: "var(--text-secondary)",
+                            fontSize: "0.75rem",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            fontWeight: "500"
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.borderColor = "var(--accent)";
+                            e.currentTarget.style.color = "var(--accent-light)";
+                            e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 8%, transparent)";
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.borderColor = "var(--border-subtle)";
+                            e.currentTarget.style.color = "var(--text-secondary)";
+                            e.currentTarget.style.background = "var(--bg-secondary)";
+                          }}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
