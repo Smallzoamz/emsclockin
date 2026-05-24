@@ -207,7 +207,9 @@ export default function UserAnnouncementsPage() {
       categoryName.includes("แบล็คลิส") ||
       (activeTemplate && activeTemplate.content.includes("[โทษ]"));
 
-    if (!isBlacklist || !name.trim()) return;
+    const resolvedName = name.trim() || gang.trim();
+
+    if (!isBlacklist || !resolvedName) return;
 
     try {
       const activePenalty = penalties.find((p) => p.id === selectedPenaltyId);
@@ -216,7 +218,7 @@ export default function UserAnnouncementsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: loggedBlacklistId || undefined,
-          name: name.trim(),
+          name: resolvedName,
           phone: phone.trim(),
           gang: gang.trim(),
           penalty: activePenalty ? activePenalty.name : "",
