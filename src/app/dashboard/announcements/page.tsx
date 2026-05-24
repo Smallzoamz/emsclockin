@@ -199,7 +199,15 @@ export default function UserAnnouncementsPage() {
   const formattedResultText = generateFormattedText(false);
 
   const saveOrUpdateBlacklistRecord = async () => {
-    if (selectedCatId !== "cat_blacklist" || !name.trim()) return;
+    const categoryName = categories.find(c => c.id === selectedCatId)?.name.toLowerCase() || "";
+    const isBlacklist = selectedCatId === "cat_blacklist" || 
+      categoryName.includes("blacklist") ||
+      categoryName.includes("แบล็คลิสต์") ||
+      categoryName.includes("แบลคลิส") ||
+      categoryName.includes("แบล็คลิส") ||
+      (activeTemplate && activeTemplate.content.includes("[โทษ]"));
+
+    if (!isBlacklist || !name.trim()) return;
 
     try {
       const activePenalty = penalties.find((p) => p.id === selectedPenaltyId);
@@ -232,33 +240,35 @@ export default function UserAnnouncementsPage() {
 
   // Copy to Clipboard Action
   const handleCopyText = async () => {
+    const now = new Date();
+    const bkkNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+    const bkkEnd = new Date(bkkNow.getTime() + cooldownMinutes * 60 * 1000);
+    
+    const startH = bkkNow.getHours().toString().padStart(2, "0");
+    const startM = bkkNow.getMinutes().toString().padStart(2, "0");
+    const startStr = `${startH}.${startM}`;
+
+    const endH = bkkEnd.getHours().toString().padStart(2, "0");
+    const endM = bkkEnd.getMinutes().toString().padStart(2, "0");
+    const endStr = `${endH}.${endM}`;
+
+    setFixedStartTime(startStr);
+    setFixedEndTime(endStr);
+
+    const textToCopy = generateFormattedText(false, startStr, endStr);
+
+    // 1. Try to copy to clipboard
     try {
-      const now = new Date();
-      const bkkNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
-      const bkkEnd = new Date(bkkNow.getTime() + cooldownMinutes * 60 * 1000);
-      
-      const startH = bkkNow.getHours().toString().padStart(2, "0");
-      const startM = bkkNow.getMinutes().toString().padStart(2, "0");
-      const startStr = `${startH}.${startM}`;
-
-      const endH = bkkEnd.getHours().toString().padStart(2, "0");
-      const endM = bkkEnd.getMinutes().toString().padStart(2, "0");
-      const endStr = `${endH}.${endM}`;
-
-      setFixedStartTime(startStr);
-      setFixedEndTime(endStr);
-
-      const textToCopy = generateFormattedText(false, startStr, endStr);
-
       await navigator.clipboard.writeText(textToCopy);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 3000);
-
-      // Log/upsert blacklist record in database
-      await saveOrUpdateBlacklistRecord();
     } catch (err) {
-      alert("ไม่สามารถคัดลอกข้อความได้โดยอัตโนมัติ กรุณาครอบดำข้อความแล้วคัดลอกเองค่ะ");
+      console.error("Clipboard copy failed:", err);
+      alert("ไม่สามารถคัดลอกข้อความได้โดยอัตโนมัติ กรุณาครอบดำข้อความในช่องพรีวิวแล้วคัดลอกด้วยตนเองค่ะ (ระบบจะยังคงบันทึกประวัติการติด Blacklist ให้ตามปกติค่ะ)");
     }
+
+    // 2. Log/upsert blacklist record in database (Independent of clipboard success!)
+    await saveOrUpdateBlacklistRecord();
   };
 
   // Discord Send Action
