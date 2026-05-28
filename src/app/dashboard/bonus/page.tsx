@@ -5,6 +5,7 @@ import * as React from "react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { th } from "date-fns/locale";
 import { formatHoursToHHMMSS } from "@/lib/utils";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 interface PayoutRecord {
   id: string;
@@ -48,6 +49,7 @@ interface BonusHistory {
 }
 
 export default function BonusCalculatorPage() {
+  const confirm = useConfirm();
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -184,7 +186,13 @@ export default function BonusCalculatorPage() {
 
   const handlePublish = async () => {
     if (selectedHistoryId === "live") return;
-    if (!confirm("คุณต้องการประกาศโบนัสสัปดาห์นี้ให้แพทย์ทุกคนทราบใช่หรือไม่?\n(ระบบจะส่งข้อความแจ้งเตือนไปที่ Discord)")) return;
+    if (!await confirm({
+      title: "📢 ประกาศโบนัสประจำสัปดาห์",
+      message: "คุณต้องการประกาศโบนัสสัปดาห์นี้ให้แพทย์ทุกคนทราบใช่หรือไม่?\n(ระบบจะส่งข้อความแจ้งเตือนไปที่ Discord)",
+      confirmText: "ยืนยันส่งประกาศ",
+      cancelText: "ยกเลิก",
+      variant: "success"
+    })) return;
     
     setIsPublishing(true);
     try {
@@ -256,7 +264,13 @@ export default function BonusCalculatorPage() {
 
   const handlePayout = async (entry: RankingEntry, bonusAmount: number, customName: string) => {
     if (!entry.email) return;
-    if (!confirm(`ยืนยันสั่งจ่ายโบนัส $${bonusAmount.toLocaleString()} ให้ ${customName} ?`)) return;
+    if (!await confirm({
+      title: "💸 สั่งจ่ายเงินโบนัสแพทย์",
+      message: `ยืนยันสั่งจ่ายโบนัส ${bonusAmount.toLocaleString()} IC ให้ ${customName} ใช่หรือไม่?`,
+      confirmText: "ยืนยันสั่งจ่าย",
+      cancelText: "ยกเลิก",
+      variant: "success"
+    })) return;
 
     setPayingEmail(entry.email);
     try {

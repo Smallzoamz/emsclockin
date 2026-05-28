@@ -166,4 +166,4 @@
 
 ## [2026-05-28 20:22] | File: src/app/dashboard/announcements/page.tsx | Line: 4, 26, 329 | Keyword: Replace Confirm with useConfirm | Status: ✅ Complete | Change: Replaced native browser confirm calls with custom centered glassmorphic confirm dialogs using ConfirmProvider's useConfirm hook for releasing blacklist records.
 
-
+## [2026-05-28 20:48] | File: src/app/dashboard/bonus/page.tsx | Line: 8, 48, 185, 257 | Keyword: Replace Confirm with useConfirm | Status: ✅ Complete | Change: Replaced native browser confirm calls with custom centered glassmorphic confirm dialogs using ConfirmProvider's useConfirm hook for publishing weekly bonuses and paying bonus payouts to doctors.
