@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 interface Category {
   id: string;
@@ -25,6 +26,7 @@ interface Penalty {
 
 export default function AdminAnnouncementsPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -165,7 +167,13 @@ export default function AdminAnnouncementsPage() {
   };
 
   const handleDeleteCategory = async (id: string, name: string) => {
-    if (!confirm(`ยืนยันการลบหมวดหมู่ "${name}"? การลบหมวดหมู่อาจทำให้เทมเพลตภายใต้หมวดหมู่นี้ไม่แสดงผล`)) return;
+    if (!await confirm({
+      title: "🗑️ ยืนยันการลบหมวดหมู่",
+      message: `ยืนยันการลบหมวดหมู่ "${name}"? การลบหมวดหมู่อาจทำให้เทมเพลตภายใต้หมวดหมู่นี้ไม่แสดงผล`,
+      confirmText: "ลบหมวดหมู่",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    })) return;
 
     const updated = categories.filter((c) => c.id !== id);
     setCategories(updated);
@@ -224,7 +232,13 @@ export default function AdminAnnouncementsPage() {
   };
 
   const handleDeleteTemplate = async (id: string, title: string) => {
-    if (!confirm(`ยืนยันต้องการลบเทมเพลต "${title}" หรือไม่?`)) return;
+    if (!await confirm({
+      title: "🗑️ ยืนยันการลบเทมเพลต",
+      message: `ยืนยันต้องการลบเทมเพลต "${title}" หรือไม่?`,
+      confirmText: "ลบเทมเพลต",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    })) return;
 
     const updated = templates.filter((t) => t.id !== id);
     setTemplates(updated);
@@ -280,7 +294,13 @@ export default function AdminAnnouncementsPage() {
   };
 
   const handleDeletePenalty = async (id: string, name: string) => {
-    if (!confirm(`ยืนยันลบโทษแบล็คลิสต์ "${name}" หรือไม่?`)) return;
+    if (!await confirm({
+      title: "🗑️ ยืนยันการลบโทษแบล็คลิสต์",
+      message: `ยืนยันลบโทษแบล็คลิสต์ "${name}" หรือไม่?`,
+      confirmText: "ลบข้อมูล",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    })) return;
 
     const updated = penalties.filter((p) => p.id !== id);
     setPenalties(updated);
