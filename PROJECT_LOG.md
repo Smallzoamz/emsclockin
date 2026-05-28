@@ -159,3 +159,11 @@
 ## [2026-05-28 19:32] | File: src/app/layout.tsx | Line: 60-91 | Keyword: Register ConfirmProvider | Status: ✅ Complete | Change: Imported and registered ConfirmProvider inside the Root Layout to wrap both the logo background and children subtree. This exposes the custom confirmation context dynamically to all page client-side components across the application. Verified Next.js build clean with 0 TypeScript/compilation errors.
 
 ## [2026-05-28 19:46] | File: src/app/dashboard/admin/announcements/page.tsx | Line: 4, 27, 168, 227, 283 | Keyword: Replace Confirm with useConfirm | Status: ✅ Complete | Change: Replaced native browser confirm calls with custom centered glassmorphic confirm dialogs using ConfirmProvider's useConfirm hook.
+
+## [2026-05-28 20:05] | File: src/app/dashboard/admin/page.tsx | Line: 6, 28, 169, 199, 291 | Keyword: Replace Confirm with useConfirm | Status: ✅ Complete | Change: Replaced native browser confirm calls with custom centered glassmorphic confirm dialogs using ConfirmProvider's useConfirm hook for nickname syncing, deleting doctors, and shift deduction.
+
+## [2026-05-28 20:20] | File: src/app/dashboard/admin/settings/page.tsx | Line: 6, 17, 228, 251, 351 | Keyword: Replace Confirm with useConfirm | Status: ✅ Complete | Change: Replaced native browser confirm calls with custom centered glassmorphic confirm dialogs using ConfirmProvider's useConfirm hook for credentials admin deletion, Discord admin privilege removal, and logo removal.
+
+## [2026-05-28 20:22] | File: src/app/dashboard/announcements/page.tsx | Line: 4, 26, 329 | Keyword: Replace Confirm with useConfirm | Status: ✅ Complete | Change: Replaced native browser confirm calls with custom centered glassmorphic confirm dialogs using ConfirmProvider's useConfirm hook for releasing blacklist records.
+
+

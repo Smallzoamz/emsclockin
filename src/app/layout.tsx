@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { supabase } from "@/lib/supabase";
+import { ConfirmProvider } from "@/components/ConfirmProvider";
 
 export const dynamic = "force-dynamic";
 
@@ -58,36 +59,38 @@ export default async function RootLayout({
         <style dangerouslySetInnerHTML={{ __html: dynamicStyles }} />
       </head>
       <body>
-        {logoUrl && (
-          <div
-            className="theme-bg-logo-container"
-            style={{
-              position: "fixed",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              pointerEvents: "none",
-              zIndex: 0,
-              opacity: bgOpacity,
-            }}
-          >
-            <img
-              src={logoUrl}
-              alt="City Background Logo"
+        <ConfirmProvider>
+          {logoUrl && (
+            <div
+              className="theme-bg-logo-container"
               style={{
-                maxWidth: bgStyle === "cover" ? "100%" : "60vw",
-                maxHeight: bgStyle === "cover" ? "100%" : "60vh",
-                width: bgStyle === "cover" ? "100vw" : "auto",
-                height: bgStyle === "cover" ? "100vh" : "auto",
-                objectFit: bgStyle === "cover" ? "cover" : "contain",
+                position: "fixed",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 pointerEvents: "none",
-                userSelect: "none",
+                zIndex: 0,
+                opacity: bgOpacity,
               }}
-            />
-          </div>
-        )}
-        {children}
+            >
+              <img
+                src={logoUrl}
+                alt="City Background Logo"
+                style={{
+                  maxWidth: bgStyle === "cover" ? "100%" : "60vw",
+                  maxHeight: bgStyle === "cover" ? "100%" : "60vh",
+                  width: bgStyle === "cover" ? "100vw" : "auto",
+                  height: bgStyle === "cover" ? "100vh" : "auto",
+                  objectFit: bgStyle === "cover" ? "cover" : "contain",
+                  pointerEvents: "none",
+                  userSelect: "none",
+                }}
+              />
+            </div>
+          )}
+          {children}
+        </ConfirmProvider>
       </body>
     </html>
   );

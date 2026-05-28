@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getSession } from "next-auth/react";
 import { formatThaiDate } from "@/lib/utils";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 interface Category {
   id: string;
@@ -24,6 +25,7 @@ interface Penalty {
 }
 
 export default function UserAnnouncementsPage() {
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
 
   // Data States
@@ -328,7 +330,13 @@ export default function UserAnnouncementsPage() {
   };
 
   const handleReleaseBlacklist = async (record: any) => {
-    if (!confirm(`ยืนยันการปลด Blacklist ของ "${record.name}" หรือไม่?`)) return;
+    if (!await confirm({
+      title: "🕊️ ปลดสิทธิ์แบล็คลิสต์",
+      message: `ยืนยันการปลด Blacklist ของ "${record.name}" หรือไม่?`,
+      confirmText: "ปลดแบล็คลิสต์",
+      cancelText: "ยกเลิก",
+      variant: "warning"
+    })) return;
 
     setReleasingId(record.id);
     try {

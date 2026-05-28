@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatThaiDate, formatHoursToHHMMSS, formatDuration } from "@/lib/utils";
 import { getSession } from "next-auth/react";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 interface AdminOverviewEntry {
   email: string;
@@ -24,6 +25,7 @@ interface ShiftDetail {
 }
 
 export default function AdminDashboardPage() {
+  const confirm = useConfirm();
   const [isMasterAdmin, setIsMasterAdmin] = useState(false);
 
   const [overview, setOverview] = useState<AdminOverviewEntry[]>([]);
@@ -164,7 +166,13 @@ export default function AdminDashboardPage() {
   };
 
   const handleSyncNicknames = async () => {
-    if (!confirm("ยืนยันซิงค์ชื่อเล่นแพทย์ทุกคนผ่านบอท Discord?")) return;
+    if (!await confirm({
+      title: "🔄 ซิงค์ชื่อเล่นแพทย์",
+      message: "ยืนยันซิงค์ชื่อเล่นแพทย์ทุกคนผ่านบอท Discord?",
+      confirmText: "ซิงค์ข้อมูล",
+      cancelText: "ยกเลิก",
+      variant: "warning"
+    })) return;
     setIsSyncingNicknames(true);
     try {
       const res = await fetch("/api/op/sync-nicknames", { method: "POST" });
@@ -188,7 +196,13 @@ export default function AdminDashboardPage() {
   };
 
   const handleDeleteDoctor = async (email: string) => {
-    if (!confirm("ต้องการลบแพทย์คนนี้ออกจากรายชื่อลงทะเบียนในระบบหรือไม่? (หากแพทย์ล็อกอินเข้ามาใหม่จะถูกเพิ่มเข้ามาอีกครั้ง)")) return;
+    if (!await confirm({
+      title: "🗑️ ลบรายชื่อแพทย์",
+      message: "ต้องการลบแพทย์คนนี้ออกจากรายชื่อลงทะเบียนในระบบหรือไม่? (หากแพทย์ล็อกอินเข้ามาใหม่จะถูกเพิ่มเข้ามาอีกครั้ง)",
+      confirmText: "ยืนยันลบ",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    })) return;
     const updated = registeredDoctors.filter(d => d.email !== email);
     setRegisteredDoctors(updated);
     try {
@@ -274,7 +288,13 @@ export default function AdminDashboardPage() {
 
   const handleDeduct = async (shiftId: string, currentlyDeducted: boolean) => {
     const action = currentlyDeducted ? "ยกเลิกการหัก" : "หักเวรนี้ออกจากโบนัส";
-    if (!confirm(`ยืนยัน${action}?`)) return;
+    if (!await confirm({
+      title: currentlyDeducted ? "💼 ยกเลิกการหักเวร" : "💼 หักเวรออกจากโบนัส",
+      message: `ยืนยันต้องการสั่ง${action}ให้แพทย์ท่านนี้ใช่หรือไม่?`,
+      confirmText: currentlyDeducted ? "ยกเลิกการหัก" : "หักเวร",
+      cancelText: "ยกเลิก",
+      variant: currentlyDeducted ? "success" : "danger"
+    })) return;
 
     try {
       const res = await fetch("/api/admin/deduct-shift", {

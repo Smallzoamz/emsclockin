@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 interface AdminOverviewEntry {
   email: string;
@@ -15,6 +16,7 @@ interface AdminOverviewEntry {
 
 export default function AdminSettingsPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [isMasterAdmin, setIsMasterAdmin] = useState(false);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
@@ -227,7 +229,13 @@ export default function AdminSettingsPage() {
 
   const handleDeleteCredAdmin = async (username: string) => {
     if (!isMasterAdmin) return;
-    if (!confirm(`ยืนยันต้องการลบแอดมิน "${username}" หรือไม่?`)) return;
+    if (!await confirm({
+      title: "🗑️ ลบบัญชีผู้ดูแล",
+      message: `ยืนยันต้องการลบบัญชีผู้ดูแล "${username}" หรือไม่?`,
+      confirmText: "ลบบัญชี",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    })) return;
 
     const updated = adminCredentials.filter(acc => acc.username !== username);
     try {
@@ -248,7 +256,13 @@ export default function AdminSettingsPage() {
   const handleDeleteDiscordAdmin = async (adminObj: any) => {
     if (!isMasterAdmin) return;
     const displayName = adminObj.email ? adminObj.email : `@${adminObj.username}`;
-    if (!confirm(`ยืนยันต้องการลบสิทธิ์แอดมินของ "${displayName}" หรือไม่?`)) return;
+    if (!await confirm({
+      title: "🗑️ ถอนสิทธิ์ผู้ดูแล Discord",
+      message: `ยืนยันต้องการถอนสิทธิ์แอดมินของ "${displayName}" หรือไม่?`,
+      confirmText: "ถอนสิทธิ์",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    })) return;
     
     const updated = adminDiscord.filter(acc => 
       !(acc.email === adminObj.email && acc.username === adminObj.username)
@@ -348,7 +362,13 @@ export default function AdminSettingsPage() {
 
   const handleRemoveLogo = async () => {
     if (!isMasterAdmin) return;
-    if (!confirm("ยืนยันว่าต้องการลบโลโก้เมืองและกลับไปใช้โลโก้เริ่มต้นของระบบหรือไม่?")) return;
+    if (!await confirm({
+      title: "🖼️ ลบโลโก้เมือง",
+      message: "ยืนยันว่าต้องการลบโลโก้เมืองและกลับไปใช้โลโก้เริ่มต้นของระบบหรือไม่?",
+      confirmText: "ลบโลโก้",
+      cancelText: "ยกเลิก",
+      variant: "warning"
+    })) return;
 
     setIsUploadingLogo(true);
     setThemeStatus(null);
