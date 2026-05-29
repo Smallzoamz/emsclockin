@@ -1,22 +1,34 @@
 "use client";
 
 import {
-  Clock,
-  Stethoscope,
-  Hospital,
-  Megaphone,
-  Volume2,
-  Trophy,
-  BarChart3,
-  TrendingUp,
-  Banknote,
-  Coins,
-  Shield,
-  Crown,
-  Settings,
-  Lock,
-  Camera,
-  Folder,
+  FcClock,
+  FcAssistant,
+  FcDepartment,
+  FcAdvertising,
+  FcSpeaker,
+  FcIcons8Cup,
+  FcBarChart,
+  FcLineChart,
+  FcCurrencyExchange,
+  FcMoneyTransfer,
+  FcPrivacy,
+  FcVip,
+  FcSettings,
+  FcLock,
+  FcCamera,
+  FcFolder,
+  FcBusinessman,
+  FcPhone,
+  FcBookmark,
+  FcServices,
+  FcFlashOn,
+  FcTemplate,
+  FcRating,
+  FcInfo,
+  FcDocument
+} from "react-icons/fc";
+
+import {
   RefreshCw,
   Trash2,
   Pencil,
@@ -30,34 +42,25 @@ import {
   X,
   Power,
   Upload,
-  CornerUpLeft,
-  User,
-  Phone,
-  Flag,
-  Palette,
-  Sun,
-  Layout,
-  Star,
-  Info,
-  FileText
+  CornerUpLeft
 } from "lucide-react";
 
-export const ClockIcon = Clock;
-export const StethoscopeIcon = Stethoscope;
-export const HospitalIcon = Hospital;
-export const MegaphoneIcon = Megaphone;
-export const SpeakerIcon = Volume2;
-export const TrophyIcon = Trophy;
-export const ChartBarIcon = BarChart3;
-export const TrendingUpIcon = TrendingUp;
-export const MoneyIcon = Banknote;
-export const CoinsIcon = Coins;
-export const ShieldIcon = Shield;
-export const CrownIcon = Crown;
-export const SettingsIcon = Settings;
-export const LockIcon = Lock;
-export const CameraIcon = Camera;
-export const FolderIcon = Folder;
+export const ClockIcon = FcClock;
+export const StethoscopeIcon = FcAssistant;
+export const HospitalIcon = FcDepartment;
+export const MegaphoneIcon = FcAdvertising;
+export const SpeakerIcon = FcSpeaker;
+export const TrophyIcon = FcIcons8Cup;
+export const ChartBarIcon = FcBarChart;
+export const TrendingUpIcon = FcLineChart;
+export const MoneyIcon = FcCurrencyExchange;
+export const CoinsIcon = FcMoneyTransfer;
+export const ShieldIcon = FcPrivacy;
+export const CrownIcon = FcVip;
+export const SettingsIcon = FcSettings;
+export const LockIcon = FcLock;
+export const CameraIcon = FcCamera;
+export const FolderIcon = FcFolder;
 export const RefreshIcon = RefreshCw;
 export const TrashIcon = Trash2;
 export const EditIcon = Pencil;
@@ -72,12 +75,12 @@ export const CrossIcon = X;
 export const PowerIcon = Power;
 export const UploadIcon = Upload;
 export const ReturnIcon = CornerUpLeft;
-export const UserIcon = User;
-export const PhoneIcon = Phone;
-export const FlagIcon = Flag;
-export const PaletteIcon = Palette;
-export const SunIcon = Sun;
-export const LayoutIcon = Layout;
-export const StarIcon = Star;
-export const InfoIcon = Info;
-export const FileTextIcon = FileText;
+export const UserIcon = FcBusinessman;
+export const PhoneIcon = FcPhone;
+export const FlagIcon = FcBookmark;
+export const PaletteIcon = FcServices;
+export const SunIcon = FcFlashOn;
+export const LayoutIcon = FcTemplate;
+export const StarIcon = FcRating;
+export const InfoIcon = FcInfo;
+export const FileTextIcon = FcDocument;
