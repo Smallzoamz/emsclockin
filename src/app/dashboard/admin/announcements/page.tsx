@@ -595,6 +595,8 @@ export default function AdminAnnouncementsPage() {
                         { label: "👤 [ชื่อคน]", placeholder: "[ชื่อคน]", desc: "ชื่อคนไข้" },
                         { label: "📞 [เบอร์โทร]", placeholder: "[เบอร์โทร]", desc: "เบอร์มือถือ" },
                         { label: "🏴‍☠️ [ชื่อแก๊ง]", placeholder: "[ชื่อแก๊ง]", desc: "ชื่อกลุ่ม/แก๊ง" },
+                        { label: "💥 [แก๊งA]", placeholder: "[แก๊งA]", desc: "แก๊ง A/ฝั่ง A" },
+                        { label: "💥 [แก๊งB]", placeholder: "[แก๊งB]", desc: "แก๊ง B/ฝั่ง B" },
                         { label: "⚖️ [โทษ]", placeholder: "[โทษ]", desc: "โทษสำเร็จรูป" },
                         { label: "💵 [ค่าปรับ]", placeholder: "[ค่าปรับ]", desc: "ค่าปรับ" },
                         { label: "✖️ [ตัวคูณ]", placeholder: "[ตัวคูณ]", desc: "ตัวคูณโทษ" },

@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 const defaultCategories = [
   { id: "cat_blacklist", name: "Blacklist", description: "แจ้งแบล็คลิสต์บุคคล" },
   { id: "cat_notfound", name: "หาเคสไม่เจอ", description: "แจ้งหาเคสประวัติไม่เจอในระบบ" },
+  { id: "cat_fightcount", name: "สตอรี่นับไฟท์", description: "ประกาศบันทึกคะแนนสตอรี่ปะทะระหว่างแก๊ง" },
   { id: "cat_general", name: "ประกาศทั่วไป", description: "ประกาศข้อมูลข่าวสารทั่วไป" }
 ];
 
@@ -20,6 +21,12 @@ const defaultTemplates = [
     categoryId: "cat_notfound",
     title: "แจ้งหาเคสประวัติไม่พบ",
     content: "**[หาเคสไม่เจอ]**\nชื่อคนไข้: [ชื่อคน]\nเบอร์โทรศัพท์: [เบอร์โทร]\nสังกัด/แก๊ง: [ชื่อแก๊ง]\nรายละเอียด: แพทย์หาเคสไม่เจอในประวัติการรักษา กรุณาติดต่อแพทย์ด่วนที่สุด"
+  },
+  {
+    id: "tpl_fightcount",
+    categoryId: "cat_fightcount",
+    title: "ประกาศสตอรี่นับไฟท์",
+    content: "**[ประกาศสตอรี่นับไฟท์]**\nปะทะระหว่าง: [แก๊งA] VS [แก๊งB]\nครั้งที่: [คูลดาวน์] (ตัวอย่างครั้งที่/ไฟท์ที่)\nผู้ชนะ: [ชื่อคน] (หรือระบุผู้ชนะ)\nรายละเอียด: การนับคะแนนและควบคุมความสงบเรียบร้อยโดยเจ้าหน้าที่พยาบาล"
   },
   {
     id: "tpl_general",
@@ -62,8 +69,38 @@ export async function GET() {
       return acc;
     }, {});
 
-    const categories = settingsMap["announcement_categories"] || defaultCategories;
-    const templates = settingsMap["announcement_templates"] || defaultTemplates;
+    let categories = settingsMap["announcement_categories"] || defaultCategories;
+    let templates = settingsMap["announcement_templates"] || defaultTemplates;
+
+    // Self-healing database check to insert missing fight count category
+    let needUpdateDb = false;
+    if (Array.isArray(categories) && !categories.some((c: any) => c.id === "cat_fightcount")) {
+      categories = [
+        ...categories,
+        { id: "cat_fightcount", name: "สตอรี่นับไฟท์", description: "ประกาศบันทึกคะแนนสตอรี่ปะทะระหว่างแก๊ง" }
+      ];
+      needUpdateDb = true;
+      await supabase
+        .from("system_settings")
+        .upsert({ key: "announcement_categories", value: categories, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    }
+
+    // Self-healing database check to insert missing fight count template
+    if (Array.isArray(templates) && !templates.some((t: any) => t.id === "tpl_fightcount")) {
+      templates = [
+        ...templates,
+        {
+          id: "tpl_fightcount",
+          categoryId: "cat_fightcount",
+          title: "ประกาศสตอรี่นับไฟท์",
+          content: "**[ประกาศสตอรี่นับไฟท์]**\nปะทะระหว่าง: [แก๊งA] VS [แก๊งB]\nครั้งที่: [คูลดาวน์] (ตัวอย่างครั้งที่/ไฟท์ที่)\nผู้ชนะ: [ชื่อคน] (หรือระบุผู้ชนะ)\nรายละเอียด: การนับคะแนนและควบคุมความสงบเรียบร้อยโดยเจ้าหน้าที่พยาบาล"
+        }
+      ];
+      needUpdateDb = true;
+      await supabase
+        .from("system_settings")
+        .upsert({ key: "announcement_templates", value: templates, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    }
     const penalties = settingsMap["blacklist_penalties"] || defaultPenalties;
     const commandPrefix = settingsMap["announcement_command_prefix"] || "/ems";
     const announcementWebhookUrl = settingsMap["discord_announcement_webhook_url"] || "";

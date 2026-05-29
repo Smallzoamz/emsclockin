@@ -62,6 +62,8 @@ export default function UserAnnouncementsPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [gang, setGang] = useState("");
+  const [gangA, setGangA] = useState("");
+  const [gangB, setGangB] = useState("");
   const [selectedPenaltyId, setSelectedPenaltyId] = useState("");
   const [multiplier, setMultiplier] = useState(1);
   const [commandPrefix, setCommandPrefix] = useState("/ems");
@@ -149,7 +151,7 @@ export default function UserAnnouncementsPage() {
     setFixedStartTime(null);
     setFixedEndTime(null);
     setLoggedBlacklistId(null);
-  }, [name, phone, gang, selectedPenaltyId, multiplier, cooldownMinutes, commandPrefix, selectedTplId, selectedCatId]);
+  }, [name, phone, gang, gangA, gangB, selectedPenaltyId, multiplier, cooldownMinutes, commandPrefix, selectedTplId, selectedCatId]);
 
   const activeTemplate = templates.find((t) => t.id === selectedTplId);
 
@@ -194,6 +196,8 @@ export default function UserAnnouncementsPage() {
     text = text.replaceAll("[ชื่อคน]", name.trim() || "________________");
     text = text.replaceAll("[เบอร์โทร]", phone.trim() || "________________");
     text = text.replaceAll("[ชื่อแก๊ง]", gang.trim() || "________________");
+    text = text.replaceAll("[แก๊งA]", gangA.trim() || "________________");
+    text = text.replaceAll("[แก๊งB]", gangB.trim() || "________________");
     text = text.replaceAll("[โทษ]", penaltyText || "________________");
     text = text.replaceAll("[ค่าปรับ]", activePenalty ? `${formattedFine} IC` : "________________");
     text = text.replaceAll("[ตัวคูณ]", multiplier > 1 ? `${multiplier}` : "1");
@@ -530,6 +534,40 @@ export default function UserAnnouncementsPage() {
                     placeholder="ระบุชื่อแก๊ง (ถ้าไม่มีให้ใส่ - หรือ ประชาชน)"
                     value={gang}
                     onChange={(e) => setGang(e.target.value)}
+                    style={{ padding: "8px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                  />
+                </div>
+              )}
+
+              {/* Gang A Field */}
+              {hasPlaceholder("[แก๊งA]") && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <FlagIcon size={14} style={{ color: "var(--accent)" }} />
+                    แก๊ง A / ฝั่ง A
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="ระบุชื่อแก๊ง A หรือฝั่งแรก"
+                    value={gangA}
+                    onChange={(e) => setGangA(e.target.value)}
+                    style={{ padding: "8px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
+                  />
+                </div>
+              )}
+
+              {/* Gang B Field */}
+              {hasPlaceholder("[แก๊งB]") && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <FlagIcon size={14} style={{ color: "var(--accent)" }} />
+                    แก๊ง B / ฝั่ง B
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="ระบุชื่อแก๊ง B หรือฝั่งตรงข้าม"
+                    value={gangB}
+                    onChange={(e) => setGangB(e.target.value)}
                     style={{ padding: "8px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
                   />
                 </div>
