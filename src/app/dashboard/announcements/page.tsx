@@ -663,8 +663,9 @@ export default function UserAnnouncementsPage() {
                             type="button"
                             onClick={() => {
                               const text = formatPair(pair.gangA, pair.tagA, pair.scoreA, pair.gangB, pair.tagB, pair.scoreB);
-                              navigator.clipboard.writeText(text);
-                              alert(`คัดลอกคะแนนคู่ที่ ${index + 1} เรียบร้อยแล้วค่ะ!`);
+                              const cmdText = commandPrefix.trim() ? `${commandPrefix.trim()} ${text}` : text;
+                              navigator.clipboard.writeText(cmdText);
+                              alert(`คัดลอกคะแนนคู่ที่ ${index + 1} พร้อมคำสั่งเรียบร้อยแล้วค่ะ!`);
                             }}
                             title="คัดลอกคู่นี้"
                             style={{
@@ -688,11 +689,11 @@ export default function UserAnnouncementsPage() {
                           </button>
                         </div>
 
-                        {/* Grid for Gang inputs */}
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "10px", alignItems: "center" }}>
+                        {/* Grid for Gang inputs (Football Score Style) */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 110px 1fr", gap: "12px", alignItems: "center" }}>
                           
                           {/* Gang A Inputs */}
-                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                             <input
                               type="text"
                               placeholder="ชื่อแก๊ง A"
@@ -700,32 +701,41 @@ export default function UserAnnouncementsPage() {
                               onChange={(e) => updateStoryPair(index, "gangA", e.target.value)}
                               style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
                             />
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-                              <input
-                                type="text"
-                                placeholder="Tag A"
-                                value={pair.tagA}
-                                onChange={(e) => updateStoryPair(index, "tagA", e.target.value)}
-                                style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
-                              />
+                            <input
+                              type="text"
+                              placeholder="Tag A (เช่น ABC)"
+                              value={pair.tagA}
+                              onChange={(e) => updateStoryPair(index, "tagA", e.target.value)}
+                              style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                            />
+                          </div>
+
+                          {/* Middle Scoreboard Column */}
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "bold" }}>SCORE</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                               <input
                                 type="number"
                                 min="0"
-                                placeholder="สกอร์ A"
+                                placeholder="0"
                                 value={pair.scoreA}
                                 onChange={(e) => updateStoryPair(index, "scoreA", e.target.value)}
-                                style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none", fontFamily: "var(--font-mono)" }}
+                                style={{ width: "38px", padding: "6px 4px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.85rem", textAlign: "center", outline: "none", fontFamily: "var(--font-mono)" }}
+                              />
+                              <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: "bold" }}>-</span>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                value={pair.scoreB}
+                                onChange={(e) => updateStoryPair(index, "scoreB", e.target.value)}
+                                style={{ width: "38px", padding: "6px 4px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.85rem", textAlign: "center", outline: "none", fontFamily: "var(--font-mono)" }}
                               />
                             </div>
                           </div>
 
-                          {/* VS text separator */}
-                          <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: "bold" }}>
-                            VS
-                          </div>
-
                           {/* Gang B Inputs */}
-                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                             <input
                               type="text"
                               placeholder="ชื่อแก๊ง B"
@@ -733,23 +743,13 @@ export default function UserAnnouncementsPage() {
                               onChange={(e) => updateStoryPair(index, "gangB", e.target.value)}
                               style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
                             />
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-                              <input
-                                type="text"
-                                placeholder="Tag B"
-                                value={pair.tagB}
-                                onChange={(e) => updateStoryPair(index, "tagB", e.target.value)}
-                                style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
-                              />
-                              <input
-                                type="number"
-                                min="0"
-                                placeholder="สกอร์ B"
-                                value={pair.scoreB}
-                                onChange={(e) => updateStoryPair(index, "scoreB", e.target.value)}
-                                style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none", fontFamily: "var(--font-mono)" }}
-                              />
-                            </div>
+                            <input
+                              type="text"
+                              placeholder="Tag B (เช่น XYZ)"
+                              value={pair.tagB}
+                              onChange={(e) => updateStoryPair(index, "tagB", e.target.value)}
+                              style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                            />
                           </div>
 
                         </div>
