@@ -102,7 +102,7 @@ export default function UserAnnouncementsPage() {
     const tB = tagBVal.trim() ? `[${tagBVal.trim()}]` : "";
     const sB = scoreBVal.trim() !== "" ? scoreBVal.trim() : "0";
 
-    return `[${sA}] ${gA}${tA} vs ${gB}${tB} [${sB}]`;
+    return `สกอร์สตอรี่คู่ : [${sA}] ${gA}${tA} vs ${gB}${tB} [${sB}]`;
   };
 
   // Actions states
