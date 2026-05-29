@@ -4,6 +4,19 @@ import { useState, useEffect } from "react";
 import { getSession } from "next-auth/react";
 import { formatThaiDate } from "@/lib/utils";
 import { useConfirm } from "@/components/ConfirmProvider";
+import {
+  MegaphoneIcon,
+  SettingsIcon,
+  UserIcon,
+  PhoneIcon,
+  FlagIcon,
+  WarningIcon,
+  ClipboardIcon,
+  SendIcon,
+  LockIcon,
+  InfoIcon,
+  ClockIcon
+} from "@/components/Icons";
 
 interface Category {
   id: string;
@@ -410,7 +423,10 @@ export default function UserAnnouncementsPage() {
       
       {/* Header */}
       <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--text-primary)", margin: 0 }}>📣 ศูนย์จัดการข้อความประกาศ</h1>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+          <MegaphoneIcon size={24} style={{ color: "var(--accent)" }} />
+          ศูนย์จัดการข้อความประกาศ
+        </h1>
         <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>สร้างข้อความประกาศ ติด Blacklist หรือ ค้นเคสไม่เจอ พร้อมจัดโครงสร้างและคำนวณโทษปรับโดยอัตโนมัติ</p>
       </div>
 
@@ -418,8 +434,9 @@ export default function UserAnnouncementsPage() {
         
         {/* Left Side: Form Controls */}
         <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
-          <h2 style={{ fontSize: "1.2rem", color: "var(--accent-light)", margin: 0, borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
-            ⚙️ เลือกประเภทและกรอกข้อมูล
+          <h2 style={{ fontSize: "1.2rem", color: "var(--accent-light)", margin: 0, borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <SettingsIcon size={20} />
+            เลือกประเภทและกรอกข้อมูล
           </h2>
 
           {/* 1. Category Selector */}
@@ -435,8 +452,9 @@ export default function UserAnnouncementsPage() {
               ))}
             </select>
             {categories.find(c => c.id === selectedCatId)?.description && (
-              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                ℹ️ {categories.find(c => c.id === selectedCatId)?.description}
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <InfoIcon size={12} />
+                {categories.find(c => c.id === selectedCatId)?.description}
               </span>
             )}
           </div>
@@ -469,7 +487,10 @@ export default function UserAnnouncementsPage() {
               {/* Name Field */}
               {hasPlaceholder("[ชื่อคน]") && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>👤 ชื่อ-นามสกุล คนไข้/บุคคล</label>
+                  <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <UserIcon size={14} />
+                    ชื่อ-นามสกุล คนไข้/บุคคล
+                  </label>
                   <input
                     type="text"
                     placeholder="ระบุชื่อจริง-นามสกุล หรือชื่อเรียก"
@@ -483,7 +504,10 @@ export default function UserAnnouncementsPage() {
               {/* Phone Field */}
               {hasPlaceholder("[เบอร์โทร]") && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>📞 เบอร์โทรศัพท์</label>
+                  <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <PhoneIcon size={14} />
+                    เบอร์โทรศัพท์
+                  </label>
                   <input
                     type="text"
                     placeholder="เช่น 123-4567 หรือ 0812345678"
@@ -497,7 +521,10 @@ export default function UserAnnouncementsPage() {
               {/* Gang/Family Field */}
               {hasPlaceholder("[ชื่อแก๊ง]") && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>🏴‍☠️ ชื่อกลุ่ม / แก๊ง / สังกัด</label>
+                  <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <FlagIcon size={14} />
+                    ชื่อกลุ่ม / แก๊ง / สังกัด
+                  </label>
                   <input
                     type="text"
                     placeholder="ระบุชื่อแก๊ง (ถ้าไม่มีให้ใส่ - หรือ ประชาชน)"
@@ -570,7 +597,10 @@ export default function UserAnnouncementsPage() {
               {/* Cooldown Duration Input */}
               {(hasPlaceholder("[คูลดาวน์]") || hasPlaceholder("[เวลาเริ่ม]") || hasPlaceholder("[เวลาจบ]")) && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>⏱️ เวลาคูลดาวน์ (นาที)</label>
+                  <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <ClockIcon size={14} />
+                    เวลาคูลดาวน์ (นาที)
+                  </label>
                   <input
                     type="number"
                     min="1"
@@ -593,8 +623,8 @@ export default function UserAnnouncementsPage() {
           {/* Live Preview Panel */}
           <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px", minHeight: "360px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
-              <h2 style={{ fontSize: "1.2rem", color: "var(--accent-light)", margin: 0 }}>
-                👁️ ตัวอย่างประกาศเรียลไทม์ (Live Preview)
+              <h2 style={{ fontSize: "1.2rem", color: "var(--accent-light)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                ตัวอย่างประกาศเรียลไทม์ (Live Preview)
               </h2>
               {activeTemplate && (
                 <span style={{ fontSize: "0.75rem", background: "var(--bg-secondary)", padding: "4px 10px", borderRadius: "10px", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
@@ -670,7 +700,10 @@ export default function UserAnnouncementsPage() {
                     boxShadow: copySuccess ? "0 0 10px var(--accent-glow)" : "none"
                   }}
                 >
-                  {copySuccess ? "📋 คัดลอกสำเร็จแล้ว!" : "📋 คัดลอกข้อความประกาศ"}
+                  <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <ClipboardIcon size={16} />
+                    {copySuccess ? "คัดลอกสำเร็จแล้ว!" : "คัดลอกข้อความประกาศ"}
+                  </span>
                 </button>
 
                 {/* Discord Webhook Button */}
@@ -695,7 +728,10 @@ export default function UserAnnouncementsPage() {
                     gap: "8px"
                   }}
                 >
-                  {isSendingDiscord ? "กำลังส่ง..." : "💬 ส่งเข้า Discord"}
+                  <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <SendIcon size={16} />
+                    {isSendingDiscord ? "กำลังส่ง..." : "ส่งเข้า Discord"}
+                  </span>
                 </button>
 
               </div>
@@ -715,7 +751,8 @@ export default function UserAnnouncementsPage() {
       <div className="card" style={{ padding: "24px", marginTop: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
           <h2 style={{ fontSize: "1.2rem", color: "var(--accent-light)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-            📋 ประวัติการติด Blacklist ในระบบ (Active Blacklists)
+            <ClipboardIcon size={20} style={{ color: "var(--accent)" }} />
+            ประวัติการติด Blacklist ในระบบ (Active Blacklists)
           </h2>
           {loadingHistory && <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>กำลังโหลดข้อมูล...</span>}
         </div>
@@ -729,7 +766,10 @@ export default function UserAnnouncementsPage() {
             borderRadius: "8px",
             fontSize: "0.85rem"
           }}>
-            ⚠️ ตารางฐานข้อมูลประวัติยังไม่ถูกติดตั้ง กรุณาแจ้งผู้ดูแลระบบให้รันไฟล์สคริปต์ <code>sql/create_blacklist_records.sql</code> บน Database ก่อนค่ะ
+            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <WarningIcon size={16} />
+              ตารางฐานข้อมูลประวัติยังไม่ถูกติดตั้ง กรุณาแจ้งผู้ดูแลระบบให้รันไฟล์สคริปต์ <code>sql/create_blacklist_records.sql</code> บน Database ก่อนค่ะ
+            </span>
           </div>
         )}
 

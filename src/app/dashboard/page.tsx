@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ClockButton } from "@/components/ClockButton";
 import { LiveTimer } from "@/components/LiveTimer";
 import { formatHoursToHHMMSS } from "@/lib/utils";
+import { ClockIcon, CheckIcon } from "@/components/Icons";
 
 interface ActiveShift {
   id: string;
@@ -121,7 +122,10 @@ export default function DashboardPage() {
   return (
     <>
       <div className="page-header">
-        <h1 className="page-title">⏰ เข้า-ออกเวร</h1>
+        <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <ClockIcon size={24} style={{ color: "var(--accent)" }} />
+          เข้า-ออกเวร
+        </h1>
         <p className="page-desc">กดปุ่มด้านล่างเพื่อเข้าเวรหรือออกเวร</p>
       </div>
 
@@ -154,8 +158,12 @@ export default function DashboardPage() {
           <div className="stat-label">วันเข้าเวรครบ (≥{dailyMinHours} ชม./วัน)</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value" style={{ color: weeklyHours >= bonusThreshold ? "var(--accent-light)" : "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: weeklyHours >= bonusThreshold ? "1.5rem" : "1.2rem" }}>
-            {weeklyHours >= bonusThreshold ? "✅" : `${formatHoursToHHMMSS(bonusThreshold - weeklyHours)} ชม.`}
+          <div className="stat-value" style={{ color: weeklyHours >= bonusThreshold ? "var(--accent-light)" : "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: weeklyHours >= bonusThreshold ? "1.5rem" : "1.2rem", display: "flex", alignItems: "center", justifyContent: "center", minHeight: "36px" }}>
+            {weeklyHours >= bonusThreshold ? (
+              <CheckIcon size={24} style={{ color: "var(--success)" }} />
+            ) : (
+              `${formatHoursToHHMMSS(bonusThreshold - weeklyHours)} ชม.`
+            )}
           </div>
           <div className="stat-label">{weeklyHours >= bonusThreshold ? "ผ่านเกณฑ์โบนัส" : "เหลืออีกถึงโบนัส"}</div>
         </div>

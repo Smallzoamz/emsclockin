@@ -3,6 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import {
+  StethoscopeIcon,
+  ClockIcon,
+  HospitalIcon,
+  MegaphoneIcon,
+  TrophyIcon,
+  ChartBarIcon,
+  MoneyIcon,
+  ShieldIcon,
+  CrownIcon,
+  CoinsIcon,
+  SpeakerIcon,
+  SettingsIcon
+} from "./Icons";
 
 interface SidebarProps {
   user: {
@@ -46,7 +60,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
               }} 
             />
           ) : (
-            "🏥"
+            <HospitalIcon size={24} style={{ color: "var(--accent)" }} />
           )}
         </div>
         <div>
@@ -70,7 +84,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
             gap: "8px",
             opacity: 0.85
           }}>
-            <span style={{ fontSize: "0.95rem" }}>🩺</span> สำหรับแพทย์
+            <StethoscopeIcon size={16} style={{ color: "var(--accent)" }} /> สำหรับแพทย์
           </div>
 
           <div style={{
@@ -87,7 +101,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
                 href="/dashboard"
                 className={`nav-link ${pathname === "/dashboard" ? "active" : ""}`}
               >
-                <span>⏰</span>
+                <ClockIcon size={18} />
                 เข้า-ออกเวร
               </Link>
             )}
@@ -96,7 +110,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
               href="/dashboard/op"
               className={`nav-link ${pathname === "/dashboard/op" ? "active" : ""}`}
             >
-              <span>🏥</span>
+              <HospitalIcon size={18} />
               {(user.isOp || user.role === "admin") ? "ระบบจัดการคิว OP" : "ตารางเวร OP"}
             </Link>
 
@@ -104,7 +118,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
               href="/dashboard/announcements"
               className={`nav-link ${pathname === "/dashboard/announcements" ? "active" : ""}`}
             >
-              <span>📣</span>
+              <MegaphoneIcon size={18} />
               ข้อความประกาศ
             </Link>
 
@@ -112,7 +126,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
               href="/dashboard/ranking"
               className={`nav-link ${pathname === "/dashboard/ranking" ? "active" : ""}`}
             >
-              <span>🏆</span>
+              <TrophyIcon size={18} />
               จัดอันดับสัปดาห์นี้
             </Link>
 
@@ -122,14 +136,14 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
                   href="/dashboard/history"
                   className={`nav-link ${pathname === "/dashboard/history" ? "active" : ""}`}
                 >
-                  <span>📊</span>
+                  <ChartBarIcon size={18} />
                   ประวัติ & ชั่วโมง
                 </Link>
                 <Link
                   href="/dashboard/my-bonus"
                   className={`nav-link ${pathname === "/dashboard/my-bonus" ? "active" : ""}`}
                 >
-                  <span>💸</span>
+                  <MoneyIcon size={18} />
                   โบนัสของฉัน
                 </Link>
               </>
@@ -152,7 +166,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
               gap: "8px",
               opacity: 0.85
             }}>
-              <span style={{ fontSize: "0.95rem" }}>🛡️</span> สำหรับผู้ดูแล
+              <ShieldIcon size={16} style={{ color: "var(--accent)" }} /> สำหรับผู้ดูแล
             </div>
 
             <div style={{
@@ -168,7 +182,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
                 href="/dashboard/admin"
                 className={`nav-link ${pathname === "/dashboard/admin" ? "active" : ""}`}
               >
-                <span>👑</span>
+                <CrownIcon size={18} />
                 แดชบอร์ดแอดมิน
               </Link>
 
@@ -176,7 +190,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
                 href="/dashboard/bonus"
                 className={`nav-link ${pathname === "/dashboard/bonus" ? "active" : ""}`}
               >
-                <span>💰</span>
+                <CoinsIcon size={18} />
                 ตารางโบนัส
               </Link>
 
@@ -184,7 +198,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
                 href="/dashboard/admin/announcements"
                 className={`nav-link ${pathname === "/dashboard/admin/announcements" ? "active" : ""}`}
               >
-                <span>📢</span>
+                <SpeakerIcon size={18} />
                 ตั้งค่าข้อความประกาศ
               </Link>
 
@@ -193,7 +207,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
                   href="/dashboard/admin/settings"
                   className={`nav-link ${pathname === "/dashboard/admin/settings" ? "active" : ""}`}
                 >
-                  <span>⚙️</span>
+                  <SettingsIcon size={18} />
                   ตั้งค่าระบบ
                 </Link>
               )}

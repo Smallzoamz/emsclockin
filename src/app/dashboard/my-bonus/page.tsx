@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { formatHoursToHHMMSS } from "@/lib/utils";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
+import { CoinsIcon, MoneyIcon, CrossIcon, CheckIcon, ClockIcon } from "@/components/Icons";
 
 interface MyBonusEntry {
   id: string;
@@ -47,7 +48,9 @@ export default function MyBonusPage() {
     return (
       <div className="page-container">
         <header className="page-header">
-          <h1 className="page-title">💰 โบนัสของฉัน</h1>
+          <h1 className="page-title">
+            <CoinsIcon className="inline mr-2 text-[var(--accent)]" /> โบนัสของฉัน
+          </h1>
           <p className="page-subtitle">กำลังโหลดประวัติโบนัสส่วนตัว...</p>
         </header>
         <div className="loading-spinner"></div>
@@ -69,14 +72,18 @@ export default function MyBonusPage() {
     <div className="page-container">
       <header className="page-header">
         <div>
-          <h1 className="page-title">💰 โบนัสของฉัน</h1>
+          <h1 className="page-title">
+            <CoinsIcon className="inline mr-2 text-[var(--accent)]" /> โบนัสของฉัน
+          </h1>
           <p className="page-subtitle">ตรวจสอบประวัติยอดโบนัสรายสัปดาห์ของคุณ</p>
         </div>
       </header>
 
       {bonuses.length === 0 ? (
         <div className="card" style={{ textAlign: "center", padding: "48px" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "16px" }}>💸</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+            <MoneyIcon size={48} className="text-[var(--accent)]" />
+          </div>
           <h3 style={{ color: "var(--text-secondary)" }}>ยังไม่มีการประกาศโบนัส</h3>
         </div>
       ) : (
@@ -98,7 +105,7 @@ export default function MyBonusPage() {
                   fontWeight: "bold",
                   border: "1px solid rgba(239, 68, 68, 0.2)",
                 }}>
-                  ❌ ชั่วโมงไม่ถึงเกณฑ์ (ยกไปสัปดาห์ถัดไป)
+                  <CrossIcon size={14} className="text-red-500" /> ชั่วโมงไม่ถึงเกณฑ์ (ยกไปสัปดาห์ถัดไป)
                 </div>
               );
             } else if (bonus.is_paid) {
@@ -115,7 +122,7 @@ export default function MyBonusPage() {
                   fontWeight: "bold",
                   border: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
                 }}>
-                  ✅ ได้รับโบนัสแล้ว
+                  <CheckIcon size={14} className="text-emerald-500" /> ได้รับโบนัสแล้ว
                   {bonus.paid_at && (
                     <span style={{ fontWeight: "normal", opacity: 0.8 }}>
                       ({format(new Date(bonus.paid_at), "d MMM yyyy HH:mm", { locale: th })})
@@ -137,7 +144,7 @@ export default function MyBonusPage() {
                   fontWeight: "bold",
                   border: "1px solid rgba(245, 158, 11, 0.2)",
                 }}>
-                  ⏳ รอสั่งจ่าย
+                  <ClockIcon size={14} className="text-amber-500" /> รอสั่งจ่าย
                 </div>
               );
             }

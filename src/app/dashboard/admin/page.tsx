@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { formatThaiDate, formatHoursToHHMMSS, formatDuration } from "@/lib/utils";
 import { getSession } from "next-auth/react";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { CrownIcon, CameraIcon, TrashIcon, RefreshIcon, SaveIcon, UsersIcon, HospitalIcon } from "@/components/Icons";
 
 interface AdminOverviewEntry {
   email: string;
@@ -320,7 +321,10 @@ export default function AdminDashboardPage() {
       <div className="page-container">
         <header className="page-header">
           <div>
-            <h1 className="page-title">👑 แดชบอร์ดผู้ดูแลระบบ</h1>
+            <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <CrownIcon size={24} style={{ color: "var(--accent)" }} />
+              แดชบอร์ดผู้ดูแลระบบ
+            </h1>
             <p className="page-subtitle">กำลังโหลดข้อมูลภาพรวม...</p>
           </div>
         </header>
@@ -342,7 +346,10 @@ export default function AdminDashboardPage() {
     <div className="page-container">
       <header className="page-header" style={{ display: "flex", flexWrap: "wrap", gap: "16px", justifyContent: "space-between" }}>
         <div>
-          <h1 className="page-title">👑 แดชบอร์ดผู้ดูแลระบบ</h1>
+          <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <CrownIcon size={24} style={{ color: "var(--accent)" }} />
+            แดชบอร์ดผู้ดูแลระบบ
+          </h1>
           <p className="page-subtitle">ภาพรวมการเข้าเวรทั้งหมด</p>
         </div>
         
@@ -440,9 +447,9 @@ export default function AdminDashboardPage() {
                   <button 
                     onClick={() => openGallery(entry.email, entry.discordUsername ? `@${entry.discordUsername}` : entry.name)}
                     title="ดูประวัติการเข้าเวรและรูปยืนยัน"
-                    style={{ padding: "8px 12px", background: "var(--bg-secondary)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", transition: "all 0.2s ease" }}
+                    style={{ padding: "8px 12px", background: "var(--bg-secondary)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease" }}
                   >
-                    📸
+                    <CameraIcon size={16} />
                   </button>
                 </div>
               </div>
@@ -455,7 +462,10 @@ export default function AdminDashboardPage() {
       <section className="card" style={{ marginTop: "32px", padding: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px", flexWrap: "wrap", gap: "16px" }}>
           <div>
-            <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>🗓️ ตารางเวรและตั้งค่าระบบ OP</h2>
+            <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+              <HospitalIcon size={20} style={{ color: "var(--accent)" }} />
+              ตารางเวรและตั้งค่าระบบ OP
+            </h2>
             <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>จัดการรายชื่อแพทย์ผู้มีสิทธิ์ควบคุมคิวในแต่ละวัน (ลากและวางการ์ดเพื่อจัดตาราง)</p>
           </div>
           
@@ -499,7 +509,14 @@ export default function AdminDashboardPage() {
                 transition: "0.2s"
               }}
             >
-              {isSyncingNicknames ? "กำลังซิงค์..." : "ซิงค์ชื่อเล่น Discord 🔄"}
+              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                {isSyncingNicknames ? "กำลังซิงค์..." : (
+                  <>
+                    ซิงค์ชื่อเล่น Discord
+                    <RefreshIcon size={14} />
+                  </>
+                )}
+              </span>
             </button>
 
             <button
@@ -517,7 +534,14 @@ export default function AdminDashboardPage() {
                 boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
               }}
             >
-              {isSavingOpSettings ? "กำลังบันทึก..." : "บันทึกตารางเวร OP 💾"}
+              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                {isSavingOpSettings ? "กำลังบันทึก..." : (
+                  <>
+                    บันทึกตารางเวร OP
+                    <SaveIcon size={14} />
+                  </>
+                )}
+              </span>
             </button>
           </div>
         </div>
@@ -526,7 +550,10 @@ export default function AdminDashboardPage() {
           {/* Left Column: Registered Doctors List */}
           <div style={{ flex: "1 1 300px", background: "var(--bg-secondary)", padding: "16px", borderRadius: "10px", border: "1px solid var(--border)" }}>
             <h3 style={{ fontSize: "0.95rem", color: "var(--text-primary)", marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", margin: 0 }}>
-              <span>👥 แพทย์ที่ลงทะเบียนในระบบ ({registeredDoctors.length})</span>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <UsersIcon size={18} style={{ color: "var(--accent)" }} />
+                แพทย์ที่ลงทะเบียนในระบบ ({registeredDoctors.length})
+              </span>
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "500px", overflowY: "auto", paddingRight: "4px", marginTop: "12px" }}>
               {registeredDoctors.length === 0 ? (
@@ -586,9 +613,9 @@ export default function AdminDashboardPage() {
                     <button
                       onClick={() => handleDeleteDoctor(doc.email)}
                       title="ลบออกจากรายชื่อลงทะเบียน"
-                      style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "4px", fontSize: "1rem" }}
+                      style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center" }}
                     >
-                      &times;
+                      <TrashIcon size={14} style={{ color: "var(--danger)" }} />
                     </button>
                   </div>
                 ))

@@ -2,6 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  ClockIcon,
+  HospitalIcon,
+  MegaphoneIcon,
+  TrophyIcon,
+  ChartBarIcon,
+  MoneyIcon,
+  CrownIcon,
+  CoinsIcon,
+  SpeakerIcon,
+  SettingsIcon
+} from "./Icons";
 
 export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; discordId?: string } }) {
   const pathname = usePathname();
@@ -10,40 +22,40 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; di
     <nav className="mobile-nav">
       {user?.role === "admin" && (
         <Link href="/dashboard/admin" className={pathname === "/dashboard/admin" ? "active" : ""}>
-          <span style={{ fontSize: "1.2rem" }}>👑</span>
+          <CrownIcon size={20} />
           แอดมิน
         </Link>
       )}
 
       {user?.role === "admin" && !user?.discordId && (
         <Link href="/dashboard/admin/settings" className={pathname === "/dashboard/admin/settings" ? "active" : ""}>
-          <span style={{ fontSize: "1.2rem" }}>⚙️</span>
+          <SettingsIcon size={20} />
           ตั้งค่า
         </Link>
       )}
 
       {(user?.role !== "admin" || !!user?.discordId) && (
         <Link href="/dashboard" className={pathname === "/dashboard" ? "active" : ""}>
-          <span style={{ fontSize: "1.2rem" }}>⏰</span>
+          <ClockIcon size={20} />
           เข้า-ออกเวร
         </Link>
       )}
 
       <Link href="/dashboard/op" className={pathname === "/dashboard/op" ? "active" : ""}>
-        <span style={{ fontSize: "1.2rem" }}>🏥</span>
+        <HospitalIcon size={20} />
         {(user?.isOp || user?.role === "admin") ? "คิว OP" : "เวร OP"}
       </Link>
       <Link href="/dashboard/ranking" className={pathname === "/dashboard/ranking" ? "active" : ""}>
-        <span style={{ fontSize: "1.2rem" }}>🏆</span>
+        <TrophyIcon size={20} />
         จัดอันดับ
       </Link>
       <Link href="/dashboard/announcements" className={pathname === "/dashboard/announcements" ? "active" : ""}>
-        <span style={{ fontSize: "1.2rem" }}>📣</span>
+        <MegaphoneIcon size={20} />
         ประกาศ
       </Link>
       {user?.role === "admin" && (
         <Link href="/dashboard/admin/announcements" className={pathname === "/dashboard/admin/announcements" ? "active" : ""}>
-          <span style={{ fontSize: "1.2rem" }}>📢</span>
+          <SpeakerIcon size={20} />
           คุมประกาศ
         </Link>
       )}
@@ -51,11 +63,11 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; di
       {(user?.role !== "admin" || !!user?.discordId) && (
         <>
           <Link href="/dashboard/history" className={pathname === "/dashboard/history" ? "active" : ""}>
-            <span style={{ fontSize: "1.2rem" }}>📊</span>
+            <ChartBarIcon size={20} />
             ประวัติ
           </Link>
           <Link href="/dashboard/my-bonus" className={pathname === "/dashboard/my-bonus" ? "active" : ""}>
-            <span style={{ fontSize: "1.2rem" }}>💸</span>
+            <MoneyIcon size={20} />
             โบนัสฉัน
           </Link>
         </>
@@ -63,7 +75,7 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; di
 
       {user?.role === "admin" && (
         <Link href="/dashboard/bonus" className={pathname === "/dashboard/bonus" ? "active" : ""}>
-          <span style={{ fontSize: "1.2rem" }}>💰</span>
+          <CoinsIcon size={20} />
           โบนัส
         </Link>
       )}

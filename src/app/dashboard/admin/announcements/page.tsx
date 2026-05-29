@@ -4,6 +4,16 @@ import { useState, useEffect, useRef } from "react";
 import { getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
+import {
+  MegaphoneIcon,
+  SettingsIcon,
+  SaveIcon,
+  PlusIcon,
+  TrashIcon,
+  EditIcon,
+  FolderIcon,
+  InfoIcon
+} from "@/components/Icons";
 
 interface Category {
   id: string;
@@ -326,15 +336,19 @@ export default function AdminAnnouncementsPage() {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px" }}>
         <div>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--text-primary)", margin: 0 }}>📢 ตั้งค่าระบบประกาศ & Blacklist</h1>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+            <MegaphoneIcon size={24} style={{ color: "var(--accent)" }} />
+            ตั้งค่าระบบประกาศ & Blacklist
+          </h1>
           <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>จัดการหมวดหมู่ รูปแบบเทมเพลตประกาศ และอัตราโทษปรับ Blacklist</p>
         </div>
       </div>
 
       {/* General Settings */}
       <section className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-        <h2 style={{ fontSize: "1.1rem", color: "var(--accent-light)", margin: 0, borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
-          ⚙️ ตั้งค่าทั่วไปสำหรับประกาศ (General Settings)
+        <h2 style={{ fontSize: "1.1rem", color: "var(--accent-light)", margin: 0, borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+          <SettingsIcon size={20} />
+          ตั้งค่าทั่วไปสำหรับประกาศ (General Settings)
         </h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -415,7 +429,10 @@ export default function AdminAnnouncementsPage() {
               cursor: "pointer"
             }}
           >
-            {isSaving ? "กำลังบันทึก..." : "💾 บันทึกการตั้งค่าทั่วไป"}
+            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <SaveIcon size={14} />
+              {isSaving ? "กำลังบันทึก..." : "บันทึกการตั้งค่าทั่วไป"}
+            </span>
           </button>
         </div>
       </section>
@@ -456,7 +473,7 @@ export default function AdminAnnouncementsPage() {
             borderColor: activeTab === "templates" ? "var(--border)" : "transparent"
           }}
         >
-          📝 รูปแบบเทมเพลตประกาศ
+          รูปแบบเทมเพลตประกาศ
         </button>
         <button
           onClick={() => setActiveTab("categories")}
@@ -476,7 +493,7 @@ export default function AdminAnnouncementsPage() {
             borderColor: activeTab === "categories" ? "var(--border)" : "transparent"
           }}
         >
-          📂 หมวดหมู่ประกาศ
+          หมวดหมู่ประกาศ
         </button>
         <button
           onClick={() => setActiveTab("penalties")}
@@ -496,7 +513,7 @@ export default function AdminAnnouncementsPage() {
             borderColor: activeTab === "penalties" ? "var(--border)" : "transparent"
           }}
         >
-          ⚖️ โทษปรับ Blacklist สำเร็จรูป
+          โทษปรับ Blacklist สำเร็จรูป
         </button>
       </div>
 
@@ -513,7 +530,19 @@ export default function AdminAnnouncementsPage() {
                 {/* Left Side: Create / Edit Template Form */}
                 <form onSubmit={handleSaveTemplate} className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
                   <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>
-                    {editingTemplateId ? "✏️ แก้ไขรูปแบบประกาศ" : "✨ เพิ่มรูปแบบประกาศใหม่"}
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {editingTemplateId ? (
+                        <>
+                          <EditIcon size={16} />
+                          แก้ไขรูปแบบประกาศ
+                        </>
+                      ) : (
+                        <>
+                          <PlusIcon size={16} />
+                          เพิ่มรูปแบบประกาศใหม่
+                        </>
+                      )}
+                    </span>
                   </h3>
                   
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -621,14 +650,26 @@ export default function AdminAnnouncementsPage() {
                       disabled={isSaving}
                       style={{ padding: "10px 20px", background: "var(--primary)", border: "none", color: "white", borderRadius: "6px", cursor: "pointer", fontWeight: "bold", fontSize: "0.85rem" }}
                     >
-                      {isSaving ? "กำลังบันทึก..." : editingTemplateId ? "💾 อัปเดตข้อมูล" : "➕ เพิ่มเทมเพลต"}
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        {isSaving ? "กำลังบันทึก..." : editingTemplateId ? (
+                          <>
+                            <SaveIcon size={14} />
+                            อัปเดตข้อมูล
+                          </>
+                        ) : (
+                          <>
+                            <PlusIcon size={14} />
+                            เพิ่มเทมเพลต
+                          </>
+                        )}
+                      </span>
                     </button>
                   </div>
                 </form>
 
                 {/* Right Side: List of Templates */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>📋 รูปแบบประกาศปัจจุบัน ({templates.length})</h3>
+                  <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>รูปแบบประกาศปัจจุบัน ({templates.length})</h3>
                   
                   {templates.length === 0 ? (
                     <div className="card" style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)" }}>ยังไม่มีเทมเพลต ถูกตั้งค่าไว้</div>
@@ -641,7 +682,8 @@ export default function AdminAnnouncementsPage() {
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                 <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: "bold" }}>{tpl.title}</h4>
-                                <span style={{ fontSize: "0.7rem", background: "rgba(16,185,129,0.15)", color: "var(--accent-light)", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>
+                                <span style={{ fontSize: "0.7rem", background: "rgba(16,185,129,0.15)", color: "var(--accent-light)", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold", display: "flex", alignItems: "center", gap: "4px" }}>
+                                  <FolderIcon size={12} />
                                   {cat?.name || "ไม่ระบุหมวดหมู่"}
                                 </span>
                               </div>
@@ -649,15 +691,17 @@ export default function AdminAnnouncementsPage() {
                             <div style={{ display: "flex", gap: "6px" }}>
                               <button
                                 onClick={() => handleEditClick(tpl)}
-                                style={{ padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-subtle)", color: "var(--text-secondary)", borderRadius: "4px", cursor: "pointer", fontSize: "0.75rem" }}
+                                style={{ padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-subtle)", color: "var(--text-secondary)", borderRadius: "4px", cursor: "pointer", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "4px" }}
                               >
-                                แก้ไข ✏️
+                                <EditIcon size={12} />
+                                แก้ไข
                               </button>
                               <button
                                 onClick={() => handleDeleteTemplate(tpl.id, tpl.title)}
-                                style={{ padding: "4px 8px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--danger)", borderRadius: "4px", cursor: "pointer", fontSize: "0.75rem" }}
+                                style={{ padding: "4px 8px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--danger)", borderRadius: "4px", cursor: "pointer", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "4px" }}
                               >
-                                ลบ 🗑️
+                                <TrashIcon size={12} />
+                                ลบ
                               </button>
                             </div>
                           </div>
@@ -691,7 +735,10 @@ export default function AdminAnnouncementsPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px", alignItems: "start" }}>
               {/* Left Column: Create Form */}
               <form onSubmit={handleAddCategory} className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>➕ เพิ่มหมวดหมู่ใหม่</h3>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <PlusIcon size={18} />
+                  เพิ่มหมวดหมู่ใหม่
+                </h3>
                 
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>ชื่อหมวดหมู่</label>
@@ -721,13 +768,19 @@ export default function AdminAnnouncementsPage() {
                   disabled={isSaving}
                   style={{ alignSelf: "flex-end", padding: "10px 20px", background: "var(--primary)", border: "none", color: "white", borderRadius: "6px", cursor: "pointer", fontWeight: "bold", fontSize: "0.85rem" }}
                 >
-                  {isSaving ? "กำลังบันทึก..." : "➕ บันทึกหมวดหมู่"}
+                  <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <PlusIcon size={14} />
+                    {isSaving ? "กำลังบันทึก..." : "บันทึกหมวดหมู่"}
+                  </span>
                 </button>
               </form>
 
               {/* Right Column: List */}
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>📁 รายการหมวดหมู่ทั้งหมด ({categories.length})</h3>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <FolderIcon size={18} />
+                  รายการหมวดหมู่ทั้งหมด ({categories.length})
+                </h3>
                 
                 {categories.length === 0 ? (
                   <div className="card" style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)" }}>ยังไม่มีหมวดหมู่</div>
@@ -743,9 +796,10 @@ export default function AdminAnnouncementsPage() {
                       </div>
                       <button
                         onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                        style={{ padding: "6px 12px", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--danger)", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
+                        style={{ padding: "6px 12px", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--danger)", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "4px" }}
                       >
-                        ลบ 🗑️
+                        <TrashIcon size={12} />
+                        ลบ
                       </button>
                     </div>
                   ))
@@ -759,7 +813,19 @@ export default function AdminAnnouncementsPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px", alignItems: "start" }}>
               {/* Left Column: Create Form */}
               <form onSubmit={handleAddPenalty} className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>{editingPenaltyId ? "✏️ แก้ไขความผิด / โทษปรับสำเร็จรูป" : "➕ เพิ่มความผิด / โทษปรับสำเร็จรูป"}</h3>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  {editingPenaltyId ? (
+                    <>
+                      <EditIcon size={18} />
+                      แก้ไขความผิด / โทษปรับสำเร็จรูป
+                    </>
+                  ) : (
+                    <>
+                      <PlusIcon size={18} />
+                      เพิ่มความผิด / โทษปรับสำเร็จรูป
+                    </>
+                  )}
+                </h3>
                 
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>ประเภทความผิด / โทษข้อหา</label>
@@ -801,14 +867,26 @@ export default function AdminAnnouncementsPage() {
                     disabled={isSaving}
                     style={{ padding: "10px 20px", background: "var(--primary)", border: "none", color: "white", borderRadius: "6px", cursor: "pointer", fontWeight: "bold", fontSize: "0.85rem" }}
                   >
-                    {isSaving ? "กำลังบันทึก..." : editingPenaltyId ? "💾 อัปเดตข้อหา" : "➕ บันทึกอัตราโทษ"}
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {isSaving ? "กำลังบันทึก..." : editingPenaltyId ? (
+                        <>
+                          <SaveIcon size={14} />
+                          อัปเดตข้อหา
+                        </>
+                      ) : (
+                        <>
+                          <PlusIcon size={14} />
+                          บันทึกอัตราโทษ
+                        </>
+                      )}
+                    </span>
                   </button>
                 </div>
               </form>
 
               {/* Right Column: List */}
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>⚖️ รายการอัตราโทษปรับสำเร็จรูป ({penalties.length})</h3>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>รายการอัตราโทษปรับสำเร็จรูป ({penalties.length})</h3>
                 
                 {penalties.length === 0 ? (
                   <div className="card" style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)" }}>ยังไม่มีรายการตั้งค่าไว้</div>
@@ -816,7 +894,7 @@ export default function AdminAnnouncementsPage() {
                   penalties.map((pen) => (
                     <div key={pen.id} className="card" style={{ padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
-                        <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: "bold" }}>⚖️ {pen.name}</h4>
+                        <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: "bold" }}>{pen.name}</h4>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
                           <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>ค่าปรับเริ่มต้น:</span>
                           <span style={{ fontSize: "0.95rem", fontWeight: "bold", color: "var(--accent-light)", fontFamily: "var(--font-mono)" }}>
@@ -827,15 +905,17 @@ export default function AdminAnnouncementsPage() {
                       <div style={{ display: "flex", gap: "6px" }}>
                         <button
                           onClick={() => handleEditPenaltyClick(pen)}
-                          style={{ padding: "6px 12px", background: "rgba(255, 255, 255, 0.05)", border: "1px solid var(--border-subtle)", color: "var(--text-secondary)", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
+                          style={{ padding: "6px 12px", background: "rgba(255, 255, 255, 0.05)", border: "1px solid var(--border-subtle)", color: "var(--text-secondary)", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "4px" }}
                         >
-                          แก้ไข ✏️
+                          <EditIcon size={12} />
+                          แก้ไข
                         </button>
                         <button
                           onClick={() => handleDeletePenalty(pen.id, pen.name)}
-                          style={{ padding: "6px 12px", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--danger)", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold" }}
+                          style={{ padding: "6px 12px", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--danger)", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "4px" }}
                         >
-                          ลบ 🗑️
+                          <TrashIcon size={12} />
+                          ลบ
                         </button>
                       </div>
                     </div>

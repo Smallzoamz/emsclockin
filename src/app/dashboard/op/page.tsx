@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getSession } from "next-auth/react";
 import { formatThaiDate } from "@/lib/utils";
+import { ClipboardIcon, HospitalIcon, CheckIcon, LockIcon, PowerIcon, RefreshIcon, WarningIcon, SaveIcon, ClockIcon, FileTextIcon, ReturnIcon } from "@/components/Icons";
 
 interface DoctorEntry {
   email: string;
@@ -324,7 +325,7 @@ export default function OpQueuePage() {
       <div className="page-container">
         <div className="card" style={{ maxWidth: "700px", margin: "40px auto", padding: "32px" }}>
           <h2 style={{ textAlign: "center", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-            📋 ตารางเวร OP ประจำสัปดาห์
+            <ClipboardIcon className="text-[var(--accent)]" /> ตารางเวร OP ประจำสัปดาห์
           </h2>
           <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: "24px" }}>
             คุณสามารถดูตารางเวร OP ได้ แต่ไม่สามารถจัดการคิวได้ (สิทธิ์เฉพาะแอดมินหรือ OP ประจำวัน)
@@ -422,7 +423,9 @@ export default function OpQueuePage() {
     <div className="page-container">
       <header className="page-header" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
         <div>
-          <h1 style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>🏥 ระบบจัดการคิวแพทย์ (OP Dashboard)</h1>
+          <h1 style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+            <HospitalIcon className="text-[var(--accent)]" size={28} /> ระบบจัดการคิวแพทย์ (OP Dashboard)
+          </h1>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px" }}>
             <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
               จัดการกลุ่มคิวเข้าเวรของหมอ ประจำ{dayTranslations[currentDay] || currentDay}
@@ -436,16 +439,29 @@ export default function OpQueuePage() {
                 padding: "2px 8px",
                 borderRadius: "12px",
                 border: "1px solid " + (opActive ? "transparent" : "var(--border)"),
-                boxShadow: opActive ? "0 0 8px var(--accent-glow)" : "none"
+                boxShadow: opActive ? "0 0 8px var(--accent-glow)" : "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px"
               }}
             >
-              {opActive ? "🟢 OP กำลังปฏิบัติงาน" : "🔴 ปิดปฏิบัติงาน OP"}
+              {opActive ? (
+                <>
+                  <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px rgba(16,185,129,0.6)" }} className="animate-pulse" />
+                  OP กำลังปฏิบัติงาน
+                </>
+              ) : (
+                <>
+                  <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "#ef4444" }} />
+                  ปิดปฏิบัติงาน OP
+                </>
+              )}
             </span>
           </div>
         </div>
         <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-          <span style={{ background: "var(--bg-secondary)", padding: "6px 12px", borderRadius: "20px", fontSize: "0.85rem", border: "1px solid var(--border)", color: "var(--text-secondary)" }}>
-            🟢 กำลังบันทึกเบื้องหลัง: {isSavingQueue ? "จัดเก็บ..." : "เรียบร้อย"}
+          <span style={{ background: "var(--bg-secondary)", padding: "6px 12px", borderRadius: "20px", fontSize: "0.85rem", border: "1px solid var(--border)", color: "var(--text-secondary)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+            <CheckIcon size={14} className="text-emerald-500" /> กำลังบันทึกเบื้องหลัง: {isSavingQueue ? "จัดเก็บ..." : "เรียบร้อย"}
           </span>
           <button
             onClick={handleToggleOpActive}
@@ -464,7 +480,15 @@ export default function OpQueuePage() {
               transition: "all 0.2s"
             }}
           >
-            {isTogglingActive ? "กำลังสลับเวร..." : (opActive && !isOpOwner && !isUserAdmin) ? "🔒 ล็อค — ปิดได้เฉพาะคนเปิด" : opActive ? "🔴 ปิดเวร OP" : "🟢 เปิดเวร OP"}
+            {isTogglingActive ? (
+              "กำลังสลับเวร..."
+            ) : (opActive && !isOpOwner && !isUserAdmin) ? (
+              <><LockIcon size={16} className="inline mr-1 align-text-top text-amber-500" /> ล็อค — ปิดได้เฉพาะคนเปิด</>
+            ) : opActive ? (
+              <><PowerIcon size={16} className="inline mr-1 align-text-top" /> ปิดเวร OP</>
+            ) : (
+              <><PowerIcon size={16} className="inline mr-1 align-text-top" /> เปิดเวร OP</>
+            )}
           </button>
           {opActive && (
             <button
@@ -483,7 +507,7 @@ export default function OpQueuePage() {
                 transition: "all 0.2s"
               }}
             >
-              {isPosting ? "กำลังซิงค์..." : "ซิงค์ข้อความ Discord 🔄"}
+              {isPosting ? "กำลังซิงค์..." : <><span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>ซิงค์ข้อความ Discord <RefreshIcon size={16} /></span></>}
             </button>
           )}
         </div>
@@ -503,7 +527,7 @@ export default function OpQueuePage() {
           fontSize: "0.85rem",
           color: "#f59e0b"
         }}>
-          <span style={{ fontSize: "1.2rem" }}>🔒</span>
+          <LockIcon size={20} className="text-amber-500 flex-shrink-0" />
           <span>
             <strong>{opOpenedBy.discordUsername || opOpenedBy.email}</strong> เป็นคนเปิดเวร OP — เฉพาะเขาเท่านั้นที่สามารถปิดเวร OP ได้ คุณยังสามารถจัดการคิวหมอได้ตามปกติค่ะ
           </span>
@@ -514,7 +538,9 @@ export default function OpQueuePage() {
       <section className="card" style={{ marginBottom: "24px", padding: "20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "8px" }}>
           <h3 style={{ fontSize: "0.95rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px", margin: 0 }}>
-            <span>⚠️ คำเตือน / ประกาศพิเศษ (จะอัปเดตไปที่ดิสคอร์ด)</span>
+            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <WarningIcon size={16} className="text-amber-500" /> คำเตือน / ประกาศพิเศษ (จะอัปเดตไปที่ดิสคอร์ด)
+            </span>
           </h3>
           {opActive && (
             <button
@@ -529,10 +555,13 @@ export default function OpQueuePage() {
                 cursor: "pointer",
                 fontWeight: "bold",
                 fontSize: "0.8rem",
-                transition: "all 0.2s"
+                transition: "all 0.2s",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px"
               }}
             >
-              {isSavingNotice ? "กำลังบันทึก..." : "💾 บันทึกประกาศ & อัปเดต Discord"}
+              {isSavingNotice ? "กำลังบันทึก..." : <><SaveIcon size={14} /> บันทึกประกาศ & อัปเดต Discord</>}
             </button>
           )}
         </div>
@@ -568,7 +597,7 @@ export default function OpQueuePage() {
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
               <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--success)", display: "flex", alignItems: "center", gap: "6px" }}>
-                🟢 เข้าเวรรับเคส
+                <CheckIcon size={16} className="text-emerald-500" /> เข้าเวรรับเคส
               </span>
               <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
                 {activeCol.length}
@@ -596,7 +625,7 @@ export default function OpQueuePage() {
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
               <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#f59e0b", display: "flex", alignItems: "center", gap: "6px" }}>
-                🟡 ข้ามเคส / เหม่อ
+                <ClockIcon size={16} className="text-amber-500" /> ข้ามเคส / เหม่อ
               </span>
               <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
                 {skippedCol.length}
@@ -624,7 +653,7 @@ export default function OpQueuePage() {
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
               <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#3b82f6", display: "flex", alignItems: "center", gap: "6px" }}>
-                🔵 รายชื่อหมอสตอรี่
+                <FileTextIcon size={16} className="text-blue-500" /> รายชื่อหมอสตอรี่
               </span>
               <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
                 {storyCol.length}
@@ -650,7 +679,7 @@ export default function OpQueuePage() {
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
               <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--danger)", display: "flex", alignItems: "center", gap: "6px" }}>
-                🔴 ออกจากระบบ (ออกเวร)
+                <PowerIcon size={16} className="text-red-500" /> ออกจากระบบ (ออกเวร)
               </span>
               <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
                 {inactiveCol.length}
@@ -677,7 +706,7 @@ export default function OpQueuePage() {
       {!opActive && doctors.length > 0 && (
         <section className="card" style={{ padding: "24px" }}>
           <h3 style={{ fontSize: "1rem", marginBottom: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
-            📋 สรุปรายชื่อแพทย์ในรอบเวร OP ที่ผ่านมา
+            <ClipboardIcon className="text-[var(--accent)]" /> สรุปรายชื่อแพทย์ในรอบเวร OP ที่ผ่านมา
           </h3>
           <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginBottom: "20px" }}>
             แสดงรายชื่อแพทย์ที่เข้าเวรและออกเวรในรอบ OP ล่าสุด
@@ -746,7 +775,7 @@ export default function OpQueuePage() {
       {/* Weekly OP Schedule Table at the bottom for OP / Admin */}
       <section className="card" style={{ marginTop: "32px", padding: "24px" }}>
         <h3 style={{ fontSize: "1rem", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-          📋 ตารางเวร OP ประจำสัปดาห์
+          <ClipboardIcon className="text-[var(--accent)]" /> ตารางเวร OP ประจำสัปดาห์
         </h3>
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: "20px" }}>
           ตารางแสดงรายชื่อแพทย์ปฏิบัติหน้าที่ OP ประจำวันในสัปดาห์นี้
@@ -845,7 +874,10 @@ function SkippedTimer({ startTime }: { startTime: number }) {
       fontWeight: "bold",
       letterSpacing: "0.5px"
     }}>
-      ⏱ {hours > 0 ? `${pad(hours)}:` : ''}{pad(minutes)}:{pad(seconds)}
+      <span className="inline-flex items-center gap-1">
+        <ClockIcon size={10} className="text-amber-500" />
+        {hours > 0 ? `${pad(hours)}:` : ''}{pad(minutes)}:{pad(seconds)}
+      </span>
     </span>
   );
 }
@@ -941,7 +973,7 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
             doctor.queueCategory !== "receiving" ? (
               <button
                 onClick={() => onMove(doctor.email, "receiving")}
-                title="รับเคส (🟢)"
+                title="รับเคส"
                 style={{
                   width: "28px",
                   height: "28px",
@@ -958,7 +990,7 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
                 onMouseOver={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 25%, transparent)"}
                 onMouseOut={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 10%, transparent)"}
               >
-                🟢
+                <CheckIcon size={14} className="text-emerald-500" />
               </button>
             ) : (
               <button
@@ -980,7 +1012,7 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
                 onMouseOver={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)"}
                 onMouseOut={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)"}
               >
-                ↩️
+                <ReturnIcon size={14} className="text-red-500" />
               </button>
             )
           )}
@@ -990,7 +1022,7 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
             doctor.queueCategory !== "recase" ? (
             <button
               onClick={() => onMove(doctor.email, "recase")}
-              title="Re-Case (🔄)"
+              title="Re-Case"
               style={{
                 width: "28px",
                 height: "28px",
@@ -1007,7 +1039,7 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
               onMouseOver={e => e.currentTarget.style.background = "rgba(245, 158, 11, 0.25)"}
               onMouseOut={e => e.currentTarget.style.background = "rgba(245, 158, 11, 0.1)"}
             >
-              🔄
+              <RefreshIcon size={14} className="text-amber-500" />
             </button>
           ) : (
             <button
@@ -1029,7 +1061,7 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
               onMouseOver={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)"}
               onMouseOut={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)"}
             >
-              ↩️
+              <ReturnIcon size={14} className="text-red-500" />
             </button>
             )
           )}
@@ -1055,7 +1087,7 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
               onMouseOver={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 25%, transparent)"}
               onMouseOut={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 10%, transparent)"}
             >
-              🟢
+              <CheckIcon size={14} className="text-emerald-500" />
             </button>
           )}
 
@@ -1080,7 +1112,7 @@ function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
               onMouseOver={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 25%, transparent)"}
               onMouseOut={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 10%, transparent)"}
             >
-              🟢
+              <CheckIcon size={14} className="text-emerald-500" />
             </button>
           )}
 

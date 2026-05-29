@@ -4,6 +4,19 @@ import { useState, useEffect } from "react";
 import { getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
+import {
+  SettingsIcon,
+  PaletteIcon,
+  TrashIcon,
+  UploadIcon,
+  SunIcon,
+  LayoutIcon,
+  MegaphoneIcon,
+  UsersIcon,
+  LockIcon,
+  PlusIcon,
+  SaveIcon
+} from "@/components/Icons";
 
 interface AdminOverviewEntry {
   email: string;
@@ -410,7 +423,10 @@ export default function AdminSettingsPage() {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px" }}>
         <div>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--text-primary)", margin: 0 }}>⚙️ ตั้งค่าระบบผู้ดูแลหลัก</h1>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+            <SettingsIcon size={24} style={{ color: "var(--accent)" }} />
+            ตั้งค่าระบบผู้ดูแลหลัก
+          </h1>
           <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", margin: "4px 0 0 0" }}>จัดการสิทธิ์แอดมินของเว็บไซต์และตั้งค่าการเชื่อมต่อ Discord Webhook</p>
         </div>
       </div>
@@ -419,7 +435,8 @@ export default function AdminSettingsPage() {
       <section className="card" style={{ padding: "24px" }}>
         <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
           <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
-            🎨 ตั้งค่าธีมและโลโก้เมือง (Branding & Theme Settings)
+            <PaletteIcon size={20} style={{ color: "var(--accent)" }} />
+            ตั้งค่าธีมและโลโก้เมือง (Branding & Theme Settings)
           </h2>
           <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
             ปรับแต่งโทนสีหลักของเว็บไซต์ และอัปโหลดภาพโลโก้เมืองเพื่อแสดงเป็นภาพพื้นหลังและบนส่วนหัวของเมนูข้าง
@@ -433,8 +450,9 @@ export default function AdminSettingsPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               {/* Accent Color Section */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
-                  🎨 สีหลักของระบบ (Accent Color)
+                <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <PaletteIcon size={16} />
+                  สีหลักของระบบ (Accent Color)
                 </label>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                   {/* Preset Colors */}
@@ -515,8 +533,9 @@ export default function AdminSettingsPage() {
               {/* Opacity Slider */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
-                    ☀️ ความโปร่งใสโลโก้พื้นหลัง (Background Opacity)
+                  <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <SunIcon size={16} />
+                    ความโปร่งใสโลโก้พื้นหลัง (Background Opacity)
                   </label>
                   <span style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--accent)" }}>
                     {themeBgOpacity}%
@@ -545,8 +564,9 @@ export default function AdminSettingsPage() {
 
               {/* Background Style Toggle */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
-                  📐 รูปแบบการจัดวางพื้นหลัง (Background Style)
+                <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <LayoutIcon size={16} />
+                  รูปแบบการจัดวางพื้นหลัง (Background Style)
                 </label>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button
@@ -646,7 +666,9 @@ export default function AdminSettingsPage() {
                     </>
                   ) : (
                     <>
-                      <div style={{ fontSize: "2rem" }}>🏢</div>
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <PaletteIcon size={36} style={{ color: "var(--text-muted)" }} />
+                      </div>
                       <div style={{ textAlign: "center" }}>
                         <p style={{ fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: "500" }}>
                           ยังไม่มีโลโก้เมืองผู้จัดตั้ง
@@ -682,7 +704,10 @@ export default function AdminSettingsPage() {
                         disabled={isUploadingLogo}
                         style={{ display: "none" }}
                       />
-                      {isUploadingLogo ? "กำลังอัปโหลด..." : "📤 อัปโหลดโลโก้ใหม่"}
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <UploadIcon size={14} />
+                        {isUploadingLogo ? "กำลังอัปโหลด..." : "อัปโหลดโลโก้ใหม่"}
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -723,7 +748,10 @@ export default function AdminSettingsPage() {
               transition: "all 0.2s"
             }}
           >
-            {isSavingTheme ? "กำลังบันทึก..." : "💾 บันทึกการตั้งค่าธีม"}
+            <span style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
+              <SaveIcon size={14} />
+              {isSavingTheme ? "กำลังบันทึก..." : "บันทึกการตั้งค่าธีม"}
+            </span>
           </button>
         </form>
       </section>
@@ -732,7 +760,8 @@ export default function AdminSettingsPage() {
       <section className="card" style={{ padding: "24px" }}>
         <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
           <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
-            📢 ตั้งค่า Discord Webhook (Webhook Settings)
+            <MegaphoneIcon size={20} style={{ color: "var(--accent)" }} />
+            ตั้งค่า Discord Webhook (Webhook Settings)
           </h2>
           <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
             ตั้งค่า URL สำหรับส่ง log การ เข้า-ออกเวร และรายงานกลุ่มแพทย์เวร (OP) ไปยัง Discord Channel
@@ -809,7 +838,10 @@ export default function AdminSettingsPage() {
               opacity: isSavingWebhooks ? 0.7 : 1
             }}
           >
-            {isSavingWebhooks ? "กำลังบันทึก..." : "💾 บันทึกการตั้งค่า Webhook"}
+            <span style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
+              <SaveIcon size={14} />
+              {isSavingWebhooks ? "กำลังบันทึก..." : "บันทึกการตั้งค่า Webhook"}
+            </span>
           </button>
         </form>
       </section>
@@ -818,7 +850,8 @@ export default function AdminSettingsPage() {
       <section className="card" style={{ padding: "24px" }}>
         <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
           <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
-            👥 จัดการสิทธิ์ผู้ดูแลระบบ (Admin Management)
+            <UsersIcon size={20} style={{ color: "var(--accent)" }} />
+            จัดการสิทธิ์ผู้ดูแลระบบ (Admin Management)
           </h2>
           <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
             จัดการบัญชีผู้ดูแลระบบ (ทั้งแบบ Login ด้วย Username และเชื่อมสิทธิ์ Discord Account)
@@ -830,7 +863,10 @@ export default function AdminSettingsPage() {
           {/* Left Side: Credentials Admin */}
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <h3 style={{ fontSize: "1rem", color: "var(--text-primary)", margin: 0, paddingBottom: "8px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              🔒 แอดมินล็อกอินด้วย Username
+              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <LockIcon size={18} style={{ color: "var(--accent)" }} />
+                แอดมินล็อกอินด้วย Username
+              </span>
             </h3>
             
             {/* List */}
@@ -868,7 +904,10 @@ export default function AdminSettingsPage() {
 
             {/* Add Form */}
             <form onSubmit={handleAddCredAdmin} style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "16px", border: "1px dashed var(--border)", borderRadius: "8px" }}>
-              <h4 style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-primary)" }}>➕ เพิ่มบัญชีผู้ดูแลระบบ (Credentials)</h4>
+              <h4 style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                <PlusIcon size={16} />
+                เพิ่มบัญชีผู้ดูแลระบบ (Credentials)
+              </h4>
               
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <input 
@@ -947,7 +986,10 @@ export default function AdminSettingsPage() {
 
             {/* Add Form */}
             <form onSubmit={handleAddDiscordAdmin} style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "16px", border: "1px dashed var(--border)", borderRadius: "8px" }}>
-              <h4 style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-primary)" }}>➕ มอบสิทธิ์ผู้ดูแลระบบให้กับ Discord Account</h4>
+              <h4 style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                <PlusIcon size={16} />
+                มอบสิทธิ์ผู้ดูแลระบบให้กับ Discord Account
+              </h4>
               
               <div style={{ display: "flex", gap: "12px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
                 <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" }}>

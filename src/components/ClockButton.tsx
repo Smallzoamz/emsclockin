@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PowerIcon, CameraIcon, FolderIcon } from "./Icons";
 
 interface ClockButtonProps {
   isOnDuty: boolean;
@@ -67,7 +68,9 @@ export function ClockButton({ isOnDuty, onClockIn, onClockOut }: ClockButtonProp
         id="clock-btn"
         aria-label={isOnDuty ? "ออกเวร" : "เข้าเวร"}
       >
-        <span className="btn-icon">{isOnDuty ? "🔴" : "🟢"}</span>
+        <span className="btn-icon">
+          <PowerIcon size={24} style={{ color: isOnDuty ? "var(--danger)" : "var(--accent-light)", display: "block" }} />
+        </span>
         <span style={{ fontSize: "1.1rem", fontWeight: 700 }}>
           {pressing ? "กำลังดำเนินการ..." : isOnDuty ? "ออกเวร" : "เข้าเวร"}
         </span>
@@ -80,7 +83,10 @@ export function ClockButton({ isOnDuty, onClockIn, onClockOut }: ClockButtonProp
       {showModal && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999, padding: "20px" }}>
           <div className="card" style={{ maxWidth: "400px", width: "100%", padding: "24px" }}>
-            <h3 style={{ marginBottom: "8px", color: "var(--text-primary)" }}>📸 ยืนยันการออกเวร</h3>
+            <h3 style={{ marginBottom: "8px", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px" }}>
+              <CameraIcon size={20} style={{ color: "var(--accent)" }} />
+              ยืนยันการออกเวร
+            </h3>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "20px" }}>
               กรุณาอัปโหลดรูปภาพแคปหน้าจอเพื่อเป็นหลักฐานยืนยันการออกเวรของคุณ
             </p>
@@ -102,8 +108,8 @@ export function ClockButton({ isOnDuty, onClockIn, onClockOut }: ClockButtonProp
                 {previewUrl ? (
                   <img src={previewUrl} alt="Preview" style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "8px", objectFit: "contain" }} />
                 ) : (
-                  <div style={{ color: "var(--text-muted)" }}>
-                    <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📁</div>
+                  <div style={{ color: "var(--text-muted)", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <FolderIcon size={32} style={{ marginBottom: "8px", color: "var(--text-muted)" }} />
                     คลิกเพื่อเลือกรูปภาพ<br/>
                     <small>(.jpg, .png)</small>
                   </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatHoursToHHMMSS } from "@/lib/utils";
+import { TrophyIcon, HospitalIcon, CrownIcon } from "@/components/Icons";
 
 interface RankingEntry {
   name: string;
@@ -33,7 +34,9 @@ export default function RankingPage() {
       <div className="page-container">
         <header className="page-header">
           <div>
-            <h1 className="page-title">🏆 จัดอันดับแพทย์</h1>
+            <h1 className="page-title">
+              <TrophyIcon className="inline mr-2 text-[#f59e0b]" size={28} /> จัดอันดับแพทย์
+            </h1>
             <p className="page-subtitle">กำลังโหลดข้อมูล...</p>
           </div>
         </header>
@@ -49,8 +52,8 @@ export default function RankingPage() {
     <div className="page-container">
       <header className="page-header">
         <div>
-          <h1 className="page-title" style={{ background: "linear-gradient(135deg, #f59e0b, #fbbf24)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            🏆 ทำเนียบแพทย์ดีเด่น
+          <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "8px", background: "linear-gradient(135deg, #f59e0b, #fbbf24)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            <TrophyIcon className="text-[#f59e0b]" size={28} /> ทำเนียบแพทย์ดีเด่น
           </h1>
           <p className="page-subtitle">ชั่วโมงการเข้าเวรสูงสุดประจำสัปดาห์</p>
         </div>
@@ -58,7 +61,9 @@ export default function RankingPage() {
 
       {ranking.length === 0 ? (
         <div className="card" style={{ textAlign: "center", padding: "48px" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "16px" }}>🏥</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+            <HospitalIcon size={48} className="text-[var(--accent)]" />
+          </div>
           <h3 style={{ color: "var(--text-secondary)" }}>ยังไม่มีข้อมูลการเข้าเวรในสัปดาห์นี้</h3>
         </div>
       ) : (
@@ -68,12 +73,16 @@ export default function RankingPage() {
             {top3.map((entry, index) => {
               const rank = index + 1;
               const isFirst = rank === 1;
-              const rankIcon = isFirst ? "👑" : rank === 2 ? "🥈" : "🥉";
+              const rankIcon = isFirst ? (
+                <CrownIcon size={14} className="inline mr-1 align-text-top text-[#f59e0b]" />
+              ) : (
+                <TrophyIcon size={14} className="inline mr-1 align-text-top" />
+              );
               const accentColor = isFirst ? "#f59e0b" : rank === 2 ? "#94a3b8" : "#d97706";
 
               return (
                 <div key={index} className={`podium-card rank-${rank}`}>
-                  <div className="rank-badge" style={{ background: accentColor }}>
+                  <div className="rank-badge" style={{ background: accentColor, display: "inline-flex", alignItems: "center", gap: "2px" }}>
                     {rankIcon} อันดับ {rank}
                   </div>
                   <div className="podium-avatar">

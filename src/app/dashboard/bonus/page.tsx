@@ -6,6 +6,7 @@ import { format, startOfWeek, endOfWeek } from "date-fns";
 import { th } from "date-fns/locale";
 import { formatHoursToHHMMSS } from "@/lib/utils";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { CoinsIcon, SaveIcon, CheckIcon, MegaphoneIcon, StarIcon, MoneyIcon } from "@/components/Icons";
 
 interface PayoutRecord {
   id: string;
@@ -302,7 +303,9 @@ export default function BonusCalculatorPage() {
     return (
       <div className="page-container">
         <header className="page-header">
-          <h1 className="page-title">💰 ตารางคำนวณโบนัส</h1>
+          <h1 className="page-title">
+            <CoinsIcon className="inline mr-2 text-[var(--accent)]" /> ตารางคำนวณโบนัส
+          </h1>
           <p className="page-subtitle">กำลังโหลดข้อมูลชั่วโมงการทำงานสัปดาห์นี้...</p>
         </header>
         <div className="loading-spinner"></div>
@@ -359,7 +362,9 @@ export default function BonusCalculatorPage() {
     <div className="page-container">
       <header className="page-header bonus-page-header">
         <div>
-          <h1 className="page-title">💰 ตารางคำนวณโบนัส</h1>
+          <h1 className="page-title">
+            <CoinsIcon className="inline mr-2 text-[var(--accent)]" /> ตารางคำนวณโบนัส
+          </h1>
           <p className="page-subtitle">
             รอบสัปดาห์: <strong style={{ color: "var(--accent-light)" }}>{activeDateStr}</strong>
           </p>
@@ -371,10 +376,10 @@ export default function BonusCalculatorPage() {
             onChange={e => setSelectedHistoryId(e.target.value)}
             className="history-select"
           >
-            <option value="live">🔴 สัปดาห์ปัจจุบัน (Live)</option>
+            <option value="live">● สัปดาห์ปัจจุบัน (Live)</option>
             {historyList.map(h => (
               <option key={h.id} value={h.id}>
-                🗓️ {format(new Date(h.week_start), "d MMM")} - {format(new Date(h.week_end), "d MMM yyyy")}
+                รอบ {format(new Date(h.week_start), "d MMM")} - {format(new Date(h.week_end), "d MMM yyyy")}
               </option>
             ))}
           </select>
@@ -388,7 +393,7 @@ export default function BonusCalculatorPage() {
                 background: saveSuccess ? "var(--success)" : "var(--primary)"
               }}
             >
-              {isSaving ? "กำลังบันทึก..." : saveSuccess ? "✅ บันทึกแล้ว" : "💾 บันทึกประวัติสัปดาห์นี้"}
+              {isSaving ? "กำลังบันทึก..." : saveSuccess ? <><CheckIcon size={16} className="inline mr-1 align-text-top" /> บันทึกแล้ว</> : <><SaveIcon size={16} className="inline mr-1 align-text-top" /> บันทึกประวัติสัปดาห์นี้</>}
             </button>
           )}
 
@@ -402,7 +407,7 @@ export default function BonusCalculatorPage() {
                  cursor: (isPublishing || historyList.find(h => h.id === selectedHistoryId)?.is_published) ? "not-allowed" : "pointer"
                }}
              >
-               {historyList.find(h => h.id === selectedHistoryId)?.is_published ? "✅ ประกาศแล้ว" : isPublishing ? "กำลังประกาศ..." : "📢 แจ้งยอดให้แพทย์ (Share)"}
+               {historyList.find(h => h.id === selectedHistoryId)?.is_published ? <><CheckIcon size={16} className="inline mr-1 align-text-top" /> ประกาศแล้ว</> : isPublishing ? "กำลังประกาศ..." : <><MegaphoneIcon size={16} className="inline mr-1 align-text-top" /> แจ้งยอดให้แพทย์ (Share)</>}
              </button>
           )}
         </div>
@@ -416,7 +421,7 @@ export default function BonusCalculatorPage() {
               onClick={() => setShowRankModal(true)}
               className="btn-manage-ranks"
             >
-              ⭐ จัดการยศและเรทโบนัส
+              <StarIcon size={16} className="inline mr-1 align-text-top" /> จัดการยศและเรทโบนัส
             </button>
           )}
         </div>
@@ -646,7 +651,7 @@ export default function BonusCalculatorPage() {
                                 borderRadius: "6px",
                                 fontSize: "0.8rem",
                                 fontWeight: "bold",
-                              }}>✅ จ่ายแล้ว</span>
+                              }}><CheckIcon size={14} className="inline mr-1 align-text-top text-emerald-500" /> จ่ายแล้ว</span>
                             );
                           }
                           if (isBelowThreshold && !fiftyPercentMode) {
@@ -663,7 +668,7 @@ export default function BonusCalculatorPage() {
                           if (!windowStatus.canPay) {
                             return (
                               <span style={{
-                                background: "rgba(107, 114, 128, 0.1)",
+                                background: "rgba(107, 114, 128, 0.15)",
                                 color: "#6b7280",
                                 padding: "6px 12px",
                                 borderRadius: "6px",
@@ -687,7 +692,7 @@ export default function BonusCalculatorPage() {
                                 transition: "0.2s",
                               }}
                             >
-                              {isPaying ? "กำลังจ่าย..." : "💸 สั่งจ่าย"}
+                              {isPaying ? "กำลังจ่าย..." : <><MoneyIcon size={14} className="inline mr-1 align-text-top" /> สั่งจ่าย</>}
                             </button>
                           );
                         })()}
@@ -717,7 +722,9 @@ export default function BonusCalculatorPage() {
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000, padding: "20px", backdropFilter: "blur(4px)" }}>
           <div className="card" style={{ maxWidth: "500px", width: "100%", maxHeight: "90vh", display: "flex", flexDirection: "column", padding: "24px", overflowY: "auto" }}>
             <h2 style={{ marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>⭐ จัดการยศและเรทโบนัส</span>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <StarIcon size={20} className="text-amber-500" /> จัดการยศและเรทโบนัส
+              </span>
               <button onClick={() => setShowRankModal(false)} style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: "1.2rem" }}>✕</button>
             </h2>
 
@@ -774,7 +781,7 @@ export default function BonusCalculatorPage() {
               className="btn btn-primary"
               style={{ width: "100%", padding: "12px", fontSize: "1.1rem" }}
             >
-              💾 บันทึกการเปลี่ยนแปลง
+              <><SaveIcon size={16} className="inline mr-1 align-text-top" /> บันทึกการเปลี่ยนแปลง</>
             </button>
           </div>
         </div>
