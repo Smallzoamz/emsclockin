@@ -29,6 +29,12 @@ const defaultTemplates = [
     content: "**[ประกาศสตอรี่นับไฟท์]**\nปะทะระหว่าง: [แก๊งA] VS [แก๊งB]\nครั้งที่: [คูลดาวน์] (ตัวอย่างครั้งที่/ไฟท์ที่)\nผู้ชนะ: [ชื่อคน] (หรือระบุผู้ชนะ)\nรายละเอียด: การนับคะแนนและควบคุมความสงบเรียบร้อยโดยเจ้าหน้าที่พยาบาล"
   },
   {
+    id: "tpl_storyscore",
+    categoryId: "cat_fightcount",
+    title: "ประกาศคะแนนสตอรี่",
+    content: "**[ประกาศคะแนนสตอรี่]**\n[คะแนนสตอรี่]\nครั้งที่: [คูลดาวน์] (ตัวอย่างครั้งที่/ไฟท์ที่)\nรายละเอียด: บันทึกคะแนนโดยเจ้าหน้าที่พยาบาล"
+  },
+  {
     id: "tpl_general",
     categoryId: "cat_general",
     title: "แจ้งประกาศทั่วไป",
@@ -85,7 +91,7 @@ export async function GET() {
         .upsert({ key: "announcement_categories", value: categories, updated_at: new Date().toISOString() }, { onConflict: "key" });
     }
 
-    // Self-healing database check to insert missing fight count template
+    // Self-healing database check to insert missing templates
     if (Array.isArray(templates) && !templates.some((t: any) => t.id === "tpl_fightcount")) {
       templates = [
         ...templates,
@@ -97,6 +103,22 @@ export async function GET() {
         }
       ];
       needUpdateDb = true;
+    }
+
+    if (Array.isArray(templates) && !templates.some((t: any) => t.id === "tpl_storyscore")) {
+      templates = [
+        ...templates,
+        {
+          id: "tpl_storyscore",
+          categoryId: "cat_fightcount",
+          title: "ประกาศคะแนนสตอรี่",
+          content: "**[ประกาศคะแนนสตอรี่]**\n[คะแนนสตอรี่]\nครั้งที่: [คูลดาวน์] (ตัวอย่างครั้งที่/ไฟท์ที่)\nรายละเอียด: บันทึกคะแนนโดยเจ้าหน้าที่พยาบาล"
+        }
+      ];
+      needUpdateDb = true;
+    }
+
+    if (needUpdateDb) {
       await supabase
         .from("system_settings")
         .upsert({ key: "announcement_templates", value: templates, updated_at: new Date().toISOString() }, { onConflict: "key" });

@@ -68,6 +68,43 @@ export default function UserAnnouncementsPage() {
   const [multiplier, setMultiplier] = useState(1);
   const [commandPrefix, setCommandPrefix] = useState("/ems");
 
+  // 5 Story Pairs State
+  const [storyPairs, setStoryPairs] = useState<Array<{
+    gangA: string;
+    tagA: string;
+    scoreA: string;
+    gangB: string;
+    tagB: string;
+    scoreB: string;
+  }>>([
+    { gangA: "", tagA: "", scoreA: "", gangB: "", tagB: "", scoreB: "" },
+    { gangA: "", tagA: "", scoreA: "", gangB: "", tagB: "", scoreB: "" },
+    { gangA: "", tagA: "", scoreA: "", gangB: "", tagB: "", scoreB: "" },
+    { gangA: "", tagA: "", scoreA: "", gangB: "", tagB: "", scoreB: "" },
+    { gangA: "", tagA: "", scoreA: "", gangB: "", tagB: "", scoreB: "" }
+  ]);
+
+  const updateStoryPair = (index: number, field: "gangA" | "tagA" | "scoreA" | "gangB" | "tagB" | "scoreB", value: string) => {
+    setStoryPairs(prev => prev.map((pair, idx) => {
+      if (idx === index) {
+        return { ...pair, [field]: value };
+      }
+      return pair;
+    }));
+  };
+
+  const formatPair = (gangAName: string, tagAVal: string, scoreAVal: string, gangBName: string, tagBVal: string, scoreBVal: string) => {
+    const gA = gangAName.trim() || "ชื่อแก๊ง A";
+    const tA = tagAVal.trim() ? `[${tagAVal.trim()}]` : "";
+    const sA = scoreAVal.trim() !== "" ? scoreAVal.trim() : "0";
+
+    const gB = gangBName.trim() || "ชื่อแก๊ง B";
+    const tB = tagBVal.trim() ? `[${tagBVal.trim()}]` : "";
+    const sB = scoreBVal.trim() !== "" ? scoreBVal.trim() : "0";
+
+    return `[${sA}] ${gA}${tA} vs ${gB}${tB} [${sB}]`;
+  };
+
   // Actions states
   const [copySuccess, setCopySuccess] = useState(false);
   const [isSendingDiscord, setIsSendingDiscord] = useState(false);
@@ -151,7 +188,7 @@ export default function UserAnnouncementsPage() {
     setFixedStartTime(null);
     setFixedEndTime(null);
     setLoggedBlacklistId(null);
-  }, [name, phone, gang, gangA, gangB, selectedPenaltyId, multiplier, cooldownMinutes, commandPrefix, selectedTplId, selectedCatId]);
+  }, [name, phone, gang, gangA, gangB, JSON.stringify(storyPairs), selectedPenaltyId, multiplier, cooldownMinutes, commandPrefix, selectedTplId, selectedCatId]);
 
   const activeTemplate = templates.find((t) => t.id === selectedTplId);
 
@@ -201,6 +238,27 @@ export default function UserAnnouncementsPage() {
     text = text.replaceAll("[โทษ]", penaltyText || "________________");
     text = text.replaceAll("[ค่าปรับ]", activePenalty ? `${formattedFine} IC` : "________________");
     text = text.replaceAll("[ตัวคูณ]", multiplier > 1 ? `${multiplier}` : "1");
+
+    // Format all active story pairs
+    const formattedPairs = storyPairs
+      .filter(p => p.gangA.trim() || p.gangB.trim() || p.scoreA || p.scoreB)
+      .map(p => {
+        const gA = p.gangA.trim() || "ชื่อแก๊ง A";
+        const tA = p.tagA.trim() ? `[${p.tagA.trim()}]` : "";
+        const sA = p.scoreA.trim() !== "" ? p.scoreA.trim() : "0";
+
+        const gB = p.gangB.trim() || "ชื่อแก๊ง B";
+        const tB = p.tagB.trim() ? `[${p.tagB.trim()}]` : "";
+        const sB = p.scoreB.trim() !== "" ? p.scoreB.trim() : "0";
+
+        return `[${sA}] ${gA}${tA} vs ${gB}${tB} [${sB}]`;
+      });
+
+    const storyScoreText = formattedPairs.length > 0 
+      ? formattedPairs.join("\n") 
+      : "[ยังไม่มีข้อมูลคู่สตอรี่]";
+
+    text = text.replaceAll("[คะแนนสตอรี่]", storyScoreText);
 
     // Cooldown Substitutions
     text = text.replaceAll("[คูลดาวน์]", `${cooldownMinutes}`);
@@ -570,6 +628,135 @@ export default function UserAnnouncementsPage() {
                     onChange={(e) => setGangB(e.target.value)}
                     style={{ padding: "8px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", outline: "none", fontSize: "0.85rem" }}
                   />
+                </div>
+              )}
+
+              {/* 5-Pairs Story Score Form */}
+              {hasPlaceholder("[คะแนนสตอรี่]") && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div style={{ fontSize: "0.8rem", color: "var(--accent-light)", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.5px" }}>📊 ตารางบันทึกคะแนนสตอรี่ (สูงสุด 5 คู่)</div>
+                  
+                  {storyPairs.map((pair, index) => {
+                    const isRowActive = pair.gangA.trim() || pair.gangB.trim() || pair.scoreA || pair.scoreB;
+                    
+                    return (
+                      <div key={index} style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                        padding: "16px",
+                        background: isRowActive ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.005)",
+                        border: `1px solid ${isRowActive ? "var(--accent)" : "var(--border-subtle)"}`,
+                        borderRadius: "10px",
+                        position: "relative",
+                        transition: "all 0.2s"
+                      }}>
+                        
+                        {/* Header of Row */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: "0.8rem", fontWeight: "bold", color: isRowActive ? "var(--accent-light)" : "var(--text-secondary)" }}>
+                            ⚔️ คู่ที่ {index + 1}
+                          </span>
+                          
+                          {/* Row Copy Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const text = formatPair(pair.gangA, pair.tagA, pair.scoreA, pair.gangB, pair.tagB, pair.scoreB);
+                              navigator.clipboard.writeText(text);
+                              alert(`คัดลอกคะแนนคู่ที่ ${index + 1} เรียบร้อยแล้วค่ะ!`);
+                            }}
+                            title="คัดลอกคู่นี้"
+                            style={{
+                              padding: "4px 8px",
+                              background: isRowActive ? "var(--primary)" : "var(--bg-secondary)",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              fontSize: "0.75rem",
+                              cursor: isRowActive ? "pointer" : "not-allowed",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              opacity: isRowActive ? 1 : 0.5,
+                              pointerEvents: isRowActive ? "auto" : "none",
+                              transition: "all 0.2s"
+                            }}
+                          >
+                            <ClipboardIcon size={12} />
+                            คัดลอกคู่นี้
+                          </button>
+                        </div>
+
+                        {/* Grid for Gang inputs */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "10px", alignItems: "center" }}>
+                          
+                          {/* Gang A Inputs */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            <input
+                              type="text"
+                              placeholder="ชื่อแก๊ง A"
+                              value={pair.gangA}
+                              onChange={(e) => updateStoryPair(index, "gangA", e.target.value)}
+                              style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                            />
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                              <input
+                                type="text"
+                                placeholder="Tag A"
+                                value={pair.tagA}
+                                onChange={(e) => updateStoryPair(index, "tagA", e.target.value)}
+                                style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                              />
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="สกอร์ A"
+                                value={pair.scoreA}
+                                onChange={(e) => updateStoryPair(index, "scoreA", e.target.value)}
+                                style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none", fontFamily: "var(--font-mono)" }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* VS text separator */}
+                          <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: "bold" }}>
+                            VS
+                          </div>
+
+                          {/* Gang B Inputs */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            <input
+                              type="text"
+                              placeholder="ชื่อแก๊ง B"
+                              value={pair.gangB}
+                              onChange={(e) => updateStoryPair(index, "gangB", e.target.value)}
+                              style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                            />
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                              <input
+                                type="text"
+                                placeholder="Tag B"
+                                value={pair.tagB}
+                                onChange={(e) => updateStoryPair(index, "tagB", e.target.value)}
+                                style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                              />
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="สกอร์ B"
+                                value={pair.scoreB}
+                                onChange={(e) => updateStoryPair(index, "scoreB", e.target.value)}
+                                style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none", fontFamily: "var(--font-mono)" }}
+                              />
+                            </div>
+                          </div>
+
+                        </div>
+
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
