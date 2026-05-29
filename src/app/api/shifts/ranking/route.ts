@@ -47,6 +47,7 @@ export async function GET() {
     const { data: settingsData } = await supabase.from("system_settings").select("*");
     const bonusThresholdStr = settingsData?.find(s => s.key === "bonus_threshold")?.value;
     const bonusThreshold = bonusThresholdStr ? Number(bonusThresholdStr) : 20;
+    const registeredDoctors = settingsData?.find(s => s.key === "registered_doctors")?.value || [];
 
     const { data: pastHistory } = await supabase
       .from("bonus_history")
@@ -81,12 +82,19 @@ export async function GET() {
           }
         }
 
+        const docRecord = (registeredDoctors || []).find((d: any) => 
+          (user.email && d.email === user.email) ||
+          (user.discordUsername && d.discordUsername === user.discordUsername)
+        );
+        const discordId = docRecord?.discordId || null;
+
         const currentWeekHours = parseFloat((user.totalMinutes / 60).toFixed(1));
 
         return {
           email: user.email,
           name: user.name,
           discordUsername: user.discordUsername,
+          discordId: discordId,
           currentWeekHours: currentWeekHours,
           totalHours: currentWeekHours, // Hours do not carry over!
           carriedOverBonus: carriedOverBonus

@@ -1451,9 +1451,10 @@ body::before {
 
 .spreadsheet-table th, 
 .spreadsheet-table td {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 12px 18px;
   white-space: nowrap;
+  text-align: left;
 }
 
 /* Form controls styling inside spreadsheet cells */
@@ -1491,45 +1492,28 @@ body::before {
 
 /* Headers */
 .spreadsheet-table thead th {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(30, 41, 59, 0.4);
   color: var(--text-secondary);
   font-weight: 600;
-  text-align: center;
+  text-align: left;
   position: sticky;
   top: 0;
   user-select: none;
   backdrop-filter: blur(8px);
 }
 
-.spreadsheet-table thead tr:first-child th {
-  font-size: 0.8rem;
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(0,0,0,0.4);
-}
-
-.row-num-header {
-  width: 45px;
-  background: rgba(0,0,0,0.5) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
-}
-
 .col-header {
   font-weight: 700 !important;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.15) !important;
-  color: var(--text-primary) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: var(--text-secondary) !important;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(30, 41, 59, 0.4) !important;
+  padding: 14px 18px !important;
 }
 
 /* Cells */
-.row-num {
-  background: rgba(0,0,0,0.3);
-  color: var(--text-muted);
-  text-align: center;
-  font-size: 0.85rem;
-  border-right: 2px solid rgba(255, 255, 255, 0.1) !important;
-  user-select: none;
-}
-
 .cell {
   background: transparent;
 }
@@ -1553,15 +1537,16 @@ body::before {
 }
 
 .highlight-cell {
-  background: rgba(56, 189, 148, 0.05);
+  background: rgba(56, 189, 148, 0.03);
   color: var(--accent-light);
   font-weight: 700;
 }
 
 /* Total Row */
-.total-row .cell {
-  background: rgba(56, 189, 148, 0.1);
-  border-top: 2px solid var(--accent);
+.total-row td {
+  background: rgba(56, 189, 148, 0.05) !important;
+  border-top: 1px solid var(--accent) !important;
+  border-bottom: 2px double var(--accent) !important;
 }
 
 .highlight-total {
@@ -1576,12 +1561,49 @@ body::before {
   background: rgba(255, 255, 255, 0.02);
 }
 
-/* Selection effect (simulated Excel click) */
-.spreadsheet-table tbody tr:hover .cell {
-  background: rgba(255, 255, 255, 0.05);
+.spreadsheet-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
 }
+
 .spreadsheet-table tbody tr:hover .highlight-cell {
-  background: rgba(56, 189, 148, 0.15);
+  background: rgba(56, 189, 148, 0.08);
+}
+
+/* Discord UID Badge Styles */
+.discord-uid-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(56, 189, 148, 0.08);
+  border: 1px solid rgba(56, 189, 148, 0.25);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--accent-light);
+  box-shadow: 0 0 6px rgba(56, 189, 148, 0.05);
+}
+
+.discord-uid-fallback {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.uid-icon {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.uid-value {
+  font-weight: 500;
 }
 
 /* ===== Spreadsheet Responsive Rules ===== */
@@ -1590,41 +1612,6 @@ body::before {
     flex-wrap: wrap;
     gap: 16px;
     padding: 16px 20px;
-  }
-  
-  .spreadsheet-toolbar .toolbar-group:not(.right) {
-    flex: 0 1 auto;
-  }
-  
-  .spreadsheet-toolbar .toolbar-group.right {
-    flex: 1 0 100%;
-    width: 100%;
-    margin-top: 4px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px !important;
-  }
-  
-  .summary-box {
-    align-items: center;
-    text-align: center;
-    padding: 10px;
-    min-width: 0;
-  }
-}
-
-@media (max-width: 960px) {
-  .spreadsheet-toolbar .toolbar-group:not(.right) {
-    width: 100%;
-    justify-content: space-between;
-  }
-  
-  .spreadsheet-toolbar .toolbar-group.right {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .summary-remaining {
-    grid-column: span 2;
   }
 }
 
@@ -1657,17 +1644,26 @@ body::before {
     justify-content: center;
     padding: 10px 16px !important;
   }
+
+  .spreadsheet-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 16px;
+  }
+  
+  .spreadsheet-toolbar .toolbar-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .spreadsheet-toolbar .toggle-switch-wrap {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 @media (max-width: 540px) {
-  .spreadsheet-toolbar .toolbar-group.right {
-    grid-template-columns: 1fr;
-  }
-  
-  .summary-remaining {
-    grid-column: span 1;
-  }
-  
   .spreadsheet-toolbar .toolbar-group {
     flex-direction: column;
     align-items: stretch;

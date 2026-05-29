@@ -22,6 +22,7 @@ interface RankingEntry {
   email?: string;
   name: string;
   discordUsername: string;
+  discordId?: string;
   totalHours: number;
   rankName?: string;
   appliedRate?: number;
@@ -413,6 +414,22 @@ export default function BonusCalculatorPage() {
         </div>
       </header>
 
+      {/* Stats Grid - Modern KPI Cards */}
+      <div className="stats-grid" style={{ marginTop: "0px", marginBottom: "24px" }}>
+        <div className="stat-card summary-initial">
+          <div className="stat-value" style={{ color: "#f59e0b" }}>$ {activeFund.toLocaleString("en-US")}</div>
+          <div className="stat-label">ยอดกองกลางตั้งต้น</div>
+        </div>
+        <div className="stat-card summary-deducted">
+          <div className="stat-value" style={{ color: "#ef4444" }}>- $ {totalBonusAll.toLocaleString("en-US")}</div>
+          <div className="stat-label">หักโบนัสสัปดาห์นี้</div>
+        </div>
+        <div className="stat-card summary-remaining">
+          <div className="stat-value" style={{ color: "var(--accent)" }}>$ {remainingFund.toLocaleString("en-US")}</div>
+          <div className="stat-label" style={{ color: "var(--text-primary)", fontWeight: "bold" }}>คงเหลือเข้าโรงพยาบาล</div>
+        </div>
+      </div>
+
       {/* Spreadsheet Toolbar */}
       <div className="spreadsheet-toolbar">
         <div className="toolbar-group">
@@ -471,21 +488,6 @@ export default function BonusCalculatorPage() {
             {fiftyPercentMode && <span className="toggle-badge">ON</span>}
           </span>
         </div>
-        
-        <div className="toolbar-group right">
-          <div className="summary-box summary-initial">
-            <span className="summary-label" style={{ color: "var(--text-secondary)" }}>ยอดกองกลางตั้งต้น</span>
-            <span className="summary-value" style={{ color: "#f59e0b" }}>$ {activeFund.toLocaleString("en-US")}</span>
-          </div>
-          <div className="summary-box summary-deducted">
-            <span className="summary-label" style={{ color: "var(--text-secondary)" }}>หักโบนัสสัปดาห์นี้</span>
-            <span className="summary-value" style={{ color: "#ef4444" }}>- $ {totalBonusAll.toLocaleString("en-US")}</span>
-          </div>
-          <div className="summary-box summary-remaining">
-            <span className="summary-label" style={{ color: "var(--text-primary)", fontWeight: "bold" }}>คงเหลือเข้าโรงพยาบาล</span>
-            <span className="summary-value" style={{ fontSize: "1.4rem", color: "var(--accent)" }}>$ {remainingFund.toLocaleString("en-US")}</span>
-          </div>
-        </div>
       </div>
 
       {/* Spreadsheet Table */}
@@ -493,17 +495,7 @@ export default function BonusCalculatorPage() {
         <table className="spreadsheet-table">
           <thead>
             <tr>
-              <th className="row-num-header"></th>
-              <th>A</th>
-              <th>B</th>
-              <th>C</th>
-              <th>D</th>
-              <th>E</th>
-              {!isLive && <th>F</th>}
-            </tr>
-            <tr>
-              <th className="row-num-header">1</th>
-              <th className="col-header">Discord Username</th>
+              <th className="col-header">Discord UID</th>
               <th className="col-header">ชื่อ-นามสกุล (Custom Name)</th>
               <th className="col-header">ยศ (Rank)</th>
               <th className="col-header right">ชั่วโมงรวม ({isLive ? "สัปดาห์นี้" : "ที่บันทึก"})</th>
@@ -514,13 +506,10 @@ export default function BonusCalculatorPage() {
           <tbody>
             {activeData.length === 0 ? (
               <tr>
-                <td className="row-num">2</td>
-                <td colSpan={4} className="empty-cell">ไม่มีข้อมูลในรอบนี้</td>
+                <td colSpan={isLive ? 5 : 6} className="empty-cell">ไม่มีข้อมูลในรอบนี้</td>
               </tr>
             ) : (
               activeData.map((entry, idx) => {
-                const rowNum = idx + 2;
-                
                 let rankName = "ไม่ได้กำหนดยศ";
                 let appliedRate = 0;
                 let customName = entry.name || "N/A";
@@ -549,8 +538,19 @@ export default function BonusCalculatorPage() {
                 
                 return (
                   <tr key={idx}>
-                    <td className="row-num">{rowNum}</td>
-                    <td className="cell bold">@{entry.discordUsername || "N/A"}</td>
+                    <td className="cell">
+                      {entry.discordId ? (
+                        <span className="discord-uid-badge" title="Discord UID">
+                          <span className="uid-icon">🆔</span>
+                          <span className="uid-value">{entry.discordId}</span>
+                        </span>
+                      ) : (
+                        <span className="discord-uid-fallback" title="Discord Username (ไม่มี UID)">
+                          <span className="uid-icon">🆔</span>
+                          <span className="uid-value">@{entry.discordUsername || "N/A"}</span>
+                        </span>
+                      )}
+                    </td>
                     <td className="cell">
                       {isLive && entry.email ? (
                         <input 
@@ -706,7 +706,6 @@ export default function BonusCalculatorPage() {
             {/* Total Row */}
             {activeData.length > 0 && (
               <tr className="total-row">
-                <td className="row-num">{activeData.length + 2}</td>
                 <td colSpan={3} className="cell right bold">GRAND TOTAL</td>
                 <td className="cell number bold">{formatHoursToHHMMSS(totalHoursAll)}</td>
                 <td className="cell number bold highlight-total">$ {totalBonusAll.toLocaleString("en-US")}</td>
