@@ -2520,7 +2520,7 @@ export default function RulesPage() {
                               style={{
                                 fill: isActive ? "rgba(" + colorObj.rgb + ", 0.28)" : "rgba(" + colorObj.rgb + ", 0.06)",
                                 stroke: isActive ? colorObj.hex : "rgba(" + colorObj.rgb + ", 0.4)",
-                                strokeWidth: isActive ? 2.5 : 1,
+                                strokeWidth: (isActive ? 2.5 : 1) / zoomScale,
                                 transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
                                 cursor: "pointer"
                               } as React.CSSProperties}
@@ -2548,10 +2548,10 @@ export default function RulesPage() {
                               onMouseEnter={() => setHoveredZone(zoneName)}
                               onMouseLeave={() => setHoveredZone(null)}
                             >
-                              <circle cx={pin.x} cy={pin.y} r="2.0" fill="none" stroke={colorObj.hex} strokeWidth="0.6" className="map-pin-pulse" />
-                              <circle cx={pin.x} cy={pin.y} r="1.0" fill={colorObj.hex} stroke="#fff" strokeWidth="0.3" className="map-pin-circle" />
-                              <rect x={pin.x - (zoneName.length * 2.2 + 2.5)} y={pin.y + 3} width={zoneName.length * 4.4 + 5} height="5.0" rx="2.5" fill={colorObj.hex} stroke="#fff" strokeWidth="0.4" opacity="0.95" />
-                              <text x={pin.x} y={pin.y + 5.5} className="map-pin-label" dominantBaseline="middle" style={{ fontSize: "3.2px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}>{zoneName}</text>
+                              <circle cx={pin.x} cy={pin.y} r={2.0 / zoomScale} fill="none" stroke={colorObj.hex} strokeWidth={0.6 / zoomScale} className="map-pin-pulse" />
+                              <circle cx={pin.x} cy={pin.y} r={1.0 / zoomScale} fill={colorObj.hex} stroke="#fff" strokeWidth={0.3 / zoomScale} className="map-pin-circle" />
+                              <rect x={pin.x - (zoneName.length * 2.2 + 2.5) / zoomScale} y={pin.y + 3 / zoomScale} width={(zoneName.length * 4.4 + 5) / zoomScale} height={5.0 / zoomScale} rx={2.5 / zoomScale} fill={colorObj.hex} stroke="#fff" strokeWidth={0.4 / zoomScale} opacity="0.95" />
+                              <text x={pin.x} y={pin.y + 5.5 / zoomScale} className="map-pin-label" dominantBaseline="middle" style={{ fontSize: (3.2 / zoomScale) + "px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}>{zoneName}</text>
                             </g>
                           );
                         })}
@@ -2581,7 +2581,7 @@ export default function RulesPage() {
                                     x2={pt.x}
                                     y2={pt.y}
                                     stroke={colorHex}
-                                    strokeWidth="0.8"
+                                    strokeWidth={0.8 / zoomScale}
                                     className="editor-edge-line"
                                   />
                                 );
@@ -2593,7 +2593,7 @@ export default function RulesPage() {
                                   x2={points[0].x}
                                   y2={points[0].y}
                                   stroke={colorHex}
-                                  strokeWidth="0.8"
+                                  strokeWidth={0.8 / zoomScale}
                                   className="editor-edge-line"
                                 />
                               )}
@@ -2604,12 +2604,12 @@ export default function RulesPage() {
                                   key={"vertex-" + idx}
                                   cx={pt.x}
                                   cy={pt.y}
-                                  r={selectedVertexIndex === idx ? "1.6" : "1.0"}
+                                  r={(selectedVertexIndex === idx ? 1.6 : 1.0) / zoomScale}
                                   className="editor-vertex-point"
                                   style={{
                                     fill: selectedVertexIndex === idx ? "#3b82f6" : "#ffffff",
                                     stroke: selectedVertexIndex === idx ? "#ffffff" : colorHex,
-                                    strokeWidth: selectedVertexIndex === idx ? 1.0 : 0.6,
+                                    strokeWidth: (selectedVertexIndex === idx ? 1.0 : 0.6) / zoomScale,
                                     cursor: "move",
                                     pointerEvents: "auto"
                                   }}
