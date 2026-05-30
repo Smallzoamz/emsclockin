@@ -117,7 +117,7 @@ export default function RulesPage() {
         const direction = e.deltaY < 0 ? 1 : -1;
         setZoomScale(prev => {
           const next = prev + direction * zoomStep;
-          return Math.min(Math.max(next, 1), 8); // Max zoom 8x (800% zoom!)
+          return Math.min(Math.max(next, 1), 20); // Max zoom 20x (2000% zoom!)
         });
       };
       wheelHandlerRef.current = handleWheel;
@@ -2374,7 +2374,7 @@ export default function RulesPage() {
                 <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginRight: "4px" }}>ขนาดแผนที่:</span>
                 <button 
                   type="button" 
-                  onClick={() => setZoomScale(prev => Math.min(prev + 0.25, 4))}
+                  onClick={() => setZoomScale(prev => Math.min(prev + 0.25, 20))}
                   className="btn" 
                   style={{ padding: "4px 8px", fontSize: "0.7rem", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-subtle)" }}
                   title="ซูมเข้า"
