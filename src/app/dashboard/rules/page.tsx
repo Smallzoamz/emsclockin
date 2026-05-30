@@ -42,7 +42,6 @@ export default function RulesPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [activeCategory, setActiveCategory] = useState("hospital_area");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const showToast = useCallback((message: string, type: "success" | "error") => {
@@ -77,11 +76,9 @@ export default function RulesPage() {
 
   const handleToggleEdit = () => {
     if (isEditMode) {
-      // Discard changes
       setEditedRules(null);
       setIsEditMode(false);
     } else {
-      // Enter edit mode: clone rules
       setEditedRules(JSON.parse(JSON.stringify(rules)));
       setIsEditMode(true);
     }
@@ -243,10 +240,6 @@ export default function RulesPage() {
   const currentRules = isEditMode ? editedRules : rules;
   if (!currentRules) return null;
 
-  const activeCategoryData = currentRules.categories.find(
-    (cat) => cat.id === activeCategory
-  ) || currentRules.categories[0];
-
   return (
     <>
       <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
@@ -295,7 +288,7 @@ export default function RulesPage() {
         )}
       </div>
 
-      {/* Major Title Segment */}
+      {/* Major Title Banner */}
       <div className="card" style={{ marginBottom: "20px", padding: "16px 24px", background: "linear-gradient(135deg, rgba(15, 23, 42, 0.7) 0%, rgba(12, 18, 32, 0.8) 100%)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%" }}>
           <span style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "1px", color: "var(--text-muted)", fontWeight: 700 }}>
@@ -318,140 +311,118 @@ export default function RulesPage() {
         </div>
       </div>
 
-      {/* Main Responsive Grid Layout */}
-      <div className="rules-layout">
-        {/* Left Column Tabs */}
-        <aside className="rules-sidebar">
-          <div className="rules-tab-list">
-            {currentRules.categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`rules-tab ${activeCategory === cat.id ? "active" : ""}`}
-              >
-                {getCategoryIcon(cat.id)}
-                <span>{cat.name}</span>
-                <span className="rules-tab-count">
-                  {cat.rules.length} ข้อ
-                </span>
-              </button>
-            ))}
-          </div>
+      {/* Info Notice Board */}
+      <div className="card" style={{ padding: "16px", marginBottom: "24px", background: "rgba(15, 23, 42, 0.3)", display: "flex", gap: "10px", alignItems: "center" }}>
+        <InfoIcon size={20} style={{ flexShrink: 0, color: "var(--info)" }} />
+        <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+          <strong>ข้อควรปฏิบัติ:</strong> กฏระเบียบแบ่งออกเป็น 5 หมวดหมู่ย่อย เพื่อความสะดวกในการอ่านและค้นหาข้อมูลสำหรับการปฏิบัติหน้าที่แพทย์ในเวร
+        </div>
+      </div>
 
-          <div className="card" style={{ padding: "16px", background: "rgba(15, 23, 42, 0.3)", display: "flex", gap: "10px", alignItems: "flex-start" }}>
-            <InfoIcon size={20} style={{ flexShrink: 0, marginTop: "2px" }} />
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
-              <strong>คำแนะนำ:</strong> กฏระเบียบถูกแบ่งตามหมวดหมู่ปฏิบัติหน้าที่เพื่อให้ค้นหาได้รวดเร็ว กรุณาปฏิบัติงานในเวรให้ตรงตามหลักเกณฑ์
+      {/* Responsive Cards Grid */}
+      <div className="rules-grid">
+        {currentRules.categories.map((cat) => (
+          <section key={cat.id} className="rules-category-card">
+            {/* Card Header */}
+            <div className="rules-card-header">
+              <div className="rules-card-title">
+                {getCategoryIcon(cat.id, 22)}
+                {isEditMode ? (
+                  <input
+                    type="text"
+                    value={cat.name}
+                    onChange={(e) => handleCategoryNameChange(cat.id, e.target.value)}
+                    className="rules-textarea"
+                    style={{ minHeight: "auto", padding: "4px 8px", width: "200px", fontSize: "0.95rem" }}
+                    placeholder="ชื่อหมวดหมู่"
+                  />
+                ) : (
+                  <h3>{cat.name}</h3>
+                )}
+              </div>
+              <span className="rules-card-badge">
+                {cat.rules.length} ข้อปฏิบัติ
+              </span>
             </div>
-          </div>
-        </aside>
 
-        {/* Right Column Content */}
-        <main className="card" style={{ padding: "28px" }}>
-          {/* Header of Active Subcategory */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "24px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              {getCategoryIcon(activeCategoryData.id, 24)}
-              {isEditMode ? (
-                <input
-                  type="text"
-                  value={activeCategoryData.name}
-                  onChange={(e) => handleCategoryNameChange(activeCategoryData.id, e.target.value)}
-                  className="rules-textarea"
-                  style={{ minHeight: "auto", padding: "6px 12px", width: "260px" }}
-                  placeholder="ชื่อหมวดหมู่ย่อย"
-                />
+            {/* Card Body (Rules List) */}
+            <div className="rules-card-body">
+              {cat.rules.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-muted)", fontSize: "0.82rem" }}>
+                  ไม่มีข้อมูลในหมวดหมู่นี้
+                </div>
               ) : (
-                <h2 style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--text-primary)" }}>
-                  {activeCategoryData.name}
-                </h2>
+                cat.rules.map((rule, idx) => (
+                  <div key={rule.id} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {isEditMode ? (
+                      <div className="rule-edit-card">
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                          <span className="rules-card-badge" style={{ padding: "2px 8px", fontSize: "0.68rem" }}>
+                            ข้อที่ {idx + 1}
+                          </span>
+                          
+                          <div className="rule-edit-actions">
+                            <button
+                              type="button"
+                              onClick={() => handleMoveRule(cat.id, rule.id, "up")}
+                              disabled={idx === 0}
+                              className="rule-btn-icon"
+                              title="เลื่อนขึ้น"
+                              style={{ opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? "not-allowed" : "pointer" }}
+                            >
+                              ▲
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveRule(cat.id, rule.id, "down")}
+                              disabled={idx === cat.rules.length - 1}
+                              className="rule-btn-icon"
+                              title="เลื่อนลง"
+                              style={{ opacity: idx === cat.rules.length - 1 ? 0.3 : 1, cursor: idx === cat.rules.length - 1 ? "not-allowed" : "pointer" }}
+                            >
+                              ▼
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRule(cat.id, rule.id)}
+                              className="rule-btn-icon danger"
+                              title="ลบออก"
+                            >
+                              <TrashIcon size={12} />
+                            </button>
+                          </div>
+                        </div>
+                        <textarea
+                          value={rule.content}
+                          onChange={(e) => handleRuleContentChange(cat.id, rule.id, e.target.value)}
+                          className="rules-textarea"
+                          placeholder="ระบุกฏระเบียบข้อบังคับ..."
+                        />
+                      </div>
+                    ) : (
+                      <div className="rules-item">
+                        <div className="rules-item-num">{idx + 1}</div>
+                        <div className="rules-item-text">{rule.content}</div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+
+              {isEditMode && (
+                <button
+                  type="button"
+                  onClick={() => handleAddRule(cat.id)}
+                  className="btn-add-rule"
+                  style={{ marginTop: "6px" }}
+                >
+                  <PlusIcon size={14} />
+                  เพิ่มข้อปฏิบัติใหม่
+                </button>
               )}
             </div>
-            <span className="status-badge on-duty" style={{ fontSize: "0.7rem", padding: "4px 10px" }}>
-              {activeCategoryData.rules.length} กฏระเบียบ
-            </span>
-          </div>
-
-          {/* Rules List */}
-          <div className="rules-list">
-            {activeCategoryData.rules.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)" }}>
-                ไม่มีข้อมูลกฏระเบียบในหมวดหมู่นี้
-              </div>
-            ) : (
-              activeCategoryData.rules.map((rule, idx) => (
-                <div
-                  key={rule.id}
-                  className={isEditMode ? "rule-edit-card" : "rule-item-card"}
-                >
-                  {isEditMode ? (
-                    <>
-                      <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-                        <div className="rule-num-badge">#{idx + 1}</div>
-                        
-                        {/* Action controllers for reordering and deleting */}
-                        <div className="rule-edit-actions">
-                          <button
-                            type="button"
-                            onClick={() => handleMoveRule(activeCategoryData.id, rule.id, "up")}
-                            disabled={idx === 0}
-                            className="rule-btn-icon"
-                            title="เลื่อนขึ้น"
-                            style={{ opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? "not-allowed" : "pointer" }}
-                          >
-                            ▲
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMoveRule(activeCategoryData.id, rule.id, "down")}
-                            disabled={idx === activeCategoryData.rules.length - 1}
-                            className="rule-btn-icon"
-                            title="เลื่อนลง"
-                            style={{ opacity: idx === activeCategoryData.rules.length - 1 ? 0.3 : 1, cursor: idx === activeCategoryData.rules.length - 1 ? "not-allowed" : "pointer" }}
-                          >
-                            ▼
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteRule(activeCategoryData.id, rule.id)}
-                            className="rule-btn-icon danger"
-                            title="ลบออก"
-                          >
-                            <TrashIcon size={14} />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <textarea
-                        value={rule.content}
-                        onChange={(e) => handleRuleContentChange(activeCategoryData.id, rule.id, e.target.value)}
-                        className="rules-textarea"
-                        placeholder="ระบุกฏระเบียบข้อบังคับ..."
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <div className="rule-num-badge">#{idx + 1}</div>
-                      <div className="rule-text-content">{rule.content}</div>
-                    </>
-                  )}
-                </div>
-              ))
-            )}
-
-            {isEditMode && (
-              <button
-                type="button"
-                onClick={() => handleAddRule(activeCategoryData.id)}
-                className="btn-add-rule"
-                style={{ marginTop: "8px" }}
-              >
-                <PlusIcon size={16} />
-                เพิ่มข้อปฏิบัติใหม่
-              </button>
-            )}
-          </div>
-        </main>
+          </section>
+        ))}
       </div>
 
       {/* Toast Notification */}
