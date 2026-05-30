@@ -2804,6 +2804,28 @@ body::before {
   margin-top: 2px;
 }
 
+/* Faint Dashed Table Category Header Row */
+.fee-table-category-row td {
+  padding: 10px 12px !important;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.15) !important;
+}
+
+.fee-table-category-header {
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.fee-table-item-row td {
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08) !important;
+  padding: 10px 12px !important;
+}
+
+.fee-table-add-row td {
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.15) !important;
+  padding: 12px !important;
+}
+
 
 
 

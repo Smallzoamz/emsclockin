@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { getSession } from "next-auth/react";
 import { useConfirm } from "@/components/ConfirmProvider";
@@ -176,6 +176,65 @@ export default function RulesPage() {
     });
   };
 
+  const groupFeeRules = (rulesList: Rule[]) => {
+    const groups: Record<string, Rule[]> = {
+      mf_general: [],
+      mf_story: [],
+      mf_event: [],
+      mf_injection: []
+    };
+
+    rulesList.forEach(rule => {
+      if (rule.id.startsWith("mf_general") || rule.id === "mf_1") {
+        groups.mf_general.push(rule);
+      } else if (rule.id.startsWith("mf_story") || rule.id === "mf_2") {
+        groups.mf_story.push(rule);
+      } else if (rule.id.startsWith("mf_event") || rule.id === "mf_3") {
+        groups.mf_event.push(rule);
+      } else if (rule.id.startsWith("mf_injection") || rule.id === "mf_4") {
+        groups.mf_injection.push(rule);
+      } else {
+        groups.mf_general.push(rule);
+      }
+    });
+
+    return groups;
+  };
+
+  const handleAddFeeRule = (groupId: string) => {
+    if (!editedRules) return;
+    const newId = `${groupId}_${Date.now()}`;
+    const updatedCategories = editedRules.categories.map((cat) => {
+      if (cat.id !== "medical_fees") return cat;
+      return {
+        ...cat,
+        rules: [...cat.rules, { id: newId, content: "\n" }]
+      };
+    });
+    setEditedRules({ ...editedRules, categories: updatedCategories });
+  };
+
+  const handleDeleteFeeRule = async (ruleId: string) => {
+    const confirmed = await confirm({
+      title: "ยืนยันการลบรายการ",
+      message: "คุณแน่ใจหรือไม่ว่าต้องการลบอัตราค่ารักษาพยาบาลรายการนี้?",
+      confirmText: "ลบ",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    });
+    if (!confirmed) return;
+
+    if (!editedRules) return;
+    const updatedCategories = editedRules.categories.map((cat) => {
+      if (cat.id !== "medical_fees") return cat;
+      return {
+        ...cat,
+        rules: cat.rules.filter(r => r.id !== ruleId)
+      };
+    });
+    setEditedRules({ ...editedRules, categories: updatedCategories });
+  };
+
   const handleMedicalFeeFieldChange = (ruleId: string, fieldIndex: number, value: string) => {
     if (!editedRules) return;
     const updatedCategories = editedRules.categories.map((cat) => {
@@ -260,14 +319,7 @@ export default function RulesPage() {
       const medCat = cloned.categories.find((c: any) => c.id === "medical_fees");
       if (medCat) {
         if (!medCat.rules) medCat.rules = [];
-        const feeIds = ["mf_general", "mf_story", "mf_event", "mf_injection"];
-        while (medCat.rules.length < 4) {
-          const idx = medCat.rules.length;
-          medCat.rules.push({ id: feeIds[idx] || `mf_${Date.now()}_${idx}`, content: "" });
-        }
-        if (medCat.rules.length > 4) {
-          medCat.rules = medCat.rules.slice(0, 4);
-        }
+        
         medCat.rules = medCat.rules.map((rule: any) => {
           if (!rule.content.includes("\n")) {
             if (rule.content.includes(":")) {
@@ -278,6 +330,14 @@ export default function RulesPage() {
             }
           }
           return rule;
+        });
+
+        const groups = groupFeeRules(medCat.rules);
+        const groupIds = ["mf_general", "mf_story", "mf_event", "mf_injection"];
+        groupIds.forEach(groupId => {
+          if (groups[groupId].length === 0) {
+            medCat.rules.push({ id: `${groupId}_init_${Date.now()}`, content: "\n" });
+          }
         });
       }
       setEditedRules(cloned);
@@ -1149,79 +1209,140 @@ export default function RulesPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {feeHeaders.map((header, idx) => {
-                            const rule = activeCategory.rules[idx] || { id: `mf_temp_${idx}`, content: "" };
-                            const color = feeColors[idx];
+                          {(() => {
+                            const feeGroups = groupFeeRules(activeCategory.rules);
+                            const categoryKeys = ["mf_general", "mf_story", "mf_event", "mf_injection"];
+                            const categoryNames = ["เคสทั่วไป", "เคสสตอรี่", "เคสกิจกรรม", "ฉีดยา"];
+                            const categoryColors = feeColors;
 
-                            const parts = rule.content.includes("\n") 
-                              ? rule.content.split("\n") 
-                              : (rule.content.includes(":") 
-                                  ? [rule.content.substring(0, rule.content.indexOf(":")).trim(), rule.content.substring(rule.content.indexOf(":") + 1).trim()] 
-                                  : [rule.content, ""]);
-                            const description = parts[0] || "";
-                            const feeText = parts[1] || "";
+                            return categoryKeys.map((catKey, catIdx) => {
+                              const groupRules = feeGroups[catKey] || [];
+                              const catName = categoryNames[catIdx];
+                              const color = categoryColors[catIdx];
 
-                            return (
-                              <tr key={rule.id}>
-                                <td>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: color.text, fontWeight: 700, fontSize: "0.82rem" }}>
-                                    <span style={{ fontSize: "0.75rem" }}>{color.icon}</span>
-                                    {header}
-                                  </div>
-                                </td>
-                                <td>
-                                  {isEditMode ? (
-                                    <textarea
-                                      value={description}
-                                      onChange={(e) => handleMedicalFeeFieldChange(rule.id, 0, e.target.value)}
-                                      className="rules-textarea"
-                                      placeholder="ระบุรายละเอียด..."
-                                      style={{ minHeight: "50px", fontSize: "0.8rem", padding: "6px 10px" }}
-                                    />
-                                  ) : (
-                                    <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
-                                      {description || "—"}
-                                    </div>
-                                  )}
-                                </td>
-                                <td style={{ textAlign: "right", verticalAlign: "middle" }}>
-                                  {isEditMode ? (
-                                    <input
-                                      type="text"
-                                      value={feeText}
-                                      onChange={(e) => handleMedicalFeeFieldChange(rule.id, 1, e.target.value)}
-                                      className="search-input"
-                                      placeholder="ตัวอย่าง: 3,000 IC"
-                                      style={{ padding: "6px 10px", fontSize: "0.8rem", width: "100%", textAlign: "right" }}
-                                    />
-                                  ) : (
-                                    feeText ? (
-                                      <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-                                        <button
-                                          onClick={() => copyFeeToClipboard(rule.id, feeText)}
-                                          className="clickable-fee-badge"
-                                          title="คลิกเพื่อคัดลอกตัวเลข"
-                                        >
-                                          <span className="font-mono" style={{ fontWeight: 700 }}>{feeText}</span>
-                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                          </svg>
-                                        </button>
-                                        {copiedRuleId === rule.id && (
-                                          <span className="copy-success-pill">
-                                            คัดลอกแล้ว!
-                                          </span>
-                                        )}
+                              return (
+                                <Fragment key={catKey}>
+                                  {/* Category Header Row */}
+                                  <tr className="fee-table-category-row">
+                                    <td colSpan={3} className="fee-table-category-header">
+                                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: color.text, fontWeight: 800 }}>
+                                        <span>{color.icon}</span>
+                                        <span>{catName}</span>
                                       </div>
-                                    ) : (
-                                      <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>—</span>
-                                    )
+                                    </td>
+                                  </tr>
+
+                                  {/* Sub-items */}
+                                  {groupRules.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={3} style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.8rem", padding: "12px" }}>
+                                        ไม่มีรายการในหมวดหมู่นี้
+                                      </td>
+                                    </tr>
+                                  ) : (
+                                    groupRules.map((rule, idx) => {
+                                      const parts = rule.content.includes("\n") 
+                                        ? rule.content.split("\n") 
+                                        : (rule.content.includes(":") 
+                                            ? [rule.content.substring(0, rule.content.indexOf(":")).trim(), rule.content.substring(rule.content.indexOf(":") + 1).trim()] 
+                                            : [rule.content, ""]);
+                                      const description = parts[0] || "";
+                                      const feeText = parts[1] || "";
+
+                                      return (
+                                        <tr key={rule.id} className="fee-table-item-row">
+                                          <td style={{ width: "36px", paddingRight: "0", verticalAlign: "middle" }}>
+                                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                                              #{idx + 1}
+                                            </span>
+                                          </td>
+                                          <td>
+                                            {isEditMode ? (
+                                              <textarea
+                                                value={description}
+                                                onChange={(e) => handleMedicalFeeFieldChange(rule.id, 0, e.target.value)}
+                                                className="rules-textarea"
+                                                placeholder="ระบุรายละเอียดการรักษา..."
+                                                style={{ minHeight: "50px", fontSize: "0.8rem", padding: "6px 10px" }}
+                                              />
+                                            ) : (
+                                              <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                                                {description || "—"}
+                                              </div>
+                                            )}
+                                          </td>
+                                          <td style={{ textAlign: "right", verticalAlign: "middle" }}>
+                                            <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                                              {isEditMode ? (
+                                                <>
+                                                  <input
+                                                    type="text"
+                                                    value={feeText}
+                                                    onChange={(e) => handleMedicalFeeFieldChange(rule.id, 1, e.target.value)}
+                                                    className="search-input"
+                                                    placeholder="3,000 IC"
+                                                    style={{ padding: "6px 10px", fontSize: "0.8rem", width: "90px", textAlign: "right" }}
+                                                  />
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteFeeRule(rule.id)}
+                                                    className="rule-btn-icon danger"
+                                                    title="ลบรายการนี้"
+                                                    style={{ width: "26px", height: "26px", padding: "0" }}
+                                                  >
+                                                    <TrashIcon size={12} />
+                                                  </button>
+                                                </>
+                                              ) : (
+                                                feeText ? (
+                                                  <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                                                    <button
+                                                      onClick={() => copyFeeToClipboard(rule.id, feeText)}
+                                                      className="clickable-fee-badge"
+                                                      title="คลิกเพื่อคัดลอกตัวเลข"
+                                                    >
+                                                      <span className="font-mono" style={{ fontWeight: 700 }}>{feeText}</span>
+                                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
+                                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                      </svg>
+                                                    </button>
+                                                    {copiedRuleId === rule.id && (
+                                                      <span className="copy-success-pill">
+                                                        คัดลอกแล้ว!
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                ) : (
+                                                  <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>—</span>
+                                                )
+                                              )}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })
                                   )}
-                                </td>
-                              </tr>
-                            );
-                          })}
+
+                                  {/* Add item row in edit mode */}
+                                  {isEditMode && (
+                                    <tr className="fee-table-add-row">
+                                      <td colSpan={3} style={{ padding: "6px 12px 14px 12px", borderBottom: "1px dashed rgba(255, 255, 255, 0.1)" }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAddFeeRule(catKey)}
+                                          className="map-upload-trigger-btn"
+                                          style={{ width: "100%", padding: "6px 12px", fontSize: "0.72rem", justifyContent: "center" }}
+                                        >
+                                          + เพิ่มรายการใน {catName}
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </Fragment>
+                              );
+                            });
+                          })()}
                         </tbody>
                       </table>
                     </div>
