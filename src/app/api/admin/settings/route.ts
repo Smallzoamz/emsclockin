@@ -27,7 +27,9 @@ export async function GET() {
     return NextResponse.json({ 
       settings: {
         ...settings,
-        bonus_threshold: settings['bonus_threshold'] ? Number(settings['bonus_threshold']) : 20
+        bonus_threshold: settings['bonus_threshold'] ? Number(settings['bonus_threshold']) : 20,
+        server_sync_enabled: settings['server_sync_enabled'] === true,
+        server_sync_api_key: settings['server_sync_api_key'] || ""
       } 
     });
   } catch (error) {
@@ -53,7 +55,14 @@ export async function POST(req: Request) {
     }
 
     // Block non-master admins (like Discord admins) from editing sensitive administrative role keys
-    const isSensitiveKey = ["admin_credentials_accounts", "admin_discord_accounts", "discord_webhook_url", "discord_op_webhook_url"].includes(key);
+    const isSensitiveKey = [
+      "admin_credentials_accounts", 
+      "admin_discord_accounts", 
+      "discord_webhook_url", 
+      "discord_op_webhook_url",
+      "server_sync_enabled",
+      "server_sync_api_key"
+    ].includes(key);
     if (isSensitiveKey && (user.discordId || user.email !== "lneeobee@gmail.com")) {
       return NextResponse.json({ error: "เฉพาะบัญชีผู้ดูแลระบบหลักของเว็บ (Master Admin) เท่านั้นที่สามารถจัดการสิทธิ์ผู้ดูแลระบบได้" }, { status: 403 });
     }

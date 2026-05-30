@@ -24,15 +24,15 @@ export async function POST(req: Request) {
   const avatarUrl = (session.user.image as string) || undefined;
 
   try {
-    // Find active shift
-    const { data: activeShift, error: findError } = await supabase
+    // Find active or pending_proof shift
+    const { data: activeShift } = await supabase
       .from("shifts")
       .select("*")
       .eq("user_email", userEmail)
-      .eq("status", "active")
-      .single();
+      .in("status", ["active", "pending_proof"])
+      .maybeSingle();
 
-    if (findError || !activeShift) {
+    if (!activeShift) {
       return NextResponse.json(
         { error: "คุณไม่ได้อยู่ในเวร กรุณาเข้าเวรก่อน" },
         { status: 400 }
@@ -102,16 +102,22 @@ export async function POST(req: Request) {
       
     const proofImageUrl = publicUrlData.publicUrl;
 
-    // Calculate duration
+    // Calculate or retrieve duration and clock-out timestamp
     const now = new Date();
-    const clockIn = new Date(activeShift.clock_in);
-    const durationMinutes = calcDurationMinutes(clockIn, now);
+    let durationMinutes = activeShift.duration_minutes;
+    let clockOutTime = activeShift.clock_out;
+
+    if (!clockOutTime || durationMinutes === null || durationMinutes === undefined) {
+      const clockIn = new Date(activeShift.clock_in);
+      durationMinutes = calcDurationMinutes(clockIn, now);
+      clockOutTime = now.toISOString();
+    }
 
     // Update shift
     const { data: updatedShift, error: updateError } = await supabase
       .from("shifts")
       .update({
-        clock_out: now.toISOString(),
+        clock_out: clockOutTime,
         duration_minutes: durationMinutes,
         status: "completed",
         proof_image_url: proofImageUrl,
@@ -155,7 +161,7 @@ export async function POST(req: Request) {
       discordUsername,
       discordId,
       action: "clock_out",
-      timestamp: formatThaiDate(now),
+      timestamp: formatThaiDate(new Date(clockOutTime)),
       duration: formatDuration(durationMinutes),
       weeklyHours,
       avatarUrl,

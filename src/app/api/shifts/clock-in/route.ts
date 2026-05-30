@@ -19,17 +19,21 @@ export async function POST() {
   const avatarUrl = (session.user.image as string) || undefined;
 
   try {
-    // Check if user already has an active shift
+    // Check if user already has an active or pending_proof shift
     const { data: activeShift } = await supabase
       .from("shifts")
       .select("*")
       .eq("user_email", userEmail)
-      .eq("status", "active")
-      .single();
+      .in("status", ["active", "pending_proof"])
+      .maybeSingle();
 
     if (activeShift) {
       return NextResponse.json(
-        { error: "คุณอยู่ในเวรอยู่แล้ว กรุณาออกเวรก่อน" },
+        { 
+          error: activeShift.status === "pending_proof"
+            ? "คุณมีเวรที่รอการอัปโหลดรูปหลักฐานอยู่ กรุณาส่งรูปหลักฐานก่อนเริ่มเวรใหม่ค่ะ"
+            : "คุณอยู่ในเวรอยู่แล้ว กรุณาออกเวรก่อน"
+        },
         { status: 400 }
       );
     }

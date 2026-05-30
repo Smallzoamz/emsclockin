@@ -62,6 +62,12 @@ export default function AdminSettingsPage() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [themeStatus, setThemeStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
 
+  // Server Sync Integration State
+  const [serverSyncEnabled, setServerSyncEnabled] = useState(false);
+  const [serverSyncApiKey, setServerSyncApiKey] = useState("");
+  const [isSavingServerSync, setIsSavingServerSync] = useState(false);
+  const [serverSyncStatus, setServerSyncStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
+
   useEffect(() => {
     document.title = "ตั้งค่าระบบ | EMS Clock-in";
     // Get Session and determine Master Admin
@@ -105,6 +111,12 @@ export default function AdminSettingsPage() {
         if (data.settings?.theme_bg_style) {
           setThemeBgStyle(data.settings.theme_bg_style);
         }
+        if (data.settings?.server_sync_enabled !== undefined) {
+          setServerSyncEnabled(data.settings.server_sync_enabled);
+        }
+        if (data.settings?.server_sync_api_key) {
+          setServerSyncApiKey(data.settings.server_sync_api_key);
+        }
       })
       .catch(err => console.error("Failed to load settings:", err));
   }, [router]);
@@ -142,6 +154,50 @@ export default function AdminSettingsPage() {
       setIsSavingWebhooks(false);
       setTimeout(() => setWebhookStatus(null), 4000);
     }
+  };
+
+  const handleSaveServerSync = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isMasterAdmin) return;
+    setIsSavingServerSync(true);
+    setServerSyncStatus(null);
+
+    try {
+      // Save enabled toggle
+      const res1 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "server_sync_enabled", value: serverSyncEnabled }),
+      });
+      // Save API key
+      const res2 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "server_sync_api_key", value: serverSyncApiKey }),
+      });
+
+      if (res1.ok && res2.ok) {
+        setServerSyncStatus({ message: "บันทึกการตั้งค่า Server Sync เรียบร้อยแล้วค่ะ", type: "success" });
+      } else {
+        const d1 = await res1.json();
+        const d2 = await res2.json();
+        setServerSyncStatus({ message: d1.error || d2.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
+      }
+    } catch (err) {
+      setServerSyncStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    } finally {
+      setIsSavingServerSync(false);
+      setTimeout(() => setServerSyncStatus(null), 4000);
+    }
+  };
+
+  const generateApiKey = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let result = "ems_sync_";
+    for (let i = 0; i < 24; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setServerSyncApiKey(result);
   };
 
   const handleAddCredAdmin = async (e: React.FormEvent) => {
@@ -842,6 +898,184 @@ export default function AdminSettingsPage() {
             <span style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
               <SaveIcon size={14} />
               {isSavingWebhooks ? "กำลังบันทึก..." : "บันทึกการตั้งค่า Webhook"}
+            </span>
+          </button>
+        </form>
+      </section>
+
+      {/* Server Sync Integration */}
+      <section className="card" style={{ padding: "24px" }}>
+        <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
+          <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+            <SettingsIcon size={20} style={{ color: "var(--accent)" }} />
+            เชื่อมต่อระบบเข้า-ออกเวรอัตโนมัติ (Server Sync Integration)
+          </h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
+            เชื่อมโยงการเข้า-ออกเวรในเกม (เช่น FiveM) หรือผ่านบอทดึงข้อมูล Discord Log มายังหน้าเว็บนี้
+          </p>
+        </div>
+
+        <form onSubmit={handleSaveServerSync} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {/* Toggle Switch */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-secondary)", padding: "16px", borderRadius: "10px", border: "1px solid var(--border-subtle)" }}>
+            <div>
+              <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--text-primary)", display: "block" }}>
+                เปิดใช้งานการเชื่อมต่อจากภายนอก (Enable Server Sync)
+              </span>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                หากเปิดใช้งาน ระบบจะยอมรับการซิงค์ข้อมูลผ่านช่องทาง API
+              </span>
+            </div>
+            
+            {/* Animated Custom Switch */}
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => setServerSyncEnabled(!serverSyncEnabled)}
+                style={{
+                  width: "44px",
+                  height: "24px",
+                  borderRadius: "12px",
+                  background: serverSyncEnabled ? "var(--accent)" : "rgba(255,255,255,0.1)",
+                  border: "none",
+                  position: "relative",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  boxShadow: serverSyncEnabled ? "0 0 10px var(--accent-glow)" : "none"
+                }}
+              >
+                <div style={{
+                  width: "18px",
+                  height: "18px",
+                  borderRadius: "50%",
+                  background: "white",
+                  position: "absolute",
+                  top: "3px",
+                  left: serverSyncEnabled ? "23px" : "3px",
+                  transition: "all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)"
+                }} />
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "24px" }}>
+            {/* API Key */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                🔑 คีย์สำหรับเชื่อมต่อ API (Server Sync API Key)
+              </label>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <input 
+                  type="text" 
+                  placeholder="สุ่มสร้างคีย์เพื่อความปลอดภัย..." 
+                  value={serverSyncApiKey}
+                  onChange={e => setServerSyncApiKey(e.target.value.trim())}
+                  disabled={!serverSyncEnabled}
+                  style={{ 
+                    flex: 1, 
+                    padding: "10px 14px", 
+                    background: "var(--bg-secondary)", 
+                    border: "1px solid var(--border)", 
+                    color: "var(--text-primary)", 
+                    borderRadius: "8px", 
+                    outline: "none", 
+                    fontSize: "0.85rem",
+                    opacity: serverSyncEnabled ? 1 : 0.5,
+                    fontFamily: "var(--font-mono)"
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={generateApiKey}
+                  disabled={!serverSyncEnabled}
+                  style={{
+                    padding: "10px 16px",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text-secondary)",
+                    borderRadius: "8px",
+                    cursor: serverSyncEnabled ? "pointer" : "not-allowed",
+                    fontSize: "0.85rem",
+                    fontWeight: "bold",
+                    opacity: serverSyncEnabled ? 1 : 0.5,
+                    transition: "all 0.2s"
+                  }}
+                >
+                  🎲 สุ่มสร้างคีย์
+                </button>
+              </div>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                ใช้สิทธิ Master Admin ในการเข้าถึงข้อมูล กรุณาเก็บเป็นความลับและห้ามเผยแพร่คีย์นี้
+              </span>
+            </div>
+
+            {/* Integration Details / Manual */}
+            {serverSyncEnabled && (
+              <div style={{ background: "rgba(0, 0, 0, 0.2)", padding: "16px", borderRadius: "10px", border: "1px solid var(--border-subtle)", fontSize: "0.85rem" }}>
+                <h4 style={{ margin: "0 0 8px 0", color: "var(--accent-light)", fontWeight: "bold" }}>
+                  💡 วิธีการติดตั้งและส่งข้อมูลจากเซิฟเวอร์ (API Integration Manual)
+                </h4>
+                <p style={{ margin: "0 0 12px 0", color: "var(--text-secondary)", fontSize: "0.8rem", lineHeight: "1.4" }}>
+                  ให้ส่งคำขอแบบ <strong style={{ color: "var(--text-primary)" }}>POST JSON</strong> ไปยัง Endpoint ลิงก์ระบบดังนี้:
+                </p>
+                <div style={{ background: "var(--bg-card)", padding: "10px 14px", borderRadius: "6px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--accent-light)", overflowX: "auto", border: "1px solid var(--border)", marginBottom: "12px" }}>
+                  POST {typeof window !== "undefined" ? window.location.origin : ""}/api/shifts/server-sync
+                </div>
+                
+                <p style={{ margin: "0 0 6px 0", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
+                  <strong>รูปแบบของ Payload (JSON Body):</strong>
+                </p>
+                <pre style={{ margin: 0, padding: "12px", background: "var(--bg-card)", borderRadius: "6px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--text-secondary)", overflowX: "auto", border: "1px solid var(--border)" }}>
+{`{
+  "apiKey": "\${serverSyncApiKey || "ระบุคีย์เชื่อมต่อของบอส"}",
+  "discordId": "345389657056302290", // ไอดีดิสคอร์ดของหมอ (แนะนำ)
+  "discordUsername": "doctor_name", // หรือชื่อบัญชีดิสคอร์ดของหมอ
+  "action": "clock_in" // ส่ง "clock_in" หรือ "clock_out"
+}`}
+                </pre>
+                
+                <div style={{ marginTop: "12px", color: "var(--text-muted)", fontSize: "0.75rem", display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <span>⚠️ *ระบบจะบันทึกเข้า-ออกงานให้อัตโนมัติทันทีหากตรวจพบรหัสผู้ใช้งานที่ลงทะเบียนไว้</span>
+                  <span>⚠️ *การออกงานจากระบบเซิฟเวอร์ จะเป็นการเปลี่ยนสถานะเป็น "รอส่งหลักฐาน" (Pending Proof) เพื่อให้หมอมาแนบรูปสกรีนช็อตที่หน้าเว็บของตนเองก่อน จึงจะสิ้นสุดชั่วโมงเวรสมบูรณ์และส่ง Log เข้าห้องดิสคอร์ดหลัก</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Status Message */}
+          {serverSyncStatus && (
+            <div style={{
+              padding: "10px 14px",
+              borderRadius: "6px",
+              fontSize: "0.85rem",
+              background: serverSyncStatus.type === "success" ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "rgba(239, 68, 68, 0.1)",
+              border: `1px solid \${serverSyncStatus.type === "success" ? "var(--success)" : "var(--danger)"}`,
+              color: serverSyncStatus.type === "success" ? "var(--success)" : "var(--danger)"
+            }}>
+              {serverSyncStatus.message}
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <button 
+            type="submit" 
+            disabled={isSavingServerSync}
+            style={{
+              alignSelf: "flex-end",
+              padding: "10px 24px",
+              background: "var(--primary)",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              opacity: isSavingServerSync ? 0.7 : 1
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
+              <SaveIcon size={14} />
+              {isSavingServerSync ? "กำลังบันทึก..." : "บันทึกการตั้งค่า Server Sync"}
             </span>
           </button>
         </form>
