@@ -86,6 +86,7 @@ export default function BonusCalculatorPage() {
   const liveDateStr = `${format(weekStart, "d MMM", { locale: th })} - ${format(weekEnd, "d MMM yyyy", { locale: th })}`;
 
   useEffect(() => {
+    document.title = "ตารางโบนัส | EMS Clock-in";
     Promise.all([
       fetch("/api/shifts/ranking").then(res => {
         if (!res.ok) {

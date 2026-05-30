@@ -132,6 +132,7 @@ export default function UserAnnouncementsPage() {
   };
 
   useEffect(() => {
+    document.title = "ข้อความประกาศ | EMS Clock-in";
     // Check if user is authenticated and fetch settings
     getSession().then((session) => {
       if (!session) {

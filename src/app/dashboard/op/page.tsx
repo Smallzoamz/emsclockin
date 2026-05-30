@@ -197,6 +197,7 @@ export default function OpQueuePage() {
   };
 
   useEffect(() => {
+    document.title = "ตารางเวร OP | EMS Clock-in";
     getSession().then((sessionData) => {
       setSession(sessionData);
       if (sessionData) {

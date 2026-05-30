@@ -67,6 +67,10 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    document.title = "เข้า-ออกเวร | EMS Clock-in";
+  }, []);
+
+  useEffect(() => {
     getSession().then((session) => {
       const user = session?.user as any;
       if (user?.role === "admin" && !user?.discordId) {

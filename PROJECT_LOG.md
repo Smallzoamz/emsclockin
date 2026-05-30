@@ -208,4 +208,4 @@
 
 ## [2026-05-31 03:50] | File: multiple | Line: 1 | Keyword: Public Rules Access | Status: ✅ Complete | Change: Created `src/middleware.ts` to expose current path inside request headers. Modified `DashboardLayout` in `layout.tsx` to detect paths and bypass auth redirect for `/dashboard/rules`, displaying rules inside a clean responsive public document layout with a top-bar login prompt. Removed auth guard from GET method in `/api/rules/route.ts` to allow public read access while keeping strict admin permissions for edit commands.
 
-
+## [2026-05-31 04:08] | File: multiple | Line: 1 | Keyword: Dynamic Document Titles | Status: ✅ Complete | Change: Implemented dynamic browser document title updates for all 11 client-side pages under `/src/app/dashboard` using client-side `useEffect` hooks to set `document.title` on page mount, resolving navigation state sync issues.

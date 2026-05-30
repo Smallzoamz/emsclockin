@@ -56,6 +56,7 @@ export default function AdminDashboardPage() {
   const [isSavingOpSettings, setIsSavingOpSettings] = useState(false);
 
   useEffect(() => {
+    document.title = "แดชบอร์ดแอดมิน | EMS Clock-in";
     // Get Session and determine Master Admin
     getSession().then((session) => {
       const user = session?.user as any;

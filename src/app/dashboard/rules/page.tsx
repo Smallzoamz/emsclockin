@@ -324,6 +324,7 @@ export default function RulesPage() {
   };
 
   useEffect(() => {
+    document.title = "กฎระเบียบแพทย์ | EMS Clock-in";
     setMounted(true);
     getSession().then((session) => {
       const user = session?.user as any;

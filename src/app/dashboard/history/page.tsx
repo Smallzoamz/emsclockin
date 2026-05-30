@@ -45,6 +45,10 @@ export default function HistoryPage() {
   }, []);
 
   useEffect(() => {
+    document.title = "ประวัติ & ชั่วโมง | EMS Clock-in";
+  }, []);
+
+  useEffect(() => {
     fetchData();
   }, [fetchData]);
 

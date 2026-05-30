@@ -99,6 +99,7 @@ export default function AdminAnnouncementsPage() {
   };
 
   useEffect(() => {
+    document.title = "ตั้งค่าข้อความประกาศ | EMS Clock-in";
     // Auth Guard check
     getSession().then((session) => {
       const user = session?.user as any;

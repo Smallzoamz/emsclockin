@@ -27,6 +27,7 @@ export default function MyBonusPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    document.title = "โบนัสของฉัน | EMS Clock-in";
     fetch("/api/shifts/my-bonus")
       .then(res => {
         if (!res.ok) throw new Error("โหลดข้อมูลไม่สำเร็จ");

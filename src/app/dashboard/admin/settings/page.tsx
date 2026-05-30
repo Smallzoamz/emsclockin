@@ -63,6 +63,7 @@ export default function AdminSettingsPage() {
   const [themeStatus, setThemeStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
 
   useEffect(() => {
+    document.title = "ตั้งค่าระบบ | EMS Clock-in";
     // Get Session and determine Master Admin
     getSession().then((session) => {
       const user = session?.user as any;

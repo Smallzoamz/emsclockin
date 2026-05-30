@@ -15,6 +15,7 @@ export default function RankingPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    document.title = "จัดอันดับสัปดาห์นี้ | EMS Clock-in";
     fetch("/api/shifts/ranking")
       .then((res) => res.json())
       .then((data) => {
