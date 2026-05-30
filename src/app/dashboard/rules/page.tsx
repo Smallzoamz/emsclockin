@@ -29,6 +29,7 @@ interface Rule {
 interface Category {
   id: string;
   name: string;
+  coverUrl?: string;
   rules: Rule[];
 }
 
@@ -306,6 +307,105 @@ export default function RulesPage() {
     }
   };
 
+  const handleCategoryCoverUpload = async (catId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const confirmed = await confirm({
+      title: "อัปโหลดรูปภาพปกหมวดหมู่",
+      message: "ต้องการอัปโหลดไฟล์ภาพนี้เป็นรูปภาพปกสำหรับหมวดหมู่นี้หรือไม่?",
+      confirmText: "อัปโหลด",
+      cancelText: "ยกเลิก",
+      variant: "info"
+    });
+    if (!confirmed) return;
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("cover", file);
+    formData.append("catId", catId);
+
+    try {
+      const res = await fetch("/api/rules/upload-cover", {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updateCategoriesCover = (prev: RulesData | null) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            categories: prev.categories.map((c) => {
+              if (c.id !== catId) return c;
+              return { ...c, coverUrl: data.coverUrl };
+            })
+          };
+        };
+        setRules(updateCategoriesCover(rules));
+        if (editedRules) {
+          setEditedRules(updateCategoriesCover(editedRules));
+        }
+        showToast(data.message || "อัปโหลดรูปปกหมวดหมู่เรียบร้อยแล้วค่ะ", "success");
+      } else {
+        showToast(data.error || "เกิดข้อผิดพลาดในการอัปโหลด", "error");
+      }
+    } catch (error) {
+      console.error("Category cover upload error:", error);
+      showToast("เชื่อมต่อระบบล้มเหลว", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCategoryCoverDelete = async (catId: string) => {
+    const confirmed = await confirm({
+      title: "ลบรูปภาพปกหมวดหมู่",
+      message: "คุณแน่ใจหรือไม่ว่าต้องการลบรูปภาพปกของหมวดหมู่นี้?",
+      confirmText: "ลบออก",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    });
+    if (!confirmed) return;
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("deleteCover", "true");
+    formData.append("catId", catId);
+
+    try {
+      const res = await fetch("/api/rules/upload-cover", {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updateCategoriesCover = (prev: RulesData | null) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            categories: prev.categories.map((c) => {
+              if (c.id !== catId) return c;
+              return { ...c, coverUrl: "" };
+            })
+          };
+        };
+        setRules(updateCategoriesCover(rules));
+        if (editedRules) {
+          setEditedRules(updateCategoriesCover(editedRules));
+        }
+        showToast(data.message || "ลบรูปปกหมวดหมู่เรียบร้อยแล้วค่ะ", "success");
+      } else {
+        showToast(data.error || "เกิดข้อผิดพลาดในการลบรูปปกหมวดหมู่", "error");
+      }
+    } catch (error) {
+      console.error("Category cover delete error:", error);
+      showToast("เชื่อมต่อระบบล้มเหลว", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getCategoryIcon = (id: string, size = 20) => {
     switch (id) {
       case "hospital_area":
@@ -320,6 +420,23 @@ export default function RulesPage() {
         return <CoinsIcon size={size} />;
       default:
         return <FileTextIcon size={size} />;
+    }
+  };
+
+  const getCategoryGradient = (id: string) => {
+    switch (id) {
+      case "hospital_area":
+        return "linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(6, 10, 19, 0.8) 100%)";
+      case "doctor_duty":
+        return "linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(6, 10, 19, 0.8) 100%)";
+      case "case_story":
+        return "linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(6, 10, 19, 0.8) 100%)";
+      case "blacklist":
+        return "linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(6, 10, 19, 0.8) 100%)";
+      case "medical_fees":
+        return "linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)";
+      default:
+        return "linear-gradient(135deg, rgba(100, 116, 139, 0.2) 0%, rgba(6, 10, 19, 0.8) 100%)";
     }
   };
 
@@ -364,7 +481,6 @@ export default function RulesPage() {
   const currentRules = isEditMode ? editedRules : rules;
   if (!currentRules) return null;
 
-  // Search filter query logic to check if all cards are hidden
   const query = searchQuery.trim().toLowerCase();
   const allHidden =
     query !== "" &&
@@ -552,6 +668,27 @@ export default function RulesPage() {
               >
                 <div className="folder-tab"></div>
                 <div className="folder-body">
+                  {/* Category Cover Thumbnail */}
+                  <div className="folder-cover-thumbnail">
+                    {cat.coverUrl ? (
+                      <img src={cat.coverUrl} alt={cat.name} />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", background: getCategoryGradient(cat.id) }} />
+                    )}
+                    {isEditMode && (
+                      <label className="category-cover-upload-trigger" onClick={(e) => e.stopPropagation()}>
+                        <UploadIcon size={14} />
+                        เปลี่ยนปกย่อย
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleCategoryCoverUpload(cat.id, e)}
+                          style={{ display: "none" }}
+                        />
+                      </label>
+                    )}
+                  </div>
+
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       {getCategoryIcon(cat.id, 20)}
@@ -589,17 +726,32 @@ export default function RulesPage() {
                   )}
                   
                   {isEditMode && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveCategoryId(cat.id);
-                      }}
-                      className="btn btn-ghost"
-                      style={{ fontSize: "0.72rem", padding: "4px 8px", alignSelf: "flex-end", marginTop: "auto" }}
-                    >
-                      แก้ไขกฏข้อปฏิบัติ
-                    </button>
+                    <div style={{ display: "flex", gap: "6px", width: "100%", justifyContent: "flex-end", marginTop: "auto", zIndex: 12 }}>
+                      {cat.coverUrl && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCategoryCoverDelete(cat.id);
+                          }}
+                          className="btn btn-danger"
+                          style={{ fontSize: "0.72rem", padding: "4px 8px" }}
+                        >
+                          <TrashIcon size={12} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveCategoryId(cat.id);
+                        }}
+                        className="btn btn-ghost"
+                        style={{ fontSize: "0.72rem", padding: "4px 8px" }}
+                      >
+                        แก้ไขกฏข้อปฏิบัติ
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -625,31 +777,67 @@ export default function RulesPage() {
         }}>
           <div className="rules-modal-container" onClick={(e) => e.stopPropagation()}>
             
-            {/* Modal Header */}
-            <header className="rules-modal-header">
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                {getCategoryIcon(activeCategory.id, 24)}
-                <FolderIcon size={24} style={{ color: "var(--warning)", opacity: 0.8 }} />
-                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>
-                  {activeCategory.name}
-                </h3>
+            {/* Modal Cover Banner Header */}
+            <div className="rules-modal-cover-banner">
+              {activeCategory.coverUrl ? (
+                <img src={activeCategory.coverUrl} alt={activeCategory.name} className="rules-modal-cover-img" />
+              ) : (
+                <div className="rules-modal-cover-img" style={{ background: getCategoryGradient(activeCategory.id) }} />
+              )}
+              <div className="rules-modal-cover-overlay" />
+              
+              <div className="rules-modal-cover-content">
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%" }}>
+                  {getCategoryIcon(activeCategory.id, 24)}
+                  <FolderIcon size={24} style={{ color: "var(--warning)", opacity: 0.8 }} />
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#fff", textShadow: "0 2px 4px rgba(0,0,0,0.5)" }}>
+                    {activeCategory.name}
+                  </h3>
+                  
+                  {/* Category Cover Upload Actions inside Modal when in Edit Mode */}
+                  {isEditMode && (
+                    <div style={{ marginLeft: "auto", display: "flex", gap: "6px", zIndex: 12 }}>
+                      <label className="rules-modal-cover-upload-btn">
+                        <UploadIcon size={12} />
+                        เปลี่ยนรูปปก
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleCategoryCoverUpload(activeCategory.id, e)}
+                          style={{ display: "none" }}
+                        />
+                      </label>
+                      {activeCategory.coverUrl && (
+                        <button
+                          onClick={() => handleCategoryCoverDelete(activeCategory.id)}
+                          className="rules-modal-cover-upload-btn"
+                          style={{ background: "rgba(239, 68, 68, 0.2)", color: "#fca5a5", borderColor: "rgba(239, 68, 68, 0.3)" }}
+                        >
+                          <TrashIcon size={12} />
+                          ลบรูปปก
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                <button
+                  onClick={() => {
+                    if (!isEditMode) {
+                      setActiveCategoryId(null);
+                      setModalSearchQuery("");
+                    } else {
+                      showToast("กรุณาบันทึกหรือยกเลิกการแก้ไขก่อนปิดหน้าต่างค่ะ", "error");
+                    }
+                  }}
+                  className="rule-btn-icon"
+                  style={{ position: "absolute", top: "16px", right: "16px", borderRadius: "50%", background: "rgba(15,23,42,0.6)", color: "#fff", borderColor: "rgba(255,255,255,0.15)", zIndex: 10 }}
+                  title="ปิด"
+                >
+                  <CrossIcon size={16} />
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  if (!isEditMode) {
-                    setActiveCategoryId(null);
-                    setModalSearchQuery("");
-                  } else {
-                    showToast("กรุณาบันทึกหรือยกเลิกการแก้ไขก่อนปิดหน้าต่างค่ะ", "error");
-                  }
-                }}
-                className="rule-btn-icon"
-                style={{ borderRadius: "50%" }}
-                title="ปิด"
-              >
-                <CrossIcon size={16} />
-              </button>
-            </header>
+            </div>
 
             {/* Local Search Input inside Modal */}
             {!isEditMode && (

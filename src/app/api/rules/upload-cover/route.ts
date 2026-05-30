@@ -14,6 +14,7 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const coverFile = formData.get("cover") as File | null;
     const deleteCover = formData.get("deleteCover") === "true";
+    const catId = formData.get("catId") as string | null;
 
     // 1. Fetch current rules config
     let rulesData: any = null;
@@ -34,7 +35,14 @@ export async function POST(req: Request) {
 
     // 2. Handle cover removal
     if (deleteCover) {
-      rulesData.coverUrl = "";
+      if (catId) {
+        const cat = rulesData.categories.find((c: any) => c.id === catId);
+        if (cat) {
+          cat.coverUrl = "";
+        }
+      } else {
+        rulesData.coverUrl = "";
+      }
       
       const { error: dbError } = await supabase
         .from("system_settings")
@@ -49,7 +57,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: true,
         coverUrl: "",
-        message: "ลบรูปภาพปกเรียบร้อยแล้วค่ะ"
+        message: catId ? "ลบรูปภาพปกหมวดหมู่เรียบร้อยแล้วค่ะ" : "ลบรูปภาพปกเรียบร้อยแล้วค่ะ"
       });
     }
 
@@ -90,7 +98,16 @@ export async function POST(req: Request) {
     const coverUrl = publicUrlData.publicUrl;
 
     // 4. Update the JSON rules value
-    rulesData.coverUrl = coverUrl;
+    if (catId) {
+      const cat = rulesData.categories.find((c: any) => c.id === catId);
+      if (cat) {
+        cat.coverUrl = coverUrl;
+      } else {
+        return NextResponse.json({ error: "ไม่พบหมวดหมู่ย่อยที่ระบุในระบบ" }, { status: 404 });
+      }
+    } else {
+      rulesData.coverUrl = coverUrl;
+    }
 
     const { error: dbError } = await supabase
       .from("system_settings")
@@ -105,7 +122,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       coverUrl,
-      message: "อัปโหลดรูปภาพปกเรียบร้อยแล้วค่ะ"
+      message: catId ? "อัปโหลดรูปภาพปกหมวดหมู่เรียบร้อยแล้วค่ะ" : "อัปโหลดรูปภาพปกเรียบร้อยแล้วค่ะ"
     });
   } catch (error) {
     console.error("[Cover Upload API] Error:", error);
