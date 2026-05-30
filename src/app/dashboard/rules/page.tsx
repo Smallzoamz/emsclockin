@@ -39,6 +39,14 @@ interface RulesData {
   categories: Category[];
 }
 
+const feeHeaders = ["เคสทั่วไป", "เคสสตอรี่", "เคสกิจกรรม", "ฉีดยา"];
+const feeColors = [
+  { border: "rgba(16, 185, 129, 0.3)", borderHover: "rgba(16, 185, 129, 0.6)", bg: "rgba(16, 185, 129, 0.05)", text: "var(--accent-light)", icon: "🟢", glow: "rgba(16, 185, 129, 0.15)" },
+  { border: "rgba(59, 130, 246, 0.3)", borderHover: "rgba(59, 130, 246, 0.6)", bg: "rgba(59, 130, 246, 0.05)", text: "#93c5fd", icon: "🔵", glow: "rgba(59, 130, 246, 0.15)" },
+  { border: "rgba(245, 158, 11, 0.3)", borderHover: "rgba(245, 158, 11, 0.6)", bg: "rgba(245, 158, 11, 0.05)", text: "#fde047", icon: "🟡", glow: "rgba(245, 158, 11, 0.15)" },
+  { border: "rgba(168, 85, 247, 0.3)", borderHover: "rgba(168, 85, 247, 0.6)", bg: "rgba(168, 85, 247, 0.05)", text: "#f472b6", icon: "💉", glow: "rgba(168, 85, 247, 0.15)" }
+];
+
 export default function RulesPage() {
   const confirm = useConfirm();
   const [rules, setRules] = useState<RulesData | null>(null);
@@ -53,6 +61,126 @@ export default function RulesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState("");
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+  const handleMapUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const confirmed = await confirm({
+      title: "อัปโหลดรูปแผนที่",
+      message: "ต้องการอัปโหลดไฟล์ภาพนี้เป็นรูปแผนที่แบ่งพื้นที่การรักษาหรือไม่?",
+      confirmText: "อัปโหลด",
+      cancelText: "ยกเลิก",
+      variant: "info"
+    });
+    if (!confirmed) return;
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("cover", file);
+    formData.append("catId", "medical_fees");
+    formData.append("isMap", "true");
+
+    try {
+      const res = await fetch("/api/rules/upload-cover", {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updateMapUrl = (prev: RulesData | null) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            categories: prev.categories.map((c) => {
+              if (c.id !== "medical_fees") return c;
+              return { ...c, mapUrl: data.coverUrl };
+            })
+          };
+        };
+        setRules(updateMapUrl(rules));
+        if (editedRules) {
+          setEditedRules(updateMapUrl(editedRules));
+        }
+        showToast("อัปโหลดรูปแผนที่เรียบร้อยแล้วค่ะ", "success");
+      } else {
+        showToast(data.error || "เกิดข้อผิดพลาดในการอัปโหลด", "error");
+      }
+    } catch (error) {
+      console.error("Map upload error:", error);
+      showToast("เชื่อมต่อระบบล้มเหลว", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMapDelete = async () => {
+    const confirmed = await confirm({
+      title: "ลบรูปแผนที่",
+      message: "คุณแน่ใจหรือไม่ว่าต้องการลบรูปแผนที่แบ่งพื้นที่การรักษานี้?",
+      confirmText: "ลบออก",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    });
+    if (!confirmed) return;
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("deleteCover", "true");
+    formData.append("catId", "medical_fees");
+    formData.append("isMap", "true");
+
+    try {
+      const res = await fetch("/api/rules/upload-cover", {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updateMapUrl = (prev: RulesData | null) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            categories: prev.categories.map((c) => {
+              if (c.id !== "medical_fees") return c;
+              return { ...c, mapUrl: "" };
+            })
+          };
+        };
+        setRules(updateMapUrl(rules));
+        if (editedRules) {
+          setEditedRules(updateMapUrl(editedRules));
+        }
+        showToast("ลบรูปแผนที่เรียบร้อยแล้วค่ะ", "success");
+      } else {
+        showToast(data.error || "เกิดข้อผิดพลาดในการลบรูปแผนที่", "error");
+      }
+    } catch (error) {
+      console.error("Map delete error:", error);
+      showToast("เชื่อมต่อระบบล้มเหลว", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBlacklistFieldChange = (catId: string, ruleId: string, fieldIndex: number, value: string) => {
+    if (!editedRules) return;
+    const updatedCategories = editedRules.categories.map((cat) => {
+      if (cat.id !== catId) return cat;
+      return {
+        ...cat,
+        rules: cat.rules.map((rule) => {
+          if (rule.id !== ruleId) return rule;
+          const parts = rule.content.split("\n");
+          while (parts.length < 3) parts.push("");
+          parts[fieldIndex] = value;
+          return { ...rule, content: parts.join("\n") };
+        })
+      };
+    });
+    setEditedRules({ ...editedRules, categories: updatedCategories });
+  };
 
   const showToast = useCallback((message: string, type: "success" | "error") => {
     setToast({ message, type });
@@ -91,7 +219,20 @@ export default function RulesPage() {
       setEditedRules(null);
       setIsEditMode(false);
     } else {
-      setEditedRules(JSON.parse(JSON.stringify(rules)));
+      const cloned = JSON.parse(JSON.stringify(rules));
+      const medCat = cloned.categories.find((c: any) => c.id === "medical_fees");
+      if (medCat) {
+        if (!medCat.rules) medCat.rules = [];
+        const feeIds = ["mf_general", "mf_story", "mf_event", "mf_injection"];
+        while (medCat.rules.length < 4) {
+          const idx = medCat.rules.length;
+          medCat.rules.push({ id: feeIds[idx] || `mf_${Date.now()}_${idx}`, content: "" });
+        }
+        if (medCat.rules.length > 4) {
+          medCat.rules = medCat.rules.slice(0, 4);
+        }
+      }
+      setEditedRules(cloned);
       setIsEditMode(true);
     }
   };
@@ -872,71 +1013,298 @@ export default function RulesPage() {
 
             {/* Modal Body */}
             <div className="rules-modal-body">
-              {filteredRules.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: "0.88rem" }}>
-                  ไม่มีข้อมูลกฏระเบียบที่สอดคล้องกับคำค้นหา
-                </div>
-              ) : (
-                filteredRules.map((rule, idx) => (
-                  <div key={rule.id} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {isEditMode ? (
-                      <div className="rule-edit-card">
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                          <span className="rules-card-badge" style={{ padding: "2px 8px", fontSize: "0.68rem" }}>
-                            ข้อที่ {idx + 1}
-                          </span>
-                          
-                          <div className="rule-edit-actions">
-                            <button
-                              type="button"
-                              onClick={() => handleMoveRule(activeCategory.id, rule.id, "up")}
-                              disabled={idx === 0}
-                              className="rule-btn-icon"
-                              title="เลื่อนขึ้น"
-                              style={{ opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? "not-allowed" : "pointer" }}
-                            >
-                              ▲
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveRule(activeCategory.id, rule.id, "down")}
-                              disabled={idx === activeCategory.rules.length - 1}
-                              className="rule-btn-icon"
-                              title="เลื่อนลง"
-                              style={{ opacity: idx === activeCategory.rules.length - 1 ? 0.3 : 1, cursor: idx === activeCategory.rules.length - 1 ? "not-allowed" : "pointer" }}
-                            >
-                              ▼
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteRule(activeCategory.id, rule.id)}
-                              className="rule-btn-icon danger"
-                              title="ลบออก"
-                            >
-                              <TrashIcon size={12} />
-                            </button>
+              {activeCategory.id === "medical_fees" ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
+                  <div className="fee-grid">
+                    {feeHeaders.map((header, idx) => {
+                      const rule = activeCategory.rules[idx] || { id: `mf_temp_${idx}`, content: "" };
+                      const color = feeColors[idx];
+                      return (
+                        <div
+                          key={rule.id}
+                          className="fee-card"
+                          style={{
+                            "--card-accent-color": color.borderHover,
+                            "--card-glow-color": color.glow,
+                            "--card-text-color": color.text,
+                            borderColor: color.border,
+                            background: color.bg
+                          } as React.CSSProperties}
+                        >
+                          <div className="fee-card-title">
+                            <span>{color.icon}</span>
+                            {header}
                           </div>
+                          {isEditMode ? (
+                            <textarea
+                              value={rule.content}
+                              onChange={(e) => handleRuleContentChange(activeCategory.id, rule.id, e.target.value)}
+                              className="rules-textarea"
+                              placeholder={`ระบุอัตราค่ารักษาและรายละเอียดของ ${header}...`}
+                              style={{ minHeight: "100px", marginTop: "4px", flexGrow: 1 }}
+                            />
+                          ) : (
+                            <div className="fee-card-content">
+                              {rule.content || "— ไม่มีรายละเอียดค่ารักษา —"}
+                            </div>
+                          )}
                         </div>
-                        <textarea
-                          value={rule.content}
-                          onChange={(e) => handleRuleContentChange(activeCategory.id, rule.id, e.target.value)}
-                          className="rules-textarea"
-                          placeholder="ระบุกฏระเบียบข้อบังคับ..."
+                      );
+                    })}
+                  </div>
+
+                  {/* Map Section */}
+                  <div className="map-section">
+                    <div className="map-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexWrap: "wrap", gap: "10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        🗺️
+                        <span>แผนที่การแบ่งพื้นที่การรักษา</span>
+                      </div>
+                      {isEditMode && (
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <label className="map-upload-trigger-btn">
+                            <UploadIcon size={14} />
+                            อัปโหลดแผนที่
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleMapUpload}
+                              style={{ display: "none" }}
+                            />
+                          </label>
+                          {(activeCategory as any).mapUrl && (
+                            <button
+                              type="button"
+                              onClick={handleMapDelete}
+                              className="btn btn-danger"
+                              style={{ padding: "8px 14px", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "4px" }}
+                            >
+                              <TrashIcon size={14} />
+                              ลบแผนที่
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {(activeCategory as any).mapUrl ? (
+                      <div className="map-container" onClick={() => !isEditMode && setLightboxUrl((activeCategory as any).mapUrl)}>
+                        <img
+                          src={(activeCategory as any).mapUrl}
+                          alt="Treatment Area Map"
+                          className="map-image"
                         />
+                        {!isEditMode && (
+                          <div style={{
+                            position: "absolute",
+                            bottom: "12px",
+                            right: "12px",
+                            background: "rgba(15,23,42,0.85)",
+                            padding: "6px 12px",
+                            borderRadius: "var(--radius-sm)",
+                            fontSize: "0.72rem",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-subtle)",
+                            pointerEvents: "none",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px"
+                          }}>
+                            🔎 คลิกเพื่อขยายแผนที่
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <div className="rules-modal-item">
-                        <div className="rules-modal-item-num">{idx + 1}</div>
-                        <div className="rules-modal-item-text">
-                          {getHighlightedText(rule.content, modalSearchQuery)}
-                        </div>
+                      <div className="card" style={{ padding: "32px", textAlign: "center", borderStyle: "dashed", borderColor: "var(--border-subtle)", color: "var(--text-muted)", fontSize: "0.85rem", background: "rgba(15,23,42,0.1)" }}>
+                        ยังไม่มีการอัปโหลดแผนที่การรักษาในขณะนี้
                       </div>
                     )}
                   </div>
-                ))
+                </div>
+              ) : activeCategory.id === "blacklist" ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
+                  {filteredRules.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: "0.88rem" }}>
+                      ไม่มีข้อมูลบัญชีดำที่สอดคล้องกับคำค้นหา
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                      {filteredRules.map((rule, idx) => {
+                        const parts = rule.content.split("\n");
+                        const description = parts[0] || "";
+                        const fine = parts[1] || "";
+                        const consequence = parts[2] || "";
+
+                        return (
+                          <div key={rule.id} className="blacklist-card">
+                            {isEditMode ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "8px" }}>
+                                  <span className="rules-card-badge" style={{ padding: "2px 8px", fontSize: "0.68rem" }}>
+                                    แบล็คลิสต์ข้อที่ {idx + 1}
+                                  </span>
+                                  
+                                  <div className="rule-edit-actions">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMoveRule(activeCategory.id, rule.id, "up")}
+                                      disabled={idx === 0}
+                                      className="rule-btn-icon"
+                                      title="เลื่อนขึ้น"
+                                      style={{ opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? "not-allowed" : "pointer" }}
+                                    >
+                                      ▲
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMoveRule(activeCategory.id, rule.id, "down")}
+                                      disabled={idx === activeCategory.rules.length - 1}
+                                      className="rule-btn-icon"
+                                      title="เลื่อนลง"
+                                      style={{ opacity: idx === activeCategory.rules.length - 1 ? 0.3 : 1, cursor: idx === activeCategory.rules.length - 1 ? "not-allowed" : "pointer" }}
+                                    >
+                                      ▼
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteRule(activeCategory.id, rule.id)}
+                                      className="rule-btn-icon danger"
+                                      title="ลบออก"
+                                    >
+                                      <TrashIcon size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                    <label style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>1. รายละเอียด / เนื้อหาแบล็คลิสต์</label>
+                                    <textarea
+                                      value={description}
+                                      onChange={(e) => handleBlacklistFieldChange(activeCategory.id, rule.id, 0, e.target.value)}
+                                      className="rules-textarea"
+                                      placeholder="ระบุพฤติกรรมความผิด หรือลักษณะแบล็คลิสต์..."
+                                      style={{ minHeight: "60px" }}
+                                    />
+                                  </div>
+                                  
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                      <label style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>2. จำนวนเงินที่ต้องจ่ายชำระค่าปรับ (IC)</label>
+                                      <input
+                                        type="text"
+                                        value={fine}
+                                        onChange={(e) => handleBlacklistFieldChange(activeCategory.id, rule.id, 1, e.target.value)}
+                                        className="search-input"
+                                        placeholder="ตัวอย่าง: 100,000 IC"
+                                        style={{ padding: "8px 12px", fontSize: "0.82rem", width: "100%" }}
+                                      />
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                      <label style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>3. สิ่งที่จะเกิดขึ้น หากไม่ชำระค่าปรับ</label>
+                                      <input
+                                        type="text"
+                                        value={consequence}
+                                        onChange={(e) => handleBlacklistFieldChange(activeCategory.id, rule.id, 2, e.target.value)}
+                                        className="search-input"
+                                        placeholder="ตัวอย่าง: ติดแบล็คลิสต์ 7 วัน / แจ้งความ"
+                                        style={{ padding: "8px 12px", fontSize: "0.82rem", width: "100%" }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                <div className="blacklist-card-title">
+                                  <span style={{ color: "#ef4444" }}>🚫</span>
+                                  {getHighlightedText(description, modalSearchQuery)}
+                                </div>
+                                <div className="blacklist-card-meta">
+                                  <div className="blacklist-meta-row">
+                                    <span className="blacklist-meta-label">จำนวนเงินที่ Blacklist :</span>
+                                    <span className="blacklist-meta-value font-mono" style={{ color: "#ef4444" }}>{fine || "—"}</span>
+                                  </div>
+                                  <div className="blacklist-meta-row">
+                                    <span className="blacklist-meta-label">หากไม่ชำระค่าปรับ :</span>
+                                    <span className="blacklist-meta-value" style={{ color: "#fca5a5" }}>{consequence || "—"}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                filteredRules.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: "0.88rem" }}>
+                    ไม่มีข้อมูลกฏระเบียบที่สอดคล้องกับคำค้นหา
+                  </div>
+                ) : (
+                  filteredRules.map((rule, idx) => (
+                    <div key={rule.id} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {isEditMode ? (
+                        <div className="rule-edit-card">
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                            <span className="rules-card-badge" style={{ padding: "2px 8px", fontSize: "0.68rem" }}>
+                              ข้อที่ {idx + 1}
+                            </span>
+                            
+                            <div className="rule-edit-actions">
+                              <button
+                                type="button"
+                                onClick={() => handleMoveRule(activeCategory.id, rule.id, "up")}
+                                disabled={idx === 0}
+                                className="rule-btn-icon"
+                                title="เลื่อนขึ้น"
+                                style={{ opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? "not-allowed" : "pointer" }}
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveRule(activeCategory.id, rule.id, "down")}
+                                disabled={idx === activeCategory.rules.length - 1}
+                                className="rule-btn-icon"
+                                title="เลื่อนลง"
+                                style={{ opacity: idx === activeCategory.rules.length - 1 ? 0.3 : 1, cursor: idx === activeCategory.rules.length - 1 ? "not-allowed" : "pointer" }}
+                              >
+                                ▼
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteRule(activeCategory.id, rule.id)}
+                                className="rule-btn-icon danger"
+                                title="ลบออก"
+                              >
+                                <TrashIcon size={12} />
+                              </button>
+                            </div>
+                          </div>
+                          <textarea
+                            value={rule.content}
+                            onChange={(e) => handleRuleContentChange(activeCategory.id, rule.id, e.target.value)}
+                            className="rules-textarea"
+                            placeholder="ระบุกฏระเบียบข้อบังคับ..."
+                          />
+                        </div>
+                      ) : (
+                        <div className="rules-modal-item">
+                          <div className="rules-modal-item-num">{idx + 1}</div>
+                          <div className="rules-modal-item-text">
+                            {getHighlightedText(rule.content, modalSearchQuery)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )
               )}
 
-              {isEditMode && (
+              {isEditMode && activeCategory.id !== "medical_fees" && (
                 <button
                   type="button"
                   onClick={() => handleAddRule(activeCategory.id)}
@@ -983,6 +1351,23 @@ export default function RulesPage() {
               )}
             </footer>
 
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Lightbox Fullscreen Map Viewer */}
+      {lightboxUrl && mounted && createPortal(
+        <div className="lightbox-backdrop" onClick={() => setLightboxUrl(null)}>
+          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setLightboxUrl(null)}
+              className="lightbox-close"
+              title="ปิด"
+            >
+              <CrossIcon size={18} />
+            </button>
+            <img src={lightboxUrl} alt="Fullscreen Map" className="lightbox-image" />
           </div>
         </div>,
         document.body

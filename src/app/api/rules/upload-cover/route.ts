@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     const coverFile = formData.get("cover") as File | null;
     const deleteCover = formData.get("deleteCover") === "true";
     const catId = formData.get("catId") as string | null;
+    const isMap = formData.get("isMap") === "true";
 
     // 1. Fetch current rules config
     let rulesData: any = null;
@@ -38,7 +39,11 @@ export async function POST(req: Request) {
       if (catId) {
         const cat = rulesData.categories.find((c: any) => c.id === catId);
         if (cat) {
-          cat.coverUrl = "";
+          if (isMap) {
+            cat.mapUrl = "";
+          } else {
+            cat.coverUrl = "";
+          }
         }
       } else {
         rulesData.coverUrl = "";
@@ -57,20 +62,20 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: true,
         coverUrl: "",
-        message: catId ? "ลบรูปภาพปกหมวดหมู่เรียบร้อยแล้วค่ะ" : "ลบรูปภาพปกเรียบร้อยแล้วค่ะ"
+        message: isMap ? "ลบรูปแผนที่เรียบร้อยแล้วค่ะ" : (catId ? "ลบรูปภาพปกหมวดหมู่เรียบร้อยแล้วค่ะ" : "ลบรูปภาพปกเรียบร้อยแล้วค่ะ")
       });
     }
 
     // 3. Handle cover upload
     if (!coverFile) {
       return NextResponse.json(
-        { error: "กรุณาแนบไฟล์รูปภาพปก" },
+        { error: isMap ? "กรุณาแนบไฟล์รูปภาพแผนที่" : "กรุณาแนบไฟล์รูปภาพปก" },
         { status: 400 }
       );
     }
 
     const fileExt = coverFile.name.split('.').pop() || 'jpg';
-    const fileName = `theme/rules-cover-${Date.now()}.${fileExt}`;
+    const fileName = isMap ? `theme/rules-map-${Date.now()}.${fileExt}` : `theme/rules-cover-${Date.now()}.${fileExt}`;
     const arrayBuffer = await coverFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -101,7 +106,11 @@ export async function POST(req: Request) {
     if (catId) {
       const cat = rulesData.categories.find((c: any) => c.id === catId);
       if (cat) {
-        cat.coverUrl = coverUrl;
+        if (isMap) {
+          cat.mapUrl = coverUrl;
+        } else {
+          cat.coverUrl = coverUrl;
+        }
       } else {
         return NextResponse.json({ error: "ไม่พบหมวดหมู่ย่อยที่ระบุในระบบ" }, { status: 404 });
       }
@@ -122,7 +131,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       coverUrl,
-      message: catId ? "อัปโหลดรูปภาพปกหมวดหมู่เรียบร้อยแล้วค่ะ" : "อัปโหลดรูปภาพปกเรียบร้อยแล้วค่ะ"
+      message: isMap ? "อัปโหลดรูปแผนที่เรียบร้อยแล้วค่ะ" : (catId ? "อัปโหลดรูปภาพปกหมวดหมู่เรียบร้อยแล้วค่ะ" : "อัปโหลดรูปภาพปกเรียบร้อยแล้วค่ะ")
     });
   } catch (error) {
     console.error("[Cover Upload API] Error:", error);
