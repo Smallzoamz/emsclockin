@@ -1852,112 +1852,191 @@ body::before {
 }
 
 /* ===== Doctor Rules Page ===== */
-.rules-grid {
+.folder-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 28px;
   margin-top: 24px;
-  align-items: stretch;
 }
 
-@media (min-width: 1200px) {
-  .rules-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.folder-card {
+  position: relative;
+  padding-top: 12px;
+  margin-top: 12px;
+  cursor: pointer;
 }
 
-.rules-category-card {
+.folder-tab {
+  position: absolute;
+  top: -1px;
+  left: 14px;
+  height: 14px;
+  width: 90px;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1;
+}
+
+.folder-body {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) var(--radius-lg);
   padding: 24px;
   backdrop-filter: blur(12px);
   box-shadow: var(--shadow-card);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 160px;
   position: relative;
-  overflow: hidden;
+  z-index: 2;
 }
 
-.rules-category-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 4px;
-  background: linear-gradient(to right, var(--accent), var(--info));
-  opacity: 0.6;
-  transition: opacity 0.3s;
-}
-
-.rules-category-card:hover {
-  transform: translateY(-6px) scale(1.005);
+.folder-card:hover .folder-tab {
+  top: -8px;
+  background: color-mix(in srgb, var(--accent) 15%, var(--bg-card));
   border-color: var(--border-glow);
-  box-shadow: var(--shadow-elevated), 0 10px 30px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
-.rules-category-card:hover::before {
-  opacity: 1;
+.folder-card:hover .folder-body {
+  transform: translateY(-4px);
+  border-color: var(--border-glow);
+  box-shadow: var(--shadow-elevated), 0 8px 24px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
-.rules-card-header {
+/* Search Bar Layout */
+.search-container {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 42px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  outline: none;
+  transition: all 0.25s;
+  font-size: 0.9rem;
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 15px var(--accent-glow);
+  background: rgba(12, 18, 32, 0.8);
+}
+
+.search-icon-svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: color 0.2s;
+}
+
+.search-input:focus + .search-icon-svg {
+  color: var(--accent);
+}
+
+/* Modal Popup Layout */
+.rules-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 7, 18, 0.65);
+  backdrop-filter: blur(8px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.25s ease-out;
+  padding: 16px;
+}
+
+.rules-modal-container {
+  width: 100%;
+  max-width: 720px;
+  max-height: 85vh;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  z-index: 1000;
+  animation: modalShow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalShow {
+  from {
+    transform: scale(0.96) translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.rules-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: 14px;
+  padding: 20px 24px;
+  background: rgba(15, 23, 42, 0.3);
 }
 
-.rules-card-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.rules-card-badge {
-  font-size: 0.72rem;
-  font-family: var(--font-mono);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent-light);
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-glow);
-  flex-shrink: 0;
-}
-
-.rules-card-body {
+.rules-modal-body {
+  padding: 24px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
   flex-grow: 1;
 }
 
-.rules-item {
+.rules-modal-footer {
+  border-top: 1px solid var(--border-subtle);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.3);
+}
+
+/* Modal Rule Item Layouts */
+.rules-modal-item {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: var(--radius-md);
   border-left: 3px solid transparent;
-  background: rgba(255, 255, 255, 0.01);
+  background: rgba(255, 255, 255, 0.015);
   border-top: 1px solid rgba(255, 255, 255, 0.005);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.rules-item:hover {
-  background: rgba(255, 255, 255, 0.025);
+.rules-modal-item:hover {
+  background: rgba(255, 255, 255, 0.035);
   border-left-color: var(--accent);
-  padding-left: 18px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding-left: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.rules-item-num {
+.rules-modal-item-num {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 700;
@@ -1974,27 +2053,27 @@ body::before {
   transition: all 0.25s;
 }
 
-.rules-item:hover .rules-item-num {
+.rules-modal-item:hover .rules-modal-item-num {
   background: var(--accent);
   color: #fff;
   box-shadow: 0 0 8px var(--accent-glow);
 }
 
-.rules-item-text {
+.rules-modal-item-text {
   font-size: 0.88rem;
   color: var(--text-secondary);
-  line-height: 1.55;
+  line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
   flex: 1;
   transition: color 0.2s;
 }
 
-.rules-item:hover .rules-item-text {
+.rules-modal-item:hover .rules-modal-item-text {
   color: var(--text-primary);
 }
 
-/* Edit Mode Layouts */
+/* Edit Mode inside Modal */
 .rule-edit-card {
   display: flex;
   flex-direction: column;
@@ -2021,12 +2100,12 @@ body::before {
 
 .rules-textarea {
   width: 100%;
-  min-height: 70px;
+  min-height: 60px;
   background: rgba(6, 10, 19, 0.6);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  padding: 10px 12px;
+  padding: 8px 12px;
   font-family: var(--font-ui);
   font-size: 0.88rem;
   line-height: 1.5;
@@ -2091,20 +2170,34 @@ body::before {
   box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 3%, transparent);
 }
 
+/* Highlight matching search text */
+.highlight-text {
+  background: rgba(16, 185, 129, 0.25);
+  color: #fff;
+  border-radius: 2px;
+  padding: 0 2px;
+  font-weight: 600;
+}
+
 /* Responsiveness */
 @media (max-width: 768px) {
-  .rules-grid {
+  .folder-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 20px;
   }
 
-  .rules-category-card {
-    padding: 18px;
+  .rules-modal-container {
+    max-height: 90vh;
   }
 
-  .rules-category-card:hover {
-    transform: translateY(-4px) scale(1.002);
+  .rules-modal-body {
+    padding: 16px;
+  }
+
+  .rules-modal-header {
+    padding: 16px;
   }
 }
+
 
 

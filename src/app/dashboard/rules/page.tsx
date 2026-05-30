@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { getSession } from "next-auth/react";
 import { useConfirm } from "@/components/ConfirmProvider";
 import {
   FileTextIcon,
+  FolderIcon,
   HospitalIcon,
   StethoscopeIcon,
   FlagIcon,
@@ -43,6 +45,12 @@ export default function RulesPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Search Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [modalSearchQuery, setModalSearchQuery] = useState("");
 
   const showToast = useCallback((message: string, type: "success" | "error") => {
     setToast({ message, type });
@@ -65,6 +73,7 @@ export default function RulesPage() {
   };
 
   useEffect(() => {
+    setMounted(true);
     getSession().then((session) => {
       const user = session?.user as any;
       if (user?.role === "admin") {
@@ -72,6 +81,7 @@ export default function RulesPage() {
       }
       fetchRules();
     });
+    return () => setMounted(false);
   }, []);
 
   const handleToggleEdit = () => {
@@ -233,6 +243,41 @@ export default function RulesPage() {
     }
   };
 
+  // Helper to highlight matching text
+  const getHighlightedText = (text: string, search: string) => {
+    if (!search.trim()) return text;
+    
+    const escapedSearch = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+    const regex = new RegExp(`(${escapedSearch})`, "gi");
+    const parts = text.split(regex);
+    
+    return (
+      <>
+        {parts.map((part, i) =>
+          regex.test(part) ? (
+            <mark key={i} className="highlight-text">
+              {part}
+            </mark>
+          ) : (
+            part
+          )
+        )}
+      </>
+    );
+  };
+
+  // Modal keyboard listeners (Escape key closes modal)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && activeCategoryId && !isEditMode) {
+        setActiveCategoryId(null);
+        setModalSearchQuery("");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeCategoryId, isEditMode]);
+
   if (loading && !rules) {
     return <div className="loading-spinner" />;
   }
@@ -240,16 +285,45 @@ export default function RulesPage() {
   const currentRules = isEditMode ? editedRules : rules;
   if (!currentRules) return null;
 
+  // Filter Categories on the main page
+  const filteredCategories = currentRules.categories.filter((cat) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+
+    // Matches category name
+    const matchesName = cat.name.toLowerCase().includes(query);
+    // Matches any rule inside this category
+    const matchesRules = cat.rules.some((rule) =>
+      rule.content.toLowerCase().includes(query)
+    );
+
+    return matchesName || matchesRules;
+  });
+
+  // Active category inside modal
+  const activeCategory = currentRules.categories.find(
+    (cat) => cat.id === activeCategoryId
+  );
+
+  // Filtered rules inside modal popup
+  const filteredRules = activeCategory
+    ? activeCategory.rules.filter((rule) => {
+        const query = modalSearchQuery.trim().toLowerCase();
+        if (!query || isEditMode) return true; // Show all rules when editing
+        return rule.content.toLowerCase().includes(query);
+      })
+    : [];
+
   return (
     <>
       <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <FileTextIcon size={28} />
-            {isEditMode ? "ระบบจัดการกฏระเบียบ" : "กฏระเบียบแพทย์"}
+            {isEditMode ? "จัดการกฏระเบียบโฟลเดอร์" : "สารบัญกฏระเบียบแพทย์"}
           </h1>
           <p className="page-desc">
-            {isEditMode ? "โหมดแก้ไขข้อกำหนดและรายละเอียดกฏโรงพยาบาล" : "อ่านและทำความเข้าใจข้อตกลงและกฏระเบียบการกู้ชีพอย่างเคร่งครัด"}
+            {isEditMode ? "โหมดแก้ไขหัวข้อและกฏแยกตามแฟ้มเอกสาร" : "คลิกเลือกแฟ้มโฟลเดอร์เพื่อเปิดอ่านกฏระเบียบการกู้ชีพอย่างเป็นทางการ"}
           </p>
         </div>
 
@@ -289,7 +363,7 @@ export default function RulesPage() {
       </div>
 
       {/* Major Title Banner */}
-      <div className="card" style={{ marginBottom: "20px", padding: "16px 24px", background: "linear-gradient(135deg, rgba(15, 23, 42, 0.7) 0%, rgba(12, 18, 32, 0.8) 100%)" }}>
+      <div className="card" style={{ marginBottom: "24px", padding: "16px 24px", background: "linear-gradient(135deg, rgba(15, 23, 42, 0.7) 0%, rgba(12, 18, 32, 0.8) 100%)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%" }}>
           <span style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "1px", color: "var(--text-muted)", fontWeight: 700 }}>
             หัวข้อใหญ่:
@@ -311,48 +385,193 @@ export default function RulesPage() {
         </div>
       </div>
 
-      {/* Info Notice Board */}
-      <div className="card" style={{ padding: "16px", marginBottom: "24px", background: "rgba(15, 23, 42, 0.3)", display: "flex", gap: "10px", alignItems: "center" }}>
-        <InfoIcon size={20} style={{ flexShrink: 0, color: "var(--info)" }} />
-        <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
-          <strong>ข้อควรปฏิบัติ:</strong> กฏระเบียบแบ่งออกเป็น 5 หมวดหมู่ย่อย เพื่อความสะดวกในการอ่านและค้นหาข้อมูลสำหรับการปฏิบัติหน้าที่แพทย์ในเวร
+      {/* Main Page Search Container */}
+      {!isEditMode && (
+        <div className="search-container" style={{ marginBottom: "28px" }}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-input"
+            placeholder="ค้นหาตามหมวดหมู่ หรือคำสำคัญภายในกฏ..."
+          />
+          <svg
+            className="search-icon-svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
         </div>
+      )}
+
+      {/* Folders Grid */}
+      <div className="folder-grid">
+        {filteredCategories.length === 0 ? (
+          <div className="card" style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px", color: "var(--text-secondary)" }}>
+            ไม่พบแฟ้มข้อมูลที่ตรงกับคำค้นหาของคุณ
+          </div>
+        ) : (
+          filteredCategories.map((cat) => {
+            // Count search query matches inside this category
+            const matchingRulesCount = searchQuery.trim()
+              ? cat.rules.filter((r) => r.content.toLowerCase().includes(searchQuery.trim().toLowerCase())).length
+              : 0;
+
+            return (
+              <div
+                key={cat.id}
+                className="folder-card"
+                onClick={() => {
+                  if (!isEditMode) {
+                    setActiveCategoryId(cat.id);
+                  }
+                }}
+              >
+                {/* Folder Top Tab Shape */}
+                <div className="folder-tab"></div>
+                
+                {/* Folder Main Body Card */}
+                <div className="folder-body">
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {getCategoryIcon(cat.id, 20)}
+                      <FolderIcon size={20} style={{ opacity: 0.6 }} />
+                    </div>
+                    <span className="rules-card-badge" style={{ fontSize: "0.68rem" }}>
+                      {cat.rules.length} ข้อ
+                    </span>
+                  </div>
+
+                  <div style={{ flexGrow: 1 }}>
+                    {isEditMode ? (
+                      <input
+                        type="text"
+                        value={cat.name}
+                        onClick={(e) => e.stopPropagation()} // Prevent trigger focus
+                        onChange={(e) => handleCategoryNameChange(cat.id, e.target.value)}
+                        className="rules-textarea"
+                        style={{ minHeight: "auto", padding: "6px 10px", fontSize: "0.88rem", width: "100%" }}
+                        placeholder="ชื่อหมวดหมู่"
+                      />
+                    ) : (
+                      <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.4 }}>
+                        {getHighlightedText(cat.name, searchQuery)}
+                      </h3>
+                    )}
+                  </div>
+
+                  {/* Search query hit tag indicator */}
+                  {matchingRulesCount > 0 && (
+                    <div style={{ display: "flex", alignSelf: "flex-start", marginTop: "auto" }}>
+                      <span className="status-badge on-duty" style={{ fontSize: "0.65rem", padding: "2px 8px" }}>
+                        พบในกฏ {matchingRulesCount} ข้อ
+                      </span>
+                    </div>
+                  )}
+                  
+                  {isEditMode && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveCategoryId(cat.id); // Open modal to edit rules inside
+                      }}
+                      className="btn btn-ghost"
+                      style={{ fontSize: "0.72rem", padding: "4px 8px", alignSelf: "flex-end", marginTop: "auto" }}
+                    >
+                      แก้ไขกฏข้อปฏิบัติ
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
-      {/* Responsive Cards Grid */}
-      <div className="rules-grid">
-        {currentRules.categories.map((cat) => (
-          <section key={cat.id} className="rules-category-card">
-            {/* Card Header */}
-            <div className="rules-card-header">
-              <div className="rules-card-title">
-                {getCategoryIcon(cat.id, 22)}
-                {isEditMode ? (
+      {/* Rules Modal Popup (Mounted via React Portal) */}
+      {activeCategoryId && activeCategory && mounted && createPortal(
+        <div className="rules-modal-backdrop" onClick={() => {
+          if (!isEditMode) {
+            setActiveCategoryId(null);
+            setModalSearchQuery("");
+          }
+        }}>
+          <div className="rules-modal-container" onClick={(e) => e.stopPropagation()}>
+            
+            {/* Modal Header */}
+            <header className="rules-modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                {getCategoryIcon(activeCategory.id, 24)}
+                <FolderIcon size={24} style={{ color: "var(--warning)", opacity: 0.8 }} />
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                  {activeCategory.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  if (!isEditMode) {
+                    setActiveCategoryId(null);
+                    setModalSearchQuery("");
+                  } else {
+                    showToast("กรุณาบันทึกหรือยกเลิกการแก้ไขก่อนปิดหน้าต่างค่ะ", "error");
+                  }
+                }}
+                className="rule-btn-icon"
+                style={{ borderRadius: "50%" }}
+                title="ปิด"
+              >
+                <CrossIcon size={16} />
+              </button>
+            </header>
+
+            {/* Local Search Input inside Modal */}
+            {!isEditMode && (
+              <div style={{ padding: "16px 24px 0 24px" }}>
+                <div className="search-container" style={{ maxWidth: "100%" }}>
                   <input
                     type="text"
-                    value={cat.name}
-                    onChange={(e) => handleCategoryNameChange(cat.id, e.target.value)}
-                    className="rules-textarea"
-                    style={{ minHeight: "auto", padding: "4px 8px", width: "200px", fontSize: "0.95rem" }}
-                    placeholder="ชื่อหมวดหมู่"
+                    value={modalSearchQuery}
+                    onChange={(e) => setModalSearchQuery(e.target.value)}
+                    className="search-input"
+                    placeholder="พิมพ์เพื่อค้นหาคีย์เวิร์ดในหมวดหมู่นี้..."
+                    style={{ padding: "10px 14px 10px 38px", fontSize: "0.85rem" }}
                   />
-                ) : (
-                  <h3>{cat.name}</h3>
-                )}
+                  <svg
+                    className="search-icon-svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ left: 12 }}
+                  >
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
               </div>
-              <span className="rules-card-badge">
-                {cat.rules.length} ข้อปฏิบัติ
-              </span>
-            </div>
+            )}
 
-            {/* Card Body (Rules List) */}
-            <div className="rules-card-body">
-              {cat.rules.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-muted)", fontSize: "0.82rem" }}>
-                  ไม่มีข้อมูลในหมวดหมู่นี้
+            {/* Modal Body (Rules List) */}
+            <div className="rules-modal-body">
+              {filteredRules.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: "0.88rem" }}>
+                  ไม่มีข้อมูลกฏระเบียบที่สอดคล้องกับคำค้นหา
                 </div>
               ) : (
-                cat.rules.map((rule, idx) => (
+                filteredRules.map((rule, idx) => (
                   <div key={rule.id} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     {isEditMode ? (
                       <div className="rule-edit-card">
@@ -364,7 +583,7 @@ export default function RulesPage() {
                           <div className="rule-edit-actions">
                             <button
                               type="button"
-                              onClick={() => handleMoveRule(cat.id, rule.id, "up")}
+                              onClick={() => handleMoveRule(activeCategory.id, rule.id, "up")}
                               disabled={idx === 0}
                               className="rule-btn-icon"
                               title="เลื่อนขึ้น"
@@ -374,17 +593,17 @@ export default function RulesPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleMoveRule(cat.id, rule.id, "down")}
-                              disabled={idx === cat.rules.length - 1}
+                              onClick={() => handleMoveRule(activeCategory.id, rule.id, "down")}
+                              disabled={idx === activeCategory.rules.length - 1}
                               className="rule-btn-icon"
                               title="เลื่อนลง"
-                              style={{ opacity: idx === cat.rules.length - 1 ? 0.3 : 1, cursor: idx === cat.rules.length - 1 ? "not-allowed" : "pointer" }}
+                              style={{ opacity: idx === activeCategory.rules.length - 1 ? 0.3 : 1, cursor: idx === activeCategory.rules.length - 1 ? "not-allowed" : "pointer" }}
                             >
                               ▼
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDeleteRule(cat.id, rule.id)}
+                              onClick={() => handleDeleteRule(activeCategory.id, rule.id)}
                               className="rule-btn-icon danger"
                               title="ลบออก"
                             >
@@ -394,15 +613,17 @@ export default function RulesPage() {
                         </div>
                         <textarea
                           value={rule.content}
-                          onChange={(e) => handleRuleContentChange(cat.id, rule.id, e.target.value)}
+                          onChange={(e) => handleRuleContentChange(activeCategory.id, rule.id, e.target.value)}
                           className="rules-textarea"
                           placeholder="ระบุกฏระเบียบข้อบังคับ..."
                         />
                       </div>
                     ) : (
-                      <div className="rules-item">
-                        <div className="rules-item-num">{idx + 1}</div>
-                        <div className="rules-item-text">{rule.content}</div>
+                      <div className="rules-modal-item">
+                        <div className="rules-modal-item-num">{idx + 1}</div>
+                        <div className="rules-modal-item-text">
+                          {getHighlightedText(rule.content, modalSearchQuery)}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -412,7 +633,7 @@ export default function RulesPage() {
               {isEditMode && (
                 <button
                   type="button"
-                  onClick={() => handleAddRule(cat.id)}
+                  onClick={() => handleAddRule(activeCategory.id)}
                   className="btn-add-rule"
                   style={{ marginTop: "6px" }}
                 >
@@ -421,9 +642,45 @@ export default function RulesPage() {
                 </button>
               )}
             </div>
-          </section>
-        ))}
-      </div>
+
+            {/* Modal Footer */}
+            <footer className="rules-modal-footer">
+              {isEditMode ? (
+                <>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="btn btn-ghost"
+                    style={{ fontSize: "0.82rem", padding: "8px 16px" }}
+                  >
+                    ยกเลิกการแก้
+                  </button>
+                  <button
+                    onClick={handleSaveChanges}
+                    className="btn btn-primary"
+                    style={{ fontSize: "0.82rem", padding: "8px 16px" }}
+                  >
+                    <SaveIcon size={14} />
+                    บันทึกข้อมูล
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setActiveCategoryId(null);
+                    setModalSearchQuery("");
+                  }}
+                  className="btn btn-primary"
+                  style={{ fontSize: "0.82rem", padding: "8px 20px" }}
+                >
+                  ปิดหน้าต่าง
+                </button>
+              )}
+            </footer>
+
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Toast Notification */}
       {toast && (
