@@ -1852,11 +1852,55 @@ body::before {
 }
 
 /* ===== Doctor Rules Page ===== */
-.folder-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+.folder-flex-container {
+  display: flex;
+  flex-wrap: wrap;
   gap: 28px;
   margin-top: 24px;
+}
+
+.folder-card-wrapper {
+  flex: 1 1 280px;
+  max-width: calc(33.333% - 19px);
+  min-width: 280px;
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition: 
+    opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    min-width 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    max-width 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    flex-basis 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    margin 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    padding 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  box-sizing: border-box;
+}
+
+@media (max-width: 992px) {
+  .folder-card-wrapper {
+    max-width: calc(50% - 14px);
+  }
+}
+
+@media (max-width: 640px) {
+  .folder-card-wrapper {
+    max-width: 100%;
+    flex: 1 1 100%;
+  }
+}
+
+.folder-card-wrapper.hidden {
+  opacity: 0;
+  transform: scale(0.8) translateY(20px);
+  pointer-events: none;
+  min-width: 0;
+  max-width: 0;
+  flex-basis: 0;
+  margin: 0;
+  padding: 0;
+  margin-left: -14px;
+  margin-right: -14px;
+  overflow: hidden;
 }
 
 .folder-card {
@@ -1906,6 +1950,81 @@ body::before {
   transform: translateY(-4px);
   border-color: var(--border-glow);
   box-shadow: var(--shadow-elevated), 0 8px 24px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* Page Cover Banner */
+.rules-cover-banner {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 28px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 28px;
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(6, 10, 19, 0.9) 100%);
+  box-sizing: border-box;
+}
+
+.rules-cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  transition: transform 0.8s ease;
+}
+
+.rules-cover-banner:hover .rules-cover-img {
+  transform: scale(1.03);
+}
+
+.rules-cover-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(6, 10, 19, 0.95) 20%, rgba(12, 18, 32, 0.4) 100%);
+  z-index: 1;
+}
+
+.rules-cover-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rules-cover-upload-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 3;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+  font-family: var(--font-ui);
+}
+
+.rules-cover-upload-btn:hover {
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text-primary);
+  border-color: var(--border-glow);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
 }
 
 /* Search Bar Layout */
@@ -2198,6 +2317,7 @@ body::before {
     padding: 16px;
   }
 }
+
 
 
 

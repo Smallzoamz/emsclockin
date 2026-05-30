@@ -16,9 +16,9 @@ import {
   SaveIcon,
   PlusIcon,
   TrashIcon,
-  CheckIcon,
   CrossIcon,
-  InfoIcon
+  InfoIcon,
+  UploadIcon
 } from "@/components/Icons";
 
 interface Rule {
@@ -34,6 +34,7 @@ interface Category {
 
 interface RulesData {
   title: string;
+  coverUrl?: string;
   categories: Category[];
 }
 
@@ -226,6 +227,85 @@ export default function RulesPage() {
     }
   };
 
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const confirmed = await confirm({
+      title: "อัปโหลดรูปภาพปก",
+      message: "ต้องการอัปโหลดไฟล์ภาพนี้เป็นรูปภาพปกใหม่หรือไม่?",
+      confirmText: "อัปโหลด",
+      cancelText: "ยกเลิก",
+      variant: "info"
+    });
+    if (!confirmed) return;
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("cover", file);
+
+    try {
+      const res = await fetch("/api/rules/upload-cover", {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updatedRules = { ...rules, coverUrl: data.coverUrl } as RulesData;
+        setRules(updatedRules);
+        if (editedRules) {
+          setEditedRules({ ...editedRules, coverUrl: data.coverUrl });
+        }
+        showToast(data.message || "อัปโหลดรูปปกเรียบร้อยแล้วค่ะ", "success");
+      } else {
+        showToast(data.error || "เกิดข้อผิดพลาดในการอัปโหลด", "error");
+      }
+    } catch (error) {
+      console.error("Cover upload error:", error);
+      showToast("เชื่อมต่อระบบล้มเหลว", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCover = async () => {
+    const confirmed = await confirm({
+      title: "ลบรูปภาพปก",
+      message: "คุณแน่ใจหรือไม่ว่าต้องการลบรูปภาพปกนี้?",
+      confirmText: "ลบออก",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    });
+    if (!confirmed) return;
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("deleteCover", "true");
+
+    try {
+      const res = await fetch("/api/rules/upload-cover", {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updatedRules = { ...rules, coverUrl: "" } as RulesData;
+        setRules(updatedRules);
+        if (editedRules) {
+          setEditedRules({ ...editedRules, coverUrl: "" });
+        }
+        showToast(data.message || "ลบรูปปกเรียบร้อยแล้วค่ะ", "success");
+      } else {
+        showToast(data.error || "เกิดข้อผิดพลาดในการลบรูปปก", "error");
+      }
+    } catch (error) {
+      console.error("Cover delete error:", error);
+      showToast("เชื่อมต่อระบบล้มเหลว", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getCategoryIcon = (id: string, size = 20) => {
     switch (id) {
       case "hospital_area":
@@ -243,7 +323,6 @@ export default function RulesPage() {
     }
   };
 
-  // Helper to highlight matching text
   const getHighlightedText = (text: string, search: string) => {
     if (!search.trim()) return text;
     
@@ -285,20 +364,17 @@ export default function RulesPage() {
   const currentRules = isEditMode ? editedRules : rules;
   if (!currentRules) return null;
 
-  // Filter Categories on the main page
-  const filteredCategories = currentRules.categories.filter((cat) => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return true;
-
-    // Matches category name
-    const matchesName = cat.name.toLowerCase().includes(query);
-    // Matches any rule inside this category
-    const matchesRules = cat.rules.some((rule) =>
-      rule.content.toLowerCase().includes(query)
-    );
-
-    return matchesName || matchesRules;
-  });
+  // Search filter query logic to check if all cards are hidden
+  const query = searchQuery.trim().toLowerCase();
+  const allHidden =
+    query !== "" &&
+    !currentRules.categories.some((cat) => {
+      const matchesName = cat.name.toLowerCase().includes(query);
+      const matchesRules = cat.rules.some((rule) =>
+        rule.content.toLowerCase().includes(query)
+      );
+      return matchesName || matchesRules;
+    });
 
   // Active category inside modal
   const activeCategory = currentRules.categories.find(
@@ -309,23 +385,100 @@ export default function RulesPage() {
   const filteredRules = activeCategory
     ? activeCategory.rules.filter((rule) => {
         const query = modalSearchQuery.trim().toLowerCase();
-        if (!query || isEditMode) return true; // Show all rules when editing
+        if (!query || isEditMode) return true;
         return rule.content.toLowerCase().includes(query);
       })
     : [];
 
   return (
     <>
-      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <FileTextIcon size={28} />
-            {isEditMode ? "จัดการกฏระเบียบโฟลเดอร์" : "สารบัญกฏระเบียบแพทย์"}
+      {/* Cover Image Banner */}
+      <div className="rules-cover-banner">
+        {currentRules.coverUrl ? (
+          <img src={currentRules.coverUrl} alt="Cover Banner" className="rules-cover-img" />
+        ) : (
+          <div className="rules-cover-img" style={{ background: "linear-gradient(135deg, var(--bg-secondary) 0%, rgba(16, 185, 129, 0.08) 50%, rgba(59, 130, 246, 0.04) 100%)" }} />
+        )}
+        <div className="rules-cover-overlay" />
+        
+        <div className="rules-cover-content">
+          <span style={{ fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "2.5px", color: "var(--accent-light)", fontWeight: 800 }}>
+            {currentRules.title || "กฏของโรงพยาบาล"}
+          </span>
+          <h1 style={{ fontSize: "1.9rem", fontWeight: 900, color: "#fff", textShadow: "0 2px 4px rgba(0,0,0,0.5)", margin: "4px 0" }}>
+            {isEditMode ? (
+              <input
+                type="text"
+                value={currentRules.title}
+                onChange={(e) => handleMajorTitleChange(e.target.value)}
+                className="rules-textarea"
+                style={{ minHeight: "auto", padding: "6px 12px", width: "100%", maxWidth: "420px", background: "rgba(0,0,0,0.4)" }}
+                placeholder="หัวข้อใหญ่ประจำหน้ากฏ"
+              />
+            ) : (
+              "กฏระเบียบปฏิบัติหน้าที่"
+            )}
           </h1>
-          <p className="page-desc">
-            {isEditMode ? "โหมดแก้ไขหัวข้อและกฏแยกตามแฟ้มเอกสาร" : "คลิกเลือกแฟ้มโฟลเดอร์เพื่อเปิดอ่านกฏระเบียบการกู้ชีพอย่างเป็นทางการ"}
+          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", maxWidth: "550px", margin: 0 }}>
+            {isEditMode ? "แก้ไขหัวข้อและรูปภาพหน้าปกประจำบอร์ดกักตัวและข้อตกลงแพทย์" : "อ่านและทำความเข้าใจข้อตกลงและกฏระเบียบการกู้ชีพอย่างเป็นทางการ"}
           </p>
         </div>
+
+        {isAdmin && (
+          <div style={{ position: "absolute", top: "16px", right: "16px", display: "flex", gap: "8px", zIndex: 10 }}>
+            <label className="rules-cover-upload-btn">
+              <UploadIcon size={14} />
+              อัปโหลดรูปปก
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleCoverUpload}
+                style={{ display: "none" }}
+              />
+            </label>
+            {currentRules.coverUrl && (
+              <button
+                onClick={handleDeleteCover}
+                className="rules-cover-upload-btn"
+                style={{ background: "rgba(239, 68, 68, 0.2)", color: "#fca5a5", borderColor: "rgba(239, 68, 68, 0.3)" }}
+              >
+                <TrashIcon size={14} />
+                ลบรูปปก
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
+        {/* Search Input Filter */}
+        {!isEditMode ? (
+          <div className="search-container">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+              placeholder="ค้นหาหมวดหมู่ หรือคีย์เวิร์ดในกฏ..."
+            />
+            <svg
+              className="search-icon-svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+        ) : (
+          <div style={{ flex: 1 }} />
+        )}
 
         {isAdmin && (
           <div style={{ display: "flex", gap: "8px" }}>
@@ -362,72 +515,34 @@ export default function RulesPage() {
         )}
       </div>
 
-      {/* Major Title Banner */}
-      <div className="card" style={{ marginBottom: "24px", padding: "16px 24px", background: "linear-gradient(135deg, rgba(15, 23, 42, 0.7) 0%, rgba(12, 18, 32, 0.8) 100%)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%" }}>
-          <span style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "1px", color: "var(--text-muted)", fontWeight: 700 }}>
-            หัวข้อใหญ่:
-          </span>
-          {isEditMode ? (
-            <input
-              type="text"
-              value={currentRules.title}
-              onChange={(e) => handleMajorTitleChange(e.target.value)}
-              className="rules-textarea"
-              style={{ minHeight: "auto", padding: "8px 12px", width: "100%", maxWidth: "400px" }}
-              placeholder="หัวข้อใหญ่ประจำหน้ากฏ"
-            />
-          ) : (
-            <span style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--text-primary)", background: "linear-gradient(135deg, var(--text-primary), var(--accent-light))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              {currentRules.title}
-            </span>
-          )}
+      {/* Info Notice Card */}
+      <div className="card" style={{ padding: "16px", marginBottom: "28px", background: "rgba(15, 23, 42, 0.3)", display: "flex", gap: "10px", alignItems: "center" }}>
+        <InfoIcon size={20} style={{ flexShrink: 0, color: "var(--info)" }} />
+        <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+          <strong>ข้อควรปฏิบัติ:</strong> กฏระเบียบแบ่งออกเป็น 5 หมวดหมู่ย่อย เพื่อความสะดวกในการเปิดอ่าน ค้นหาข้อมูล และการแก้ไขรายละเอียดของเจ้าหน้าที่บอร์ดกักตัว
         </div>
       </div>
 
-      {/* Main Page Search Container */}
-      {!isEditMode && (
-        <div className="search-container" style={{ marginBottom: "28px" }}>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-            placeholder="ค้นหาตามหมวดหมู่ หรือคำสำคัญภายในกฏ..."
-          />
-          <svg
-            className="search-icon-svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-        </div>
-      )}
+      {/* Folder Flex Directory Container (With Smooth Rearrangement Animation) */}
+      <div className="folder-flex-container">
+        {currentRules.categories.map((cat) => {
+          // Filtering check
+          const matchesName = cat.name.toLowerCase().includes(query);
+          const matchesRules = cat.rules.some((rule) =>
+            rule.content.toLowerCase().includes(query)
+          );
+          const isHidden = query !== "" && !matchesName && !matchesRules;
 
-      {/* Folders Grid */}
-      <div className="folder-grid">
-        {filteredCategories.length === 0 ? (
-          <div className="card" style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px", color: "var(--text-secondary)" }}>
-            ไม่พบแฟ้มข้อมูลที่ตรงกับคำค้นหาของคุณ
-          </div>
-        ) : (
-          filteredCategories.map((cat) => {
-            // Count search query matches inside this category
-            const matchingRulesCount = searchQuery.trim()
-              ? cat.rules.filter((r) => r.content.toLowerCase().includes(searchQuery.trim().toLowerCase())).length
-              : 0;
+          const matchingRulesCount = query
+            ? cat.rules.filter((r) => r.content.toLowerCase().includes(query)).length
+            : 0;
 
-            return (
+          return (
+            <div
+              key={cat.id}
+              className={`folder-card-wrapper ${isHidden ? "hidden" : ""}`}
+            >
               <div
-                key={cat.id}
                 className="folder-card"
                 onClick={() => {
                   if (!isEditMode) {
@@ -435,10 +550,7 @@ export default function RulesPage() {
                   }
                 }}
               >
-                {/* Folder Top Tab Shape */}
                 <div className="folder-tab"></div>
-                
-                {/* Folder Main Body Card */}
                 <div className="folder-body">
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -455,7 +567,7 @@ export default function RulesPage() {
                       <input
                         type="text"
                         value={cat.name}
-                        onClick={(e) => e.stopPropagation()} // Prevent trigger focus
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) => handleCategoryNameChange(cat.id, e.target.value)}
                         className="rules-textarea"
                         style={{ minHeight: "auto", padding: "6px 10px", fontSize: "0.88rem", width: "100%" }}
@@ -468,7 +580,6 @@ export default function RulesPage() {
                     )}
                   </div>
 
-                  {/* Search query hit tag indicator */}
                   {matchingRulesCount > 0 && (
                     <div style={{ display: "flex", alignSelf: "flex-start", marginTop: "auto" }}>
                       <span className="status-badge on-duty" style={{ fontSize: "0.65rem", padding: "2px 8px" }}>
@@ -482,7 +593,7 @@ export default function RulesPage() {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setActiveCategoryId(cat.id); // Open modal to edit rules inside
+                        setActiveCategoryId(cat.id);
                       }}
                       className="btn btn-ghost"
                       style={{ fontSize: "0.72rem", padding: "4px 8px", alignSelf: "flex-end", marginTop: "auto" }}
@@ -492,8 +603,15 @@ export default function RulesPage() {
                   )}
                 </div>
               </div>
-            );
-          })
+            </div>
+          );
+        })}
+
+        {/* None Matched Indicator */}
+        {allHidden && (
+          <div className="card" style={{ width: "100%", textAlign: "center", padding: "48px", color: "var(--text-secondary)", animation: "fadeIn 0.3s" }}>
+            ไม่พบแฟ้มข้อมูลที่ตรงกับคำค้นหาของคุณ
+          </div>
         )}
       </div>
 
@@ -564,7 +682,7 @@ export default function RulesPage() {
               </div>
             )}
 
-            {/* Modal Body (Rules List) */}
+            {/* Modal Body */}
             <div className="rules-modal-body">
               {filteredRules.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: "0.88rem" }}>
