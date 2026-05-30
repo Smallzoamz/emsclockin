@@ -2830,7 +2830,7 @@ body::before {
 .map-zone-path {
   fill: transparent;
   stroke: transparent;
-  stroke-width: 2.5;
+  stroke-width: 3.5;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
 }
@@ -2838,38 +2838,44 @@ body::before {
 /* Zone Colors when active/hovered */
 .map-zone-path.zone-red.active,
 .map-zone-path.zone-red:hover {
-  fill: rgba(239, 68, 68, 0.18);
+  fill: rgba(239, 68, 68, 0.15);
   stroke: #ef4444;
-  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.7));
 }
 
 .map-zone-path.zone-yellow.active,
 .map-zone-path.zone-yellow:hover {
-  fill: rgba(234, 179, 8, 0.18);
+  fill: rgba(234, 179, 8, 0.15);
   stroke: #eab308;
-  filter: drop-shadow(0 0 8px rgba(234, 179, 8, 0.7));
 }
 
 .map-zone-path.zone-green.active,
 .map-zone-path.zone-green:hover {
-  fill: rgba(16, 185, 129, 0.18);
+  fill: rgba(16, 185, 129, 0.15);
   stroke: #10b981;
-  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.7));
 }
 
-/* Map dimming state */
+/* Map dimming state & Zoom wrapper */
+.map-zoom-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 100%;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform-origin 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .map-image {
-  transition: filter 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: filter 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .map-image.dimmed {
-  filter: brightness(0.45) saturate(0.7) contrast(1.05);
+  filter: brightness(0.4) saturate(0.85) contrast(1.05);
 }
 
 /* Dynamic Interactive Pin Labels */
 .map-pin-group {
   cursor: pointer;
   pointer-events: auto;
+  transition: opacity 0.3s ease;
 }
 
 .map-pin-circle {
@@ -2893,21 +2899,20 @@ body::before {
 }
 
 .map-pin-label {
-  font-family: var(--font-ui);
-  font-size: 5px;
+  font-family: var(--font-ui), system-ui, -apple-system, sans-serif;
+  font-size: 4.8px;
   font-weight: 800;
   fill: #ffffff;
   text-anchor: middle;
+  dominant-baseline: middle; /* Perfect vertical alignment */
   pointer-events: none;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
   transition: all 0.3s ease;
 }
 
 .map-pin-group:hover .map-pin-label,
 .map-pin-group.active .map-pin-label {
   fill: #fff;
-  font-size: 5.8px;
-  filter: drop-shadow(0 0 6px var(--accent-glow));
+  font-size: 5.2px;
 }
 
 /* Table Row Highlight */

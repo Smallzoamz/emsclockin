@@ -242,6 +242,31 @@ export default function RulesPage() {
     return null;
   };
 
+  const getMapTransform = () => {
+    if (hoveredZone === "ในเมือง") {
+      return {
+        transform: "scale(1.9)",
+        transformOrigin: "43% 102%"
+      };
+    }
+    if (hoveredZone === "นอกเมือง") {
+      return {
+        transform: "scale(1.7)",
+        transformOrigin: "50% 67%"
+      };
+    }
+    if (hoveredZone === "เมืองบน") {
+      return {
+        transform: "scale(1.9)",
+        transformOrigin: "50% 33%"
+      };
+    }
+    return {
+      transform: "scale(1)",
+      transformOrigin: "center center"
+    };
+  };
+
   const handleAddFeeRule = (groupId: string) => {
     if (!editedRules) return;
     const newId = `${groupId}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -1189,95 +1214,112 @@ export default function RulesPage() {
                     {(activeCategory as any).mapUrl ? (
                       <div className="map-container" style={{ position: "relative" }}>
                         <div 
-                          style={{ position: "relative", display: "inline-block", maxWidth: "100%", cursor: "zoom-in" }}
-                          onClick={() => !isEditMode && setLightboxUrl((activeCategory as any).mapUrl)}
+                          className="map-zoom-wrapper"
+                          style={getMapTransform()}
                         >
-                          <img
-                            src={(activeCategory as any).mapUrl}
-                            alt="Treatment Area Map"
-                            className={`map-image ${hoveredZone ? "dimmed" : ""}`}
-                            style={{ maxHeight: "320px", display: "block" }}
-                          />
-                          
-                          {/* SVG Interactive Overlay */}
-                          {!isEditMode && (
-                            <svg
-                              viewBox="0 0 100 133.3"
-                              style={{
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                width: "100%",
-                                height: "100%",
-                                pointerEvents: "none",
-                                zIndex: 10
-                              }}
-                            >
-                              {/* เมืองบน (Green) */}
-                              <polygon
-                                points="30,5 45,3 52,3 68,15 75,30 75,45 85,58 72,56 50,54 30,56 18,58 20,40 25,30"
-                                className={`map-zone-path zone-green ${hoveredZone === "เมืองบน" ? "active" : ""}`}
-                                pointerEvents="auto"
-                                onMouseEnter={() => setHoveredZone("เมืองบน")}
-                                onMouseLeave={() => setHoveredZone(null)}
-                              />
-                              
-                              {/* นอกเมือง (Yellow) */}
-                              <polygon
-                                points="18,58 13,74 12,85 18,92 22,92 28,88 38,83 50,83 61,90 65,96 66,110 78,105 88,92 90,78 90,65 85,58 72,56 50,54 30,56"
-                                className={`map-zone-path zone-yellow ${hoveredZone === "นอกเมือง" ? "active" : ""}`}
-                                pointerEvents="auto"
-                                onMouseEnter={() => setHoveredZone("นอกเมือง")}
-                                onMouseLeave={() => setHoveredZone(null)}
-                              />
-                              
-                              {/* ในเมือง (Red) */}
-                              <polygon
-                                points="22,92 20,108 24,124 29,129 42,129 44,124 48,129 60,129 65,122 66,110 65,96 61,90 50,83 38,83 28,88"
-                                className={`map-zone-path zone-red ${hoveredZone === "ในเมือง" ? "active" : ""}`}
-                                pointerEvents="auto"
-                                onMouseEnter={() => setHoveredZone("ในเมือง")}
-                                onMouseLeave={() => setHoveredZone(null)}
-                              />
-
-                              {/* Glowing Interactive Pins */}
-                              {/* Pin 1: เมืองบน */}
-                              <g 
-                                className={`map-pin-group ${hoveredZone === "เมืองบน" ? "active" : ""}`}
-                                onMouseEnter={() => setHoveredZone("เมืองบน")}
-                                onMouseLeave={() => setHoveredZone(null)}
+                          <div 
+                            style={{ position: "relative", display: "inline-block", maxWidth: "100%", cursor: "zoom-in" }}
+                            onClick={() => !isEditMode && setLightboxUrl((activeCategory as any).mapUrl)}
+                          >
+                            <img
+                              src={(activeCategory as any).mapUrl}
+                              alt="Treatment Area Map"
+                              className={`map-image ${hoveredZone ? "dimmed" : ""}`}
+                              style={{ maxHeight: "320px", display: "block" }}
+                            />
+                            
+                            {/* SVG Interactive Overlay */}
+                            {!isEditMode && (
+                              <svg
+                                viewBox="0 0 100 133.3"
+                                style={{
+                                  position: "absolute",
+                                  top: 0,
+                                  left: 0,
+                                  width: "100%",
+                                  height: "100%",
+                                  pointerEvents: "none",
+                                  zIndex: 10
+                                }}
                               >
-                                <circle cx="50" cy="33" r="3.5" fill="none" stroke="#10b981" strokeWidth="1" className="map-pin-pulse" />
-                                <circle cx="50" cy="33" r="1.8" fill="#10b981" stroke="#fff" strokeWidth="0.5" className="map-pin-circle" />
-                                <rect x="36" y="38" width="28" height="7.5" rx="3" fill="#10b981" stroke="#fff" strokeWidth="0.6" opacity="0.95" />
-                                <text x="50" y="43.5" className="map-pin-label">เมืองบน</text>
-                              </g>
+                                {/* เมืองบน (Green) */}
+                                <polygon
+                                  points="30,5 50,2 70,10 78,30 82,52 65,52 35,52 18,52 22,30"
+                                  className={`map-zone-path zone-green ${hoveredZone === "เมืองบน" ? "active" : ""}`}
+                                  pointerEvents="auto"
+                                  onMouseEnter={() => setHoveredZone("เมืองบน")}
+                                  onMouseLeave={() => setHoveredZone(null)}
+                                />
+                                
+                                {/* นอกเมือง (Yellow) */}
+                                <polygon
+                                  points="18,58 35,52 65,52 82,58 82,80 64,82 58,82 28,82 18,80"
+                                  className={`map-zone-path zone-yellow ${hoveredZone === "นอกเมือง" ? "active" : ""}`}
+                                  pointerEvents="auto"
+                                  onMouseEnter={() => setHoveredZone("นอกเมือง")}
+                                  onMouseLeave={() => setHoveredZone(null)}
+                                />
+                                
+                                {/* ในเมือง (Red) */}
+                                <polygon
+                                  points="24,94 28,82 58,82 64,94 64,114 55,126 33,126 24,114"
+                                  className={`map-zone-path zone-red ${hoveredZone === "ในเมือง" ? "active" : ""}`}
+                                  pointerEvents="auto"
+                                  onMouseEnter={() => setHoveredZone("ในเมือง")}
+                                  onMouseLeave={() => setHoveredZone(null)}
+                                />
 
-                              {/* Pin 2: นอกเมือง */}
-                              <g 
-                                className={`map-pin-group ${hoveredZone === "นอกเมือง" ? "active" : ""}`}
-                                onMouseEnter={() => setHoveredZone("นอกเมือง")}
-                                onMouseLeave={() => setHoveredZone(null)}
-                              >
-                                <circle cx="57" cy="67" r="3.5" fill="none" stroke="#eab308" strokeWidth="1" className="map-pin-pulse" />
-                                <circle cx="57" cy="67" r="1.8" fill="#eab308" stroke="#fff" strokeWidth="0.5" className="map-pin-circle" />
-                                <rect x="43" y="72" width="28" height="7.5" rx="3" fill="#eab308" stroke="#fff" strokeWidth="0.6" opacity="0.95" />
-                                <text x="57" y="77.5" className="map-pin-label">นอกเมือง</text>
-                              </g>
+                                {/* Glowing Interactive Pins */}
+                                {/* Pin 1: เมืองบน */}
+                                <g 
+                                  className={`map-pin-group ${hoveredZone === "เมืองบน" ? "active" : ""}`}
+                                  style={{
+                                    opacity: (!hoveredZone || hoveredZone === "เมืองบน") ? 1 : 0,
+                                    pointerEvents: (!hoveredZone || hoveredZone === "เมืองบน") ? "auto" : "none"
+                                  }}
+                                  onMouseEnter={() => setHoveredZone("เมืองบน")}
+                                  onMouseLeave={() => setHoveredZone(null)}
+                                >
+                                  <circle cx="50" cy="33" r="3.5" fill="none" stroke="#10b981" strokeWidth="1" className="map-pin-pulse" />
+                                  <circle cx="50" cy="33" r="1.8" fill="#10b981" stroke="#fff" strokeWidth="0.5" className="map-pin-circle" />
+                                  <rect x="36" y="38" width="28" height="7.5" rx="3.75" fill="#10b981" stroke="#fff" strokeWidth="0.6" opacity="0.95" />
+                                  <text x="50" y="41.75" className="map-pin-label" dominantBaseline="middle">เมืองบน</text>
+                                </g>
 
-                              {/* Pin 3: ในเมือง */}
-                              <g 
-                                className={`map-pin-group ${hoveredZone === "ในเมือง" ? "active" : ""}`}
-                                onMouseEnter={() => setHoveredZone("ในเมือง")}
-                                onMouseLeave={() => setHoveredZone(null)}
-                              >
-                                <circle cx="43" cy="102" r="3.5" fill="none" stroke="#ef4444" strokeWidth="1" className="map-pin-pulse" />
-                                <circle cx="43" cy="102" r="1.8" fill="#ef4444" stroke="#fff" strokeWidth="0.5" className="map-pin-circle" />
-                                <rect x="29" y="107" width="28" height="7.5" rx="3" fill="#ef4444" stroke="#fff" strokeWidth="0.6" opacity="0.95" />
-                                <text x="43" y="112.5" className="map-pin-label">ในเมือง</text>
-                              </g>
-                            </svg>
-                          )}
+                                {/* Pin 2: นอกเมือง */}
+                                <g 
+                                  className={`map-pin-group ${hoveredZone === "นอกเมือง" ? "active" : ""}`}
+                                  style={{
+                                    opacity: (!hoveredZone || hoveredZone === "นอกเมือง") ? 1 : 0,
+                                    pointerEvents: (!hoveredZone || hoveredZone === "นอกเมือง") ? "auto" : "none"
+                                  }}
+                                  onMouseEnter={() => setHoveredZone("นอกเมือง")}
+                                  onMouseLeave={() => setHoveredZone(null)}
+                                >
+                                  <circle cx="57" cy="67" r="3.5" fill="none" stroke="#eab308" strokeWidth="1" className="map-pin-pulse" />
+                                  <circle cx="57" cy="67" r="1.8" fill="#eab308" stroke="#fff" strokeWidth="0.5" className="map-pin-circle" />
+                                  <rect x="43" y="72" width="28" height="7.5" rx="3.75" fill="#eab308" stroke="#fff" strokeWidth="0.6" opacity="0.95" />
+                                  <text x="57" y="75.75" className="map-pin-label" dominantBaseline="middle">นอกเมือง</text>
+                                </g>
+
+                                {/* Pin 3: ในเมือง */}
+                                <g 
+                                  className={`map-pin-group ${hoveredZone === "ในเมือง" ? "active" : ""}`}
+                                  style={{
+                                    opacity: (!hoveredZone || hoveredZone === "ในเมือง") ? 1 : 0,
+                                    pointerEvents: (!hoveredZone || hoveredZone === "ในเมือง") ? "auto" : "none"
+                                  }}
+                                  onMouseEnter={() => setHoveredZone("ในเมือง")}
+                                  onMouseLeave={() => setHoveredZone(null)}
+                                >
+                                  <circle cx="43" cy="102" r="3.5" fill="none" stroke="#ef4444" strokeWidth="1" className="map-pin-pulse" />
+                                  <circle cx="43" cy="102" r="1.8" fill="#ef4444" stroke="#fff" strokeWidth="0.5" className="map-pin-circle" />
+                                  <rect x="29" y="107" width="28" height="7.5" rx="3.75" fill="#ef4444" stroke="#fff" strokeWidth="0.6" opacity="0.95" />
+                                  <text x="43" y="110.75" className="map-pin-label" dominantBaseline="middle">ในเมือง</text>
+                                </g>
+                              </svg>
+                            )}
+                          </div>
                         </div>
                         
                         {!isEditMode && (
