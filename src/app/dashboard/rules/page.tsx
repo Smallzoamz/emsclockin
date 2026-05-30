@@ -63,6 +63,7 @@ export default function RulesPage() {
   const [modalSearchQuery, setModalSearchQuery] = useState("");
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [copiedRuleId, setCopiedRuleId] = useState<string | null>(null);
+  const [hoveredZone, setHoveredZone] = useState<string | null>(null);
 
   const handleMapUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -231,6 +232,14 @@ export default function RulesPage() {
     });
 
     return groups;
+  };
+
+  const getZoneKey = (desc: string) => {
+    if (!desc) return null;
+    if (desc.includes("ในเมือง")) return "ในเมือง";
+    if (desc.includes("นอกเมือง")) return "นอกเมือง";
+    if (desc.includes("เมืองบน")) return "เมืองบน";
+    return null;
   };
 
   const handleAddFeeRule = (groupId: string) => {
@@ -1178,13 +1187,99 @@ export default function RulesPage() {
                     </div>
 
                     {(activeCategory as any).mapUrl ? (
-                      <div className="map-container" onClick={() => !isEditMode && setLightboxUrl((activeCategory as any).mapUrl)}>
-                        <img
-                          src={(activeCategory as any).mapUrl}
-                          alt="Treatment Area Map"
-                          className="map-image"
-                          style={{ maxHeight: "320px" }}
-                        />
+                      <div className="map-container" style={{ position: "relative" }}>
+                        <div 
+                          style={{ position: "relative", display: "inline-block", maxWidth: "100%", cursor: "zoom-in" }}
+                          onClick={() => !isEditMode && setLightboxUrl((activeCategory as any).mapUrl)}
+                        >
+                          <img
+                            src={(activeCategory as any).mapUrl}
+                            alt="Treatment Area Map"
+                            className={`map-image ${hoveredZone ? "dimmed" : ""}`}
+                            style={{ maxHeight: "320px", display: "block" }}
+                          />
+                          
+                          {/* SVG Interactive Overlay */}
+                          {!isEditMode && (
+                            <svg
+                              viewBox="0 0 100 133.3"
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "100%",
+                                height: "100%",
+                                pointerEvents: "none",
+                                zIndex: 10
+                              }}
+                            >
+                              {/* เมืองบน (Green) */}
+                              <polygon
+                                points="30,5 45,3 52,3 68,15 75,30 75,45 85,58 72,56 50,54 30,56 18,58 20,40 25,30"
+                                className={`map-zone-path zone-green ${hoveredZone === "เมืองบน" ? "active" : ""}`}
+                                pointerEvents="auto"
+                                onMouseEnter={() => setHoveredZone("เมืองบน")}
+                                onMouseLeave={() => setHoveredZone(null)}
+                              />
+                              
+                              {/* นอกเมือง (Yellow) */}
+                              <polygon
+                                points="18,58 13,74 12,85 18,92 22,92 28,88 38,83 50,83 61,90 65,96 66,110 78,105 88,92 90,78 90,65 85,58 72,56 50,54 30,56"
+                                className={`map-zone-path zone-yellow ${hoveredZone === "นอกเมือง" ? "active" : ""}`}
+                                pointerEvents="auto"
+                                onMouseEnter={() => setHoveredZone("นอกเมือง")}
+                                onMouseLeave={() => setHoveredZone(null)}
+                              />
+                              
+                              {/* ในเมือง (Red) */}
+                              <polygon
+                                points="22,92 20,108 24,124 29,129 42,129 44,124 48,129 60,129 65,122 66,110 65,96 61,90 50,83 38,83 28,88"
+                                className={`map-zone-path zone-red ${hoveredZone === "ในเมือง" ? "active" : ""}`}
+                                pointerEvents="auto"
+                                onMouseEnter={() => setHoveredZone("ในเมือง")}
+                                onMouseLeave={() => setHoveredZone(null)}
+                              />
+
+                              {/* Glowing Interactive Pins */}
+                              {/* Pin 1: เมืองบน */}
+                              <g 
+                                className={`map-pin-group ${hoveredZone === "เมืองบน" ? "active" : ""}`}
+                                onMouseEnter={() => setHoveredZone("เมืองบน")}
+                                onMouseLeave={() => setHoveredZone(null)}
+                              >
+                                <circle cx="50" cy="33" r="3.5" fill="none" stroke="#10b981" strokeWidth="1" className="map-pin-pulse" />
+                                <circle cx="50" cy="33" r="1.8" fill="#10b981" stroke="#fff" strokeWidth="0.5" className="map-pin-circle" />
+                                <rect x="36" y="38" width="28" height="7.5" rx="3" fill="#10b981" stroke="#fff" strokeWidth="0.6" opacity="0.95" />
+                                <text x="50" y="43.5" className="map-pin-label">เมืองบน</text>
+                              </g>
+
+                              {/* Pin 2: นอกเมือง */}
+                              <g 
+                                className={`map-pin-group ${hoveredZone === "นอกเมือง" ? "active" : ""}`}
+                                onMouseEnter={() => setHoveredZone("นอกเมือง")}
+                                onMouseLeave={() => setHoveredZone(null)}
+                              >
+                                <circle cx="57" cy="67" r="3.5" fill="none" stroke="#eab308" strokeWidth="1" className="map-pin-pulse" />
+                                <circle cx="57" cy="67" r="1.8" fill="#eab308" stroke="#fff" strokeWidth="0.5" className="map-pin-circle" />
+                                <rect x="43" y="72" width="28" height="7.5" rx="3" fill="#eab308" stroke="#fff" strokeWidth="0.6" opacity="0.95" />
+                                <text x="57" y="77.5" className="map-pin-label">นอกเมือง</text>
+                              </g>
+
+                              {/* Pin 3: ในเมือง */}
+                              <g 
+                                className={`map-pin-group ${hoveredZone === "ในเมือง" ? "active" : ""}`}
+                                onMouseEnter={() => setHoveredZone("ในเมือง")}
+                                onMouseLeave={() => setHoveredZone(null)}
+                              >
+                                <circle cx="43" cy="102" r="3.5" fill="none" stroke="#ef4444" strokeWidth="1" className="map-pin-pulse" />
+                                <circle cx="43" cy="102" r="1.8" fill="#ef4444" stroke="#fff" strokeWidth="0.5" className="map-pin-circle" />
+                                <rect x="29" y="107" width="28" height="7.5" rx="3" fill="#ef4444" stroke="#fff" strokeWidth="0.6" opacity="0.95" />
+                                <text x="43" y="112.5" className="map-pin-label">ในเมือง</text>
+                              </g>
+                            </svg>
+                          )}
+                        </div>
+                        
                         {!isEditMode && (
                           <div style={{
                             position: "absolute",
@@ -1199,7 +1294,8 @@ export default function RulesPage() {
                             pointerEvents: "none",
                             display: "flex",
                             alignItems: "center",
-                            gap: "2px"
+                            gap: "2px",
+                            zIndex: 15
                           }}>
                             🔎 คลิกดูรูปเต็ม
                           </div>
@@ -1262,9 +1358,31 @@ export default function RulesPage() {
                                   ) : (
                                     groupRules.map((rule, idx) => {
                                       const { description, fee: feeText } = parseMedicalFeeContent(rule.content);
+                                      const zoneKey = getZoneKey(description);
+                                      const isHighlighted = hoveredZone && zoneKey === hoveredZone;
+                                      const highlightBorderColor = 
+                                        zoneKey === "ในเมือง" ? "#ef4444" : 
+                                        zoneKey === "นอกเมือง" ? "#eab308" : 
+                                        zoneKey === "เมืองบน" ? "#10b981" : "transparent";
 
                                       return (
-                                        <tr key={rule.id} className="fee-table-item-row">
+                                        <tr 
+                                          key={rule.id} 
+                                          className={`fee-table-item-row ${isHighlighted ? "row-highlight" : ""}`}
+                                          style={{
+                                            "--row-highlight-border-color": highlightBorderColor
+                                          } as React.CSSProperties}
+                                          onMouseEnter={() => {
+                                            if (!isEditMode && zoneKey) {
+                                              setHoveredZone(zoneKey);
+                                            }
+                                          }}
+                                          onMouseLeave={() => {
+                                            if (!isEditMode) {
+                                              setHoveredZone(null);
+                                            }
+                                          }}
+                                        >
                                           <td style={{ width: "36px", paddingRight: "0", verticalAlign: "middle" }}>
                                             <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
                                               #{idx + 1}
