@@ -15,7 +15,8 @@ import {
   CrownIcon,
   CoinsIcon,
   SpeakerIcon,
-  SettingsIcon
+  SettingsIcon,
+  FileTextIcon
 } from "./Icons";
 
 interface SidebarProps {
@@ -120,6 +121,14 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
             >
               <MegaphoneIcon size={18} />
               ข้อความประกาศ
+            </Link>
+
+            <Link
+              href="/dashboard/rules"
+              className={`nav-link ${pathname === "/dashboard/rules" ? "active" : ""}`}
+            >
+              <FileTextIcon size={18} />
+              กฏระเบียบแพทย์
             </Link>
 
             <Link
