@@ -206,3 +206,6 @@
 
 ## [2026-05-30 20:44] | File: src/app/dashboard/rules/page.tsx | Line: 178 | Keyword: Robust Multi-Item Delimiter | Status: ✅ Complete | Change: Replaced simple newline splitting with custom delimiter `@@@FEE@@@` for medical fee items to prevent newlines in description text areas from breaking or misaligning columns. Integrated random suffixes in new rule IDs to guarantee uniqueness, and aligned the table column header layout correctly.
 
+## [2026-05-31 03:50] | File: multiple | Line: 1 | Keyword: Public Rules Access | Status: ✅ Complete | Change: Created `src/middleware.ts` to expose current path inside request headers. Modified `DashboardLayout` in `layout.tsx` to detect paths and bypass auth redirect for `/dashboard/rules`, displaying rules inside a clean responsive public document layout with a top-bar login prompt. Removed auth guard from GET method in `/api/rules/route.ts` to allow public read access while keeping strict admin permissions for edit commands.
+
+

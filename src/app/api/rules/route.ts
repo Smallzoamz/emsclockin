@@ -64,11 +64,6 @@ const defaultRules = {
 };
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
     const { data, error } = await supabase
       .from("system_settings")
