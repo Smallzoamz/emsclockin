@@ -176,6 +176,38 @@ export default function RulesPage() {
     });
   };
 
+  const parseMedicalFeeContent = (content: string) => {
+    if (content.includes("@@@FEE@@@")) {
+      const parts = content.split("@@@FEE@@@");
+      return {
+        description: parts[0] || "",
+        fee: parts[1] || ""
+      };
+    }
+    
+    // Backward compatibility with newlines
+    if (content.includes("\n")) {
+      const parts = content.split("\n");
+      const fee = parts[parts.length - 1] || "";
+      const description = parts.slice(0, parts.length - 1).join("\n") || "";
+      return { description, fee };
+    }
+    
+    // Backward compatibility with colon
+    if (content.includes(":")) {
+      const colonIndex = content.indexOf(":");
+      return {
+        description: content.substring(0, colonIndex).trim(),
+        fee: content.substring(colonIndex + 1).trim()
+      };
+    }
+    
+    return {
+      description: content || "",
+      fee: ""
+    };
+  };
+
   const groupFeeRules = (rulesList: Rule[]) => {
     const groups: Record<string, Rule[]> = {
       mf_general: [],
@@ -203,12 +235,12 @@ export default function RulesPage() {
 
   const handleAddFeeRule = (groupId: string) => {
     if (!editedRules) return;
-    const newId = `${groupId}_${Date.now()}`;
+    const newId = `${groupId}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const updatedCategories = editedRules.categories.map((cat) => {
       if (cat.id !== "medical_fees") return cat;
       return {
         ...cat,
-        rules: [...cat.rules, { id: newId, content: "\n" }]
+        rules: [...cat.rules, { id: newId, content: "@@@FEE@@@" }]
       };
     });
     setEditedRules({ ...editedRules, categories: updatedCategories });
@@ -243,17 +275,10 @@ export default function RulesPage() {
         ...cat,
         rules: cat.rules.map((rule) => {
           if (rule.id !== ruleId) return rule;
-          let parts = rule.content.split("\n");
-          if (parts.length < 2) {
-            if (rule.content.includes(":")) {
-              const colIdx = rule.content.indexOf(":");
-              parts = [rule.content.substring(0, colIdx).trim(), rule.content.substring(colIdx + 1).trim()];
-            } else {
-              parts = [rule.content, ""];
-            }
-          }
-          parts[fieldIndex] = value;
-          return { ...rule, content: parts.join("\n") };
+          const { description, fee } = parseMedicalFeeContent(rule.content);
+          const newDesc = fieldIndex === 0 ? value : description;
+          const newFee = fieldIndex === 1 ? value : fee;
+          return { ...rule, content: `${newDesc}@@@FEE@@@${newFee}` };
         })
       };
     });
@@ -321,22 +346,16 @@ export default function RulesPage() {
         if (!medCat.rules) medCat.rules = [];
         
         medCat.rules = medCat.rules.map((rule: any) => {
-          if (!rule.content.includes("\n")) {
-            if (rule.content.includes(":")) {
-              const colonIndex = rule.content.indexOf(":");
-              const desc = rule.content.substring(0, colonIndex).trim();
-              const f = rule.content.substring(colonIndex + 1).trim();
-              return { ...rule, content: `${desc}\n${f}` };
-            }
-          }
-          return rule;
+          const { description, fee } = parseMedicalFeeContent(rule.content);
+          return { ...rule, content: `${description}@@@FEE@@@${fee}` };
         });
 
         const groups = groupFeeRules(medCat.rules);
         const groupIds = ["mf_general", "mf_story", "mf_event", "mf_injection"];
         groupIds.forEach(groupId => {
           if (groups[groupId].length === 0) {
-            medCat.rules.push({ id: `${groupId}_init_${Date.now()}`, content: "\n" });
+            const initId = `${groupId}_init_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            medCat.rules.push({ id: initId, content: "@@@FEE@@@" });
           }
         });
       }
@@ -1203,7 +1222,7 @@ export default function RulesPage() {
                       <table className="fee-dashed-table">
                         <thead>
                           <tr>
-                            <th style={{ width: "130px" }}>ประเภท</th>
+                            <th style={{ width: "40px" }}>#</th>
                             <th>รายละเอียดการรักษา</th>
                             <th style={{ width: "160px", textAlign: "right" }}>ค่ารักษา</th>
                           </tr>
@@ -1241,13 +1260,7 @@ export default function RulesPage() {
                                     </tr>
                                   ) : (
                                     groupRules.map((rule, idx) => {
-                                      const parts = rule.content.includes("\n") 
-                                        ? rule.content.split("\n") 
-                                        : (rule.content.includes(":") 
-                                            ? [rule.content.substring(0, rule.content.indexOf(":")).trim(), rule.content.substring(rule.content.indexOf(":") + 1).trim()] 
-                                            : [rule.content, ""]);
-                                      const description = parts[0] || "";
-                                      const feeText = parts[1] || "";
+                                      const { description, fee: feeText } = parseMedicalFeeContent(rule.content);
 
                                       return (
                                         <tr key={rule.id} className="fee-table-item-row">
