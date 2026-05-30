@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Fragment } from "react";
+import { useState, useEffect, useCallback, Fragment, useRef } from "react";
 import { createPortal } from "react-dom";
 import { getSession } from "next-auth/react";
 import { useConfirm } from "@/components/ConfirmProvider";
@@ -97,6 +97,35 @@ export default function RulesPage() {
   const [selectedVertexIndex, setSelectedVertexIndex] = useState<number | null>(null);
   const [draggedVertexIndex, setDraggedVertexIndex] = useState<number | null>(null);
   const [clickedCoord, setClickedCoord] = useState<{ x: number; y: number; label: string } | null>(null);
+  
+  const mapScrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null);
+
+  const setMapScrollContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (mapScrollContainerRef.current && wheelHandlerRef.current) {
+      try {
+        mapScrollContainerRef.current.removeEventListener("wheel", wheelHandlerRef.current);
+      } catch (err) {
+        console.error("Error removing wheel listener", err);
+      }
+    }
+    mapScrollContainerRef.current = node;
+    if (node) {
+      const handleWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        const zoomStep = 0.25;
+        const direction = e.deltaY < 0 ? 1 : -1;
+        setZoomScale(prev => {
+          const next = prev + direction * zoomStep;
+          return Math.min(Math.max(next, 1), 8); // Max zoom 8x (800% zoom!)
+        });
+      };
+      wheelHandlerRef.current = handleWheel;
+      node.addEventListener("wheel", handleWheel, { passive: false });
+    } else {
+      wheelHandlerRef.current = null;
+    }
+  }, []);
 
   const handleMapUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1686,10 +1715,10 @@ export default function RulesPage() {
                                         onMouseEnter={() => !isDrawingMode && setHoveredZone(zoneName)}
                                         onMouseLeave={() => !isDrawingMode && setHoveredZone(null)}
                                       >
-                                        <circle cx={pin.x} cy={pin.y} r="3.5" fill="none" stroke={colorObj.hex} strokeWidth="1" className="map-pin-pulse" />
-                                        <circle cx={pin.x} cy={pin.y} r="1.8" fill={colorObj.hex} stroke="#fff" strokeWidth="0.5" className="map-pin-circle" />
-                                        <rect x={pin.x - (zoneName.length * 3.5 + 4)} y={pin.y + 5} width={zoneName.length * 7 + 8} height="7.5" rx="3.75" fill={colorObj.hex} stroke="#fff" strokeWidth="0.6" opacity="0.95" />
-                                        <text x={pin.x} y={pin.y + 8.75} className="map-pin-label" dominantBaseline="middle" style={{ fontSize: "5px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}>{zoneName}</text>
+                                        <circle cx={pin.x} cy={pin.y} r="2.0" fill="none" stroke={colorObj.hex} strokeWidth="0.6" className="map-pin-pulse" />
+                                        <circle cx={pin.x} cy={pin.y} r="1.0" fill={colorObj.hex} stroke="#fff" strokeWidth="0.3" className="map-pin-circle" />
+                                        <rect x={pin.x - (zoneName.length * 2.2 + 2.5)} y={pin.y + 3} width={zoneName.length * 4.4 + 5} height="5.0" rx="2.5" fill={colorObj.hex} stroke="#fff" strokeWidth="0.4" opacity="0.95" />
+                                        <text x={pin.x} y={pin.y + 5.5} className="map-pin-label" dominantBaseline="middle" style={{ fontSize: "3.2px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}>{zoneName}</text>
                                       </g>
                                     );
                                   })}
@@ -1700,10 +1729,10 @@ export default function RulesPage() {
                                       <circle
                                         cx={clickedCoord.x}
                                         cy={clickedCoord.y}
-                                        r="6"
+                                        r="4.0"
                                         fill="none"
                                         stroke="#3b82f6"
-                                        strokeWidth="1.5"
+                                        strokeWidth="1.0"
                                         style={{
                                           animation: "mapPinPulseKeyframe 1.5s infinite ease-out",
                                           transformOrigin: `${clickedCoord.x}px ${clickedCoord.y}px`
@@ -1712,27 +1741,27 @@ export default function RulesPage() {
                                       <circle
                                         cx={clickedCoord.x}
                                         cy={clickedCoord.y}
-                                        r="2"
+                                        r="1.2"
                                         fill="#3b82f6"
                                         stroke="#ffffff"
-                                        strokeWidth="0.8"
+                                        strokeWidth="0.3"
                                       />
                                       <g style={{ pointerEvents: "none" }}>
                                         <rect
-                                          x={clickedCoord.x - (clickedCoord.label.length * 3.2 + 4)}
-                                          y={clickedCoord.y - 12}
-                                          width={clickedCoord.label.length * 6.4 + 8}
-                                          height="8"
-                                          rx="2"
+                                          x={clickedCoord.x - (clickedCoord.label.length * 2.1 + 2.5)}
+                                          y={clickedCoord.y - 8}
+                                          width={clickedCoord.label.length * 4.2 + 5}
+                                          height="5.5"
+                                          rx="1.5"
                                           fill="rgba(15, 23, 42, 0.95)"
                                           stroke="#3b82f6"
-                                          strokeWidth="0.6"
+                                          strokeWidth="0.4"
                                         />
                                         <text
                                           x={clickedCoord.x}
-                                          y={clickedCoord.y - 8}
+                                          y={clickedCoord.y - 5.25}
                                           fill="#ffffff"
-                                          fontSize="4.2px"
+                                          fontSize="3.0px"
                                           fontWeight="bold"
                                           textAnchor="middle"
                                           dominantBaseline="middle"
@@ -2410,6 +2439,7 @@ export default function RulesPage() {
           >
             {/* Left Workspace Panel: Zoomable Map Viewport (Takes up 72%) */}
             <div 
+              ref={setMapScrollContainerRef}
               style={{
                 flex: "1 1 72%",
                 background: "rgba(6, 10, 19, 0.6)",
@@ -2518,10 +2548,10 @@ export default function RulesPage() {
                               onMouseEnter={() => setHoveredZone(zoneName)}
                               onMouseLeave={() => setHoveredZone(null)}
                             >
-                              <circle cx={pin.x} cy={pin.y} r="3.5" fill="none" stroke={colorObj.hex} strokeWidth="1" className="map-pin-pulse" />
-                              <circle cx={pin.x} cy={pin.y} r="1.8" fill={colorObj.hex} stroke="#fff" strokeWidth="0.5" className="map-pin-circle" />
-                              <rect x={pin.x - (zoneName.length * 3.5 + 4)} y={pin.y + 5} width={zoneName.length * 7 + 8} height="7.5" rx="3.75" fill={colorObj.hex} stroke="#fff" strokeWidth="0.6" opacity="0.95" />
-                              <text x={pin.x} y={pin.y + 8.75} className="map-pin-label" dominantBaseline="middle" style={{ fontSize: "5px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}>{zoneName}</text>
+                              <circle cx={pin.x} cy={pin.y} r="2.0" fill="none" stroke={colorObj.hex} strokeWidth="0.6" className="map-pin-pulse" />
+                              <circle cx={pin.x} cy={pin.y} r="1.0" fill={colorObj.hex} stroke="#fff" strokeWidth="0.3" className="map-pin-circle" />
+                              <rect x={pin.x - (zoneName.length * 2.2 + 2.5)} y={pin.y + 3} width={zoneName.length * 4.4 + 5} height="5.0" rx="2.5" fill={colorObj.hex} stroke="#fff" strokeWidth="0.4" opacity="0.95" />
+                              <text x={pin.x} y={pin.y + 5.5} className="map-pin-label" dominantBaseline="middle" style={{ fontSize: "3.2px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}>{zoneName}</text>
                             </g>
                           );
                         })}
@@ -2551,7 +2581,7 @@ export default function RulesPage() {
                                     x2={pt.x}
                                     y2={pt.y}
                                     stroke={colorHex}
-                                    strokeWidth="1.2"
+                                    strokeWidth="0.8"
                                     className="editor-edge-line"
                                   />
                                 );
@@ -2563,7 +2593,7 @@ export default function RulesPage() {
                                   x2={points[0].x}
                                   y2={points[0].y}
                                   stroke={colorHex}
-                                  strokeWidth="1.2"
+                                  strokeWidth="0.8"
                                   className="editor-edge-line"
                                 />
                               )}
@@ -2574,12 +2604,12 @@ export default function RulesPage() {
                                   key={"vertex-" + idx}
                                   cx={pt.x}
                                   cy={pt.y}
-                                  r={selectedVertexIndex === idx ? "3.2" : "2.2"}
+                                  r={selectedVertexIndex === idx ? "1.6" : "1.0"}
                                   className="editor-vertex-point"
                                   style={{
                                     fill: selectedVertexIndex === idx ? "#3b82f6" : "#ffffff",
                                     stroke: selectedVertexIndex === idx ? "#ffffff" : colorHex,
-                                    strokeWidth: selectedVertexIndex === idx ? 1.8 : 1.2,
+                                    strokeWidth: selectedVertexIndex === idx ? 1.0 : 0.6,
                                     cursor: "move",
                                     pointerEvents: "auto"
                                   }}
@@ -2687,14 +2717,25 @@ export default function RulesPage() {
                     {/* Add Area Form */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px", textAlign: "left" }}>
                       <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>➕ เพิ่มพื้นที่ใหม่:</label>
-                      <div style={{ display: "flex", gap: "4px" }}>
+                      <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
                         <input
                           type="text"
                           value={newZoneName}
                           onChange={(e) => setNewZoneName(e.target.value)}
                           placeholder="ชื่อพื้นที่ เช่น ด่านตรวจ"
                           className="search-input"
-                          style={{ flex: 1, padding: "6px 8px", fontSize: "0.72rem", background: "rgba(15,23,42,0.6)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)" }}
+                          style={{ flex: "1 1 140px", minWidth: "140px", padding: "6px 8px", fontSize: "0.72rem", background: "rgba(15,23,42,0.6)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)" }}
+                        />
+                        <div 
+                          style={{
+                            width: "16px",
+                            height: "16px",
+                            borderRadius: "50%",
+                            background: colorMap[newZoneColor]?.hex || "#3b82f6",
+                            border: "1px solid rgba(255,255,255,0.15)",
+                            boxShadow: "0 0 6px " + (colorMap[newZoneColor]?.hex || "#3b82f6"),
+                            flexShrink: 0
+                          }} 
                         />
                         <select
                           value={newZoneColor}
@@ -2704,7 +2745,7 @@ export default function RulesPage() {
                         >
                           {Object.keys(colorMap).map(c => (
                             <option key={c} value={c} style={{ background: "#0f172a", color: "#fff" }}>
-                              สี + colorMap[c].name
+                              {"สี" + colorMap[c].name}
                             </option>
                           ))}
                         </select>
