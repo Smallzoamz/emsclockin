@@ -2699,6 +2699,111 @@ body::before {
   font-weight: 600;
 }
 
+/* Medical Fees Modal Side-by-Side Layout */
+.medical-fees-layout {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  width: 100%;
+}
+
+.medical-fees-left {
+  flex: 1 1 40%;
+  max-width: 40%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.medical-fees-right {
+  flex: 1 1 60%;
+  max-width: 60%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .medical-fees-layout {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .medical-fees-left,
+  .medical-fees-right {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
+/* Faint Dashed Table */
+.fee-dashed-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+}
+
+.fee-dashed-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+  font-weight: 700;
+}
+
+.fee-dashed-table td {
+  padding: 14px 12px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.fee-dashed-table tr:hover td {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+/* Clickable Fee Badge */
+.clickable-fee-badge {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: var(--font-mono);
+}
+
+.clickable-fee-badge:hover {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: var(--accent);
+  color: var(--accent-light);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.clickable-fee-badge:active {
+  transform: scale(0.95);
+}
+
+/* Copy Success indicator pill */
+.copy-success-pill {
+  font-size: 0.65rem;
+  color: var(--accent-light);
+  background: rgba(16, 185, 129, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  animation: fadeIn 0.2s ease-out;
+  display: inline-block;
+  margin-top: 2px;
+}
+
 
 
 
