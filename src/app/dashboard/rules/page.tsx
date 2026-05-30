@@ -1856,229 +1856,36 @@ export default function RulesPage() {
                     {isEditMode && (
                       <div className="zone-editor-panel">
                         <div className="zone-editor-title">
-                          🛠️ เครื่องมือวาดโซนและปักหมุด
+                          🛠️ เครื่องมือจัดการพิกัดบริการ
                         </div>
                         
-                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                           <button
                             type="button"
                             onClick={() => {
-                              setIsDrawingMode(!isDrawingMode);
-                              if (!isDrawingMode) {
-                                setDrawMode("polygon");
-                              }
+                              setIsDrawingMode(true);
+                              setDrawMode("polygon");
+                              setZoomScale(1);
+                              setSelectedVertexIndex(null);
                             }}
-                            className={`editor-btn ${isDrawingMode ? "btn-primary" : "editor-btn-outline"}`}
+                            className="btn btn-primary"
+                            style={{ 
+                              width: "100%", 
+                              padding: "8px 12px", 
+                              fontSize: "0.78rem", 
+                              fontWeight: "bold",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "6px"
+                            }}
                           >
-                            {isDrawingMode ? "❌ ปิดเครื่องมือวาด" : "✏️ เปิดเครื่องมือวาด"}
+                            ✏️ เปิดเครื่องมือวาดโซนและปักหมุด (เต็มจอ)
                           </button>
+                          <p style={{ fontSize: "0.68rem", color: "var(--text-muted)", margin: 0, textAlign: "center" }}>
+                            ระบบจะเปิดหน้าจอควบคุมการลากวาดแผนที่แบบเต็มหน้าต่างเพื่อให้จัดวางพิกัดได้ง่ายและละเอียดสูงสุด
+                          </p>
                         </div>
-
-                        {isDrawingMode && (() => {
-                          const medCat = (isEditMode ? editedRules : rules)?.categories.find(c => c.id === "medical_fees") as any;
-                          const zones = medCat?.zones || defaultZones;
-                          const zoneNames = Object.keys(zones);
-                          return (
-                            <>
-                              {/* Selected Zone Selector */}
-                              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                                <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>เลือกโซนที่ต้องการแก้ไข:</label>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                                  {zoneNames.map(zone => {
-                                    const isDefault = zone === "ในเมือง" || zone === "นอกเมือง" || zone === "เมืองบน";
-                                    return (
-                                      <div 
-                                        key={zone} 
-                                        style={{ display: "flex", alignItems: "center", gap: "2px", flex: "1 0 calc(50% - 4px)", minWidth: "90px" }}
-                                      >
-                                        <button
-                                          type="button"
-                                          onClick={() => setSelectedDrawZone(zone)}
-                                          className={`editor-btn editor-btn-outline ${selectedDrawZone === zone ? "active" : ""}`}
-                                          style={{ flex: 1, justifyContent: "center" }}
-                                        >
-                                          {zone}
-                                        </button>
-                                        {!isDefault && (
-                                          <button
-                                            type="button"
-                                            onClick={() => handleDeleteZone(zone)}
-                                            className="btn btn-danger"
-                                            style={{ padding: "6px 8px", fontSize: "0.72rem" }}
-                                            title={`ลบพื้นที่ ${zone}`}
-                                          >
-                                            🗑️
-                                          </button>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-
-                              {/* Add Area Form */}
-                              <div style={{ display: "flex", flexDirection: "column", gap: "4px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "8px" }}>
-                                <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>➕ เพิ่มพื้นที่ใหม่:</label>
-                                <div style={{ display: "flex", gap: "4px" }}>
-                                  <input
-                                    type="text"
-                                    value={newZoneName}
-                                    onChange={(e) => setNewZoneName(e.target.value)}
-                                    placeholder="ชื่อพื้นที่ เช่น เข้าถึงยาก"
-                                    className="search-input"
-                                    style={{ flex: 1, padding: "6px 8px", fontSize: "0.72rem", background: "rgba(15,23,42,0.6)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)" }}
-                                  />
-                                  <select
-                                    value={newZoneColor}
-                                    onChange={(e) => setNewZoneColor(e.target.value)}
-                                    className="search-input"
-                                    style={{ padding: "4px 6px", fontSize: "0.72rem", background: "rgba(15,23,42,0.6)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)", color: "var(--text-primary)" }}
-                                  >
-                                    {Object.keys(colorMap).map(c => (
-                                      <option key={c} value={c} style={{ background: "#0f172a", color: "#fff" }}>
-                                        สี{colorMap[c].name}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <button
-                                    type="button"
-                                    onClick={handleAddZone}
-                                    className="btn btn-primary"
-                                    style={{ padding: "4px 10px", fontSize: "0.72rem" }}
-                                  >
-                                    เพิ่ม
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Fallback Zone Selector */}
-                              <div style={{ display: "flex", flexDirection: "column", gap: "4px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "8px" }}>
-                                <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>🌐 พื้นที่เริ่มต้นหากอยู่นอกเหนือเขตที่วาด (Fallback):</label>
-                                <select
-                                  value={getFallbackZone()}
-                                  onChange={(e) => handleUpdateFallbackZone(e.target.value)}
-                                  className="search-input"
-                                  style={{ padding: "6px 10px", fontSize: "0.75rem", background: "rgba(15,23,42,0.6)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)", color: "var(--text-primary)", width: "100%" }}
-                                >
-                                  <option value="">ไม่มี (ถือว่านอกขอบเขตบริการ)</option>
-                                  {zoneNames.map(name => (
-                                    <option key={name} value={name} style={{ background: "#0f172a", color: "#fff" }}>
-                                      {name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              {/* Mode Selector */}
-                              <div style={{ display: "flex", flexDirection: "column", gap: "4px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "8px" }}>
-                                <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>เลือกโหมดการจิ้ม:</label>
-                                <div style={{ display: "flex", gap: "4px" }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => setDrawMode("polygon")}
-                                    className={`editor-btn editor-btn-outline ${drawMode === "polygon" ? "active" : ""}`}
-                                    style={{ flex: 1, justifyContent: "center" }}
-                                  >
-                                    🔴 ลากเส้นขอบโซน (Polygon)
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setDrawMode("pin")}
-                                    className={`editor-btn editor-btn-outline ${drawMode === "pin" ? "active" : ""}`}
-                                    style={{ flex: 1, justifyContent: "center" }}
-                                  >
-                                    📍 จุดปักหมุดและป้าย (Pin)
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Selected Vertex Card */}
-                              {drawMode === "polygon" && selectedVertexIndex !== null && (() => {
-                                const pointsStr = getZonePoints(selectedDrawZone);
-                                const points = pointsStr ? pointsStr.split(" ").filter(Boolean) : [];
-                                const ptStr = points[selectedVertexIndex];
-                                if (!ptStr) return null;
-                                const [ptX, ptY] = ptStr.split(",");
-                                return (
-                                  <div 
-                                    style={{ 
-                                      display: "flex", 
-                                      alignItems: "center", 
-                                      justifyContent: "space-between", 
-                                      background: "rgba(59, 130, 246, 0.15)", 
-                                      border: "1px solid rgba(59, 130, 246, 0.35)", 
-                                      borderRadius: "var(--radius-sm)", 
-                                      padding: "6px 10px", 
-                                      fontSize: "0.72rem",
-                                      marginTop: "4px",
-                                      color: "var(--text-primary)"
-                                    }}
-                                  >
-                                    <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                      📍 <strong>จุดที่ {selectedVertexIndex + 1}:</strong> ({ptX}, {ptY})
-                                    </span>
-                                    <div style={{ display: "flex", gap: "4px" }}>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteVertex(selectedVertexIndex)}
-                                        className="btn btn-danger"
-                                        style={{ padding: "4px 8px", fontSize: "0.68rem" }}
-                                      >
-                                        ลบจุดนี้
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => setSelectedVertexIndex(null)}
-                                        className="btn"
-                                        style={{ padding: "4px 8px", fontSize: "0.68rem", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-subtle)" }}
-                                      >
-                                        ยกเลิกเลือก
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })()}
-
-                              {/* Action Buttons */}
-                              <div className="zone-editor-actions" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "8px" }}>
-                                {drawMode === "polygon" && (
-                                  <button
-                                    type="button"
-                                    onClick={handleUndoPoint}
-                                    className="editor-btn editor-btn-outline"
-                                    title="ลบจุดล่าสุดที่คลิก"
-                                  >
-                                    ↩️ ย้อนกลับ 1 จุด
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={handleClearPoints}
-                                  className="editor-btn editor-btn-outline"
-                                  style={{ color: "#fca5a5" }}
-                                >
-                                  🗑️ ล้างจุดทั้งหมด
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleResetToDefault}
-                                  className="editor-btn editor-btn-outline"
-                                  style={{ marginLeft: "auto" }}
-                                >
-                                  ⚙️ ใช้ค่าเริ่มต้น
-                                </button>
-                              </div>
-                              
-                              <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", lineHeight: 1.4 }}>
-                                {drawMode === "polygon" ? (
-                                  <span>💡 <strong>วิธีใช้งาน:</strong> เลือกโซนที่ต้องการ จากนั้นใช้เมาส์คลิกบนแผนที่ทีละจุดเพื่อเชื่อมเส้นขอบสีเด่นชัดตามที่ต้องการ</span>
-                                ) : (
-                                  <span>💡 <strong>วิธีใช้งาน:</strong> เลือกโซนที่ต้องการ จากนั้นใช้เมาส์คลิกบนแผนที่ 1 ครั้งเพื่อย้ายปุ่มปักหมุดข้อความไปยังตำแหน่งนั้น</span>
-                                )}
-                              </div>
-                            </>
-                          );
-                        })()}
                       </div>
                     )}
                   </div>
@@ -2483,6 +2290,595 @@ export default function RulesPage() {
               )}
             </footer>
 
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Fullscreen Drawing Portal */}
+      {isDrawingMode && mounted && createPortal(
+        <div 
+          className="drawing-fullscreen-backdrop" 
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(8, 10, 19, 0.96)",
+            backdropFilter: "blur(18px)",
+            zIndex: 99999,
+            display: "flex",
+            flexDirection: "column",
+            color: "var(--text-primary)",
+            fontFamily: "var(--font-ui), system-ui, -apple-system, sans-serif",
+            padding: "16px 24px",
+            boxSizing: "border-box"
+          }}
+        >
+          {/* Fullscreen Header */}
+          <div 
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              borderBottom: "1px solid var(--border-subtle)",
+              paddingBottom: "12px",
+              marginBottom: "16px"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span style={{ fontSize: "1.2rem" }}>✏️</span>
+              <div style={{ textAlign: "left" }}>
+                <h2 style={{ fontSize: "1.05rem", fontWeight: 800, margin: 0, color: "var(--accent)" }}>
+                  เครื่องมือจัดการพิกัดโซนบริการและปักหมุดแผนที่ (โหมดเต็มจอ)
+                </h2>
+                <p style={{ fontSize: "0.68rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
+                  แก้ไขพิกัดเส้นขอบ (Polygon) และพิกัดหมุดระบุตำแหน่ง (Pin) ได้อย่างอิสระและแม่นยำ
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              {/* Zoom Controls inside Fullscreen Header */}
+              <div style={{ display: "flex", gap: "4px", alignItems: "center", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border-subtle)", padding: "4px 8px", borderRadius: "var(--radius-sm)" }}>
+                <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginRight: "4px" }}>ขนาดแผนที่:</span>
+                <button 
+                  type="button" 
+                  onClick={() => setZoomScale(prev => Math.min(prev + 0.25, 4))}
+                  className="btn" 
+                  style={{ padding: "4px 8px", fontSize: "0.7rem", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-subtle)" }}
+                  title="ซูมเข้า"
+                >
+                  ➕ ซูมเข้า
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setZoomScale(prev => Math.max(prev - 0.25, 1))}
+                  className="btn" 
+                  style={{ padding: "4px 8px", fontSize: "0.7rem", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-subtle)" }}
+                  title="ซูมออก"
+                >
+                  ➖ ซูมออก
+                </button>
+                {zoomScale > 1 && (
+                  <button 
+                    type="button" 
+                    onClick={() => setZoomScale(1)}
+                    className="btn" 
+                    style={{ padding: "4px 8px", fontSize: "0.7rem", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-subtle)" }}
+                  >
+                    รีเซ็ต ({zoomScale * 100}%)
+                  </button>
+                )}
+              </div>
+
+              {/* Save and Close Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDrawingMode(false);
+                  setSelectedVertexIndex(null);
+                  setDraggedVertexIndex(null);
+                  showToast("บันทึกการแก้ไขพิกัดโซนและปักหมุดสำเร็จ", "success");
+                }}
+                className="btn btn-primary"
+                style={{
+                  padding: "8px 16px",
+                  fontSize: "0.78rem",
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: "0 0 15px rgba(var(--accent-rgb), 0.3)"
+                }}
+              >
+                💾 บันทึกและปิดเต็มจอ
+              </button>
+            </div>
+          </div>
+
+          {/* Fullscreen Body Workspace */}
+          <div 
+            style={{
+              display: "flex",
+              flex: 1,
+              gap: "20px",
+              height: "calc(100% - 70px)",
+              overflow: "hidden"
+            }}
+          >
+            {/* Left Workspace Panel: Zoomable Map Viewport (Takes up 72%) */}
+            <div 
+              style={{
+                flex: "1 1 72%",
+                background: "rgba(6, 10, 19, 0.6)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-md)",
+                position: "relative",
+                overflow: "auto",
+                display: "flex",
+                justifyContent: "flex-start",
+                alignItems: "flex-start",
+                padding: "16px",
+                maxHeight: "100%",
+                boxSizing: "border-box"
+              }}
+            >
+              <div 
+                className="map-zoom-wrapper"
+                style={{
+                  transform: "scale(" + zoomScale + ")",
+                  transformOrigin: "top left",
+                  transition: "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                  position: "relative",
+                  display: "inline-block"
+                }}
+              >
+                <div 
+                  style={{ position: "relative", display: "inline-block", cursor: "crosshair" }}
+                  onClick={handleMapClick}
+                  onMouseMove={handleMapMouseMove}
+                >
+                  <img
+                    src={(activeCategory as any).mapUrl}
+                    alt="Treatment Area Map"
+                    className="map-image"
+                    style={{ 
+                      maxHeight: "80vh", 
+                      width: "auto", 
+                      display: "block",
+                      borderRadius: "var(--radius-sm)",
+                      border: "1px solid rgba(255,255,255,0.05)"
+                    }}
+                  />
+                  
+                  {/* SVG Interactive Drawing Overlay */}
+                  {(() => {
+                    const medCat = (isEditMode ? editedRules : rules)?.categories.find(c => c.id === "medical_fees") as any;
+                    const zones = medCat?.zones || defaultZones;
+                    const zoneNames = Object.keys(zones);
+                    return (
+                      <svg
+                        viewBox="0 0 100 133.3"
+                        preserveAspectRatio="none"
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          pointerEvents: "none",
+                          zIndex: 10
+                        }}
+                      >
+                        {/* Dynamic Zones Polygons */}
+                        {zoneNames.map(zoneName => {
+                          const pointsStr = getZonePoints(zoneName);
+                          if (!pointsStr) return null;
+                          const colorKey = getZoneColor(zoneName);
+                          const colorObj = colorMap[colorKey] || colorMap.blue;
+                          
+                          const isSelected = selectedDrawZone === zoneName;
+                          const isActive = hoveredZone === zoneName || isSelected;
+                          
+                          return (
+                            <polygon
+                              key={"poly-" + zoneName}
+                              points={pointsStr}
+                              className={"map-zone-path " + (isActive ? "active" : "")}
+                              style={{
+                                fill: isActive ? "rgba(" + colorObj.rgb + ", 0.28)" : "rgba(" + colorObj.rgb + ", 0.06)",
+                                stroke: isActive ? colorObj.hex : "rgba(" + colorObj.rgb + ", 0.4)",
+                                strokeWidth: isActive ? 2.5 : 1,
+                                transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+                                cursor: "pointer"
+                              } as React.CSSProperties}
+                              pointerEvents="auto"
+                              onMouseEnter={() => setHoveredZone(zoneName)}
+                              onMouseLeave={() => setHoveredZone(null)}
+                            />
+                          );
+                        })}
+
+                        {/* Dynamic Pins */}
+                        {zoneNames.map(zoneName => {
+                          const pin = getPinCoords(zoneName);
+                          const colorKey = getZoneColor(zoneName);
+                          const colorObj = colorMap[colorKey] || colorMap.blue;
+                          return (
+                            <g
+                              key={"pin-" + zoneName}
+                              className={"map-pin-group " + (hoveredZone === zoneName ? "active" : "")}
+                              style={{
+                                opacity: (!hoveredZone || hoveredZone === zoneName) ? 1 : 0.3,
+                                pointerEvents: (!hoveredZone || hoveredZone === zoneName) ? "auto" : "none",
+                                transition: "opacity 0.3s ease"
+                              }}
+                              onMouseEnter={() => setHoveredZone(zoneName)}
+                              onMouseLeave={() => setHoveredZone(null)}
+                            >
+                              <circle cx={pin.x} cy={pin.y} r="3.5" fill="none" stroke={colorObj.hex} strokeWidth="1" className="map-pin-pulse" />
+                              <circle cx={pin.x} cy={pin.y} r="1.8" fill={colorObj.hex} stroke="#fff" strokeWidth="0.5" className="map-pin-circle" />
+                              <rect x={pin.x - (zoneName.length * 3.5 + 4)} y={pin.y + 5} width={zoneName.length * 7 + 8} height="7.5" rx="3.75" fill={colorObj.hex} stroke="#fff" strokeWidth="0.6" opacity="0.95" />
+                              <text x={pin.x} y={pin.y + 8.75} className="map-pin-label" dominantBaseline="middle" style={{ fontSize: "5px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}>{zoneName}</text>
+                            </g>
+                          );
+                        })}
+
+                        {/* Draw Helper Vertices when Drawing Mode is active */}
+                        {(() => {
+                          const pointsStr = getZonePoints(selectedDrawZone);
+                          if (!pointsStr) return null;
+                          const points = pointsStr.split(" ").filter(Boolean).map((pt) => {
+                            const parts = pt.split(",");
+                            return { x: Number(parts[0]), y: Number(parts[1]) };
+                          });
+                          const colorKey = getZoneColor(selectedDrawZone);
+                          const colorHex = colorMap[colorKey]?.hex || "#3b82f6";
+
+                          return (
+                            <g>
+                              {/* Connecting Dashed Lines */}
+                              {points.map((pt, idx) => {
+                                if (idx === 0) return null;
+                                const prev = points[idx - 1];
+                                return (
+                                  <line
+                                    key={"line-" + idx}
+                                    x1={prev.x}
+                                    y1={prev.y}
+                                    x2={pt.x}
+                                    y2={pt.y}
+                                    stroke={colorHex}
+                                    strokeWidth="1.2"
+                                    className="editor-edge-line"
+                                  />
+                                );
+                              })}
+                              {points.length > 2 && (
+                                <line
+                                  x1={points[points.length - 1].x}
+                                  y1={points[points.length - 1].y}
+                                  x2={points[0].x}
+                                  y2={points[0].y}
+                                  stroke={colorHex}
+                                  strokeWidth="1.2"
+                                  className="editor-edge-line"
+                                />
+                              )}
+
+                              {/* Interactive Vertices */}
+                              {points.map((pt, idx) => (
+                                <circle
+                                  key={"vertex-" + idx}
+                                  cx={pt.x}
+                                  cy={pt.y}
+                                  r={selectedVertexIndex === idx ? "3.2" : "2.2"}
+                                  className="editor-vertex-point"
+                                  style={{
+                                    fill: selectedVertexIndex === idx ? "#3b82f6" : "#ffffff",
+                                    stroke: selectedVertexIndex === idx ? "#ffffff" : colorHex,
+                                    strokeWidth: selectedVertexIndex === idx ? 1.8 : 1.2,
+                                    cursor: "move",
+                                    pointerEvents: "auto"
+                                  }}
+                                  onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedVertexIndex(idx);
+                                    setDraggedVertexIndex(idx);
+                                  }}
+                                  onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteVertex(idx);
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <title>{"จุดที่ " + (idx + 1) + " (" + pt.x + ", " + pt.y + ") - ลากเพื่อย้าย, ดับเบิ้ลคลิกเพื่อลบ"}</title>
+                                </circle>
+                              ))}
+                            </g>
+                          );
+                        })()}
+                      </svg>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Settings Panel (Takes up 28%) */}
+            <div 
+              style={{
+                flex: "1 1 28%",
+                background: "rgba(15, 23, 42, 0.45)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-md)",
+                padding: "16px 20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+                overflowY: "auto",
+                height: "100%",
+                boxSizing: "border-box"
+              }}
+            >
+              <div style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "8px", textAlign: "left" }}>
+                <h3 style={{ fontSize: "0.88rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+                  🛠️ เมนูเครื่องมือแก้ไข
+                </h3>
+              </div>
+
+              {(() => {
+                const medCat = (isEditMode ? editedRules : rules)?.categories.find(c => c.id === "medical_fees") as any;
+                const zones = medCat?.zones || defaultZones;
+                const zoneNames = Object.keys(zones);
+                return (
+                  <>
+                    {/* Selected Zone Selector */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", textAlign: "left" }}>
+                      <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>เลือกโซนที่ต้องการแก้ไข:</label>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        {zoneNames.map(zone => {
+                          const isDefault = zone === "ในเมือง" || zone === "นอกเมือง" || zone === "เมืองบน";
+                          const colorKey = getZoneColor(zone);
+                          const colorObj = colorMap[colorKey] || colorMap.blue;
+                          return (
+                            <div 
+                              key={zone} 
+                              style={{ display: "flex", alignItems: "center", gap: "4px" }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedDrawZone(zone);
+                                  setSelectedVertexIndex(null);
+                                }}
+                                className={"editor-btn editor-btn-outline " + (selectedDrawZone === zone ? "active" : "")}
+                                style={{ 
+                                  flex: 1, 
+                                  justifyContent: "flex-start", 
+                                  gap: "8px",
+                                  borderLeft: "3px solid " + colorObj.hex
+                                }}
+                              >
+                                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: colorObj.hex }} />
+                                {zone}
+                              </button>
+                              {!isDefault && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteZone(zone)}
+                                  className="btn btn-danger"
+                                  style={{ padding: "6px 10px", fontSize: "0.72rem" }}
+                                  title={"ลบพื้นที่ " + zone}
+                                >
+                                  🗑️
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Add Area Form */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px", textAlign: "left" }}>
+                      <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>➕ เพิ่มพื้นที่ใหม่:</label>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        <input
+                          type="text"
+                          value={newZoneName}
+                          onChange={(e) => setNewZoneName(e.target.value)}
+                          placeholder="ชื่อพื้นที่ เช่น ด่านตรวจ"
+                          className="search-input"
+                          style={{ flex: 1, padding: "6px 8px", fontSize: "0.72rem", background: "rgba(15,23,42,0.6)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)" }}
+                        />
+                        <select
+                          value={newZoneColor}
+                          onChange={(e) => setNewZoneColor(e.target.value)}
+                          className="search-input"
+                          style={{ padding: "4px 6px", fontSize: "0.72rem", background: "rgba(15,23,42,0.6)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)", color: "var(--text-primary)" }}
+                        >
+                          {Object.keys(colorMap).map(c => (
+                            <option key={c} value={c} style={{ background: "#0f172a", color: "#fff" }}>
+                              สี + colorMap[c].name
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={handleAddZone}
+                          className="btn btn-primary"
+                          style={{ padding: "4px 12px", fontSize: "0.72rem" }}
+                        >
+                          เพิ่ม
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Fallback Zone Selector */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px", textAlign: "left" }}>
+                      <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>🌐 พื้นที่เริ่มต้นหากอยู่นอกเหนือเขตที่วาด (Fallback):</label>
+                      <select
+                        value={getFallbackZone()}
+                        onChange={(e) => handleUpdateFallbackZone(e.target.value)}
+                        className="search-input"
+                        style={{ padding: "6px 10px", fontSize: "0.75rem", background: "rgba(15,23,42,0.6)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)", color: "var(--text-primary)", width: "100%" }}
+                      >
+                        <option value="">ไม่มี (ถือว่านอกขอบเขตบริการ)</option>
+                        {zoneNames.map(name => (
+                          <option key={name} value={name} style={{ background: "#0f172a", color: "#fff" }}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Mode Selector */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px", textAlign: "left" }}>
+                      <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>เลือกโหมดการปรับแต่งพิกัด:</label>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDrawMode("polygon");
+                            setSelectedVertexIndex(null);
+                          }}
+                          className={"editor-btn editor-btn-outline " + (drawMode === "polygon" ? "active" : "")}
+                          style={{ flex: 1, justifyContent: "center", fontSize: "0.68rem" }}
+                        >
+                          🔴 ลากเส้นขอบ (Polygon)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDrawMode("pin");
+                            setSelectedVertexIndex(null);
+                          }}
+                          className={"editor-btn editor-btn-outline " + (drawMode === "pin" ? "active" : "")}
+                          style={{ flex: 1, justifyContent: "center", fontSize: "0.68rem" }}
+                        >
+                          📍 ปักหมุด/ป้าย (Pin)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Selected Vertex Card */}
+                    {drawMode === "polygon" && selectedVertexIndex !== null && (() => {
+                      const pointsStr = getZonePoints(selectedDrawZone);
+                      const points = pointsStr ? pointsStr.split(" ").filter(Boolean) : [];
+                      const ptStr = points[selectedVertexIndex];
+                      if (!ptStr) return null;
+                      const parts = ptStr.split(",");
+                      return (
+                        <div 
+                          style={{ 
+                            display: "flex", 
+                            alignItems: "center", 
+                            justifyContent: "space-between", 
+                            background: "rgba(59, 130, 246, 0.15)", 
+                            border: "1px solid rgba(59, 130, 246, 0.35)", 
+                            borderRadius: "var(--radius-sm)", 
+                            padding: "8px 12px", 
+                            fontSize: "0.72rem",
+                            color: "var(--text-primary)"
+                          }}
+                        >
+                          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            📍 <strong>จุดที่ " + (selectedVertexIndex + 1) + ":</strong> (" + parts[0] + ", " + parts[1] + ")
+                          </span>
+                          <div style={{ display: "flex", gap: "4px" }}>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteVertex(selectedVertexIndex)}
+                              className="btn btn-danger"
+                              style={{ padding: "4px 8px", fontSize: "0.68rem" }}
+                            >
+                              ลบจุดนี้
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedVertexIndex(null)}
+                              className="btn"
+                              style={{ padding: "4px 8px", fontSize: "0.68rem", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-subtle)" }}
+                            >
+                              ยกเลิก
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Action Buttons */}
+                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px", display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                      {drawMode === "polygon" && (
+                        <button
+                          type="button"
+                          onClick={handleUndoPoint}
+                          className="editor-btn editor-btn-outline"
+                          style={{ flex: "1 0 calc(50% - 4px)", justifyContent: "center" }}
+                          title="ลบจุดล่าสุดที่คลิก"
+                        >
+                          ↩️ ย้อนกลับ 1 จุด
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleClearPoints}
+                        className="editor-btn editor-btn-outline"
+                        style={{ flex: "1 0 calc(50% - 4px)", justifyContent: "center", color: "#fca5a5" }}
+                      >
+                        🗑️ ล้างจุดทั้งหมด
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResetToDefault}
+                        className="editor-btn editor-btn-outline"
+                        style={{ width: "100%", justifyContent: "center" }}
+                      >
+                        ⚙️ ใช้ค่าเริ่มต้น
+                      </button>
+                    </div>
+                    
+                    <div 
+                      style={{ 
+                        fontSize: "0.68rem", 
+                        color: "var(--text-muted)", 
+                        lineHeight: 1.4, 
+                        background: "rgba(255,255,255,0.015)", 
+                        border: "1px solid var(--border-subtle)", 
+                        padding: "10px", 
+                        borderRadius: "var(--radius-sm)",
+                        marginTop: "auto",
+                        textAlign: "left"
+                      }}
+                    >
+                      {drawMode === "polygon" ? (
+                        <span>
+                          💡 <strong>คู่มือลากเส้นขอบ (Polygon):</strong>
+                          <ul style={{ margin: "4px 0 0 0", paddingLeft: "14px" }}>
+                            <li>คลิกแผนที่เพื่อเพิ่มจุดพิกัดเชื่อมเส้นขอบ</li>
+                            <li><strong>คลิกลากที่จุดพิกัด</strong> เพื่อย้ายตำแหน่งพิกัดได้</li>
+                            <li><strong>ดับเบิ้ลคลิก</strong> ที่จุดพิกัด หรือกดปุ่ม <code>Backspace</code>/<code>Delete</code> บนคีย์บอร์ดเพื่อลบจุด</li>
+                          </ul>
+                        </span>
+                      ) : (
+                        <span>
+                          💡 <strong>คู่มือปักหมุด (Pin):</strong>
+                          <ul style={{ margin: "4px 0 0 0", paddingLeft: "14px" }}>
+                            <li>คลิกแผนที่ 1 ครั้ง เพื่อปักหมุดข้อความแสดงโซน ณ ตำแหน่งนั้น</li>
+                            <li>พิกัดของหมุดจะบันทึกอัตโนมัติ</li>
+                          </ul>
+                        </span>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
           </div>
         </div>,
         document.body
