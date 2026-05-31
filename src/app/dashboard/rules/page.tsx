@@ -103,6 +103,8 @@ export default function RulesPage() {
   const [isDrawingFreehand, setIsDrawingFreehand] = useState(false);
   const [freehandPoints, setFreehandPoints] = useState<{ x: number; y: number }[]>([]);
   const [snapEnabled, setSnapEnabled] = useState(false);
+  const pencilStrokeBaseRef = useRef<number>(0);
+  const activePencilPointsRef = useRef<{ x: number; y: number }[]>([]);
 
   // Helpers for coordinates parsing and Douglas-Peucker simplification
   const parsePoints = (pointsStr: string): [number, number][] => {
@@ -644,22 +646,55 @@ export default function RulesPage() {
       setSnappedVertex(null);
     }
     
+    const currentPointsStr = getZonePoints(selectedDrawZone);
+    const existingPoints = currentPointsStr 
+      ? currentPointsStr.split(" ").filter(Boolean).map(p => {
+          const [px, py] = p.split(",").map(Number);
+          return { x: px, y: py };
+        })
+      : [];
+
+    pencilStrokeBaseRef.current = existingPoints.length;
+    activePencilPointsRef.current = [...existingPoints, { x, y }];
+    
     setIsDrawingFreehand(true);
-    setFreehandPoints([{ x, y }]);
+    setFreehandPoints([...activePencilPointsRef.current]);
   };
 
   const handleMapMouseUp = () => {
     if (!isDrawingFreehand) return;
     setIsDrawingFreehand(false);
     setSnappedVertex(null);
-    if (freehandPoints.length > 2) {
-      const ptsArray = freehandPoints.map(p => [p.x, p.y] as [number, number]);
-      const tolerance = Math.max(0.01, 0.04 / zoomScale);
-      const simplified = simplifyDouglasPeucker(ptsArray, tolerance);
-      const serialized = serializeOpenPoly(simplified);
-      updateZonePoints(selectedDrawZone, serialized);
+    
+    const baseLength = pencilStrokeBaseRef.current;
+    const pointsList = activePencilPointsRef.current;
+    
+    if (pointsList.length > baseLength) {
+      const newPts = pointsList.slice(baseLength);
+      if (newPts.length > 2) {
+        const ptsArray = newPts.map(p => [p.x, p.y] as [number, number]);
+        const tolerance = Math.max(0.01, 0.04 / zoomScale);
+        const simplifiedNew = simplifyDouglasPeucker(ptsArray, tolerance);
+        
+        const existingPts = pointsList.slice(0, baseLength);
+        const combined = [...existingPts, ...simplifiedNew.map(pt => ({ x: pt[0], y: pt[1] }))];
+        
+        // Loop back check (connect back to starting point):
+        if (combined.length > 2) {
+          const first = combined[0];
+          const last = combined[combined.length - 1];
+          const distToStart = Math.sqrt((first.x - last.x) ** 2 + (first.y - last.y) ** 2);
+          if (distToStart < 1.5 / zoomScale) {
+            combined[combined.length - 1] = { x: first.x, y: first.y };
+          }
+        }
+        
+        const serialized = serializeOpenPoly(combined.map(p => [p.x, p.y]));
+        updateZonePoints(selectedDrawZone, serialized);
+      }
     }
     setFreehandPoints([]);
+    activePencilPointsRef.current = [];
   };
 
   const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -714,9 +749,11 @@ export default function RulesPage() {
     }
 
     if (isDrawingFreehand && drawMode === "pencil") {
-      const lastPt = freehandPoints[freehandPoints.length - 1];
+      const pointsList = activePencilPointsRef.current;
+      const lastPt = pointsList[pointsList.length - 1];
       if (!lastPt || Math.abs(lastPt.x - x) > 0.02 || Math.abs(lastPt.y - y) > 0.02) {
-        setFreehandPoints(prev => [...prev, { x, y }]);
+        activePencilPointsRef.current.push({ x, y });
+        setFreehandPoints([...activePencilPointsRef.current]);
       }
       return;
     }
@@ -3270,13 +3307,13 @@ export default function RulesPage() {
 
                     {/* Action Buttons */}
                     <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px", display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                      {drawMode === "polygon" && (
+                      {(drawMode === "polygon" || drawMode === "pencil") && (
                         <button
                           type="button"
                           onClick={handleUndoPoint}
                           className="editor-btn editor-btn-outline"
-                          style={{ flex: "1 0 calc(50% - 4px)", justifyContent: "center" }}
-                          title="ลบจุดล่าสุดที่คลิก"
+                          style={{ flex: drawMode === "polygon" ? "1 0 calc(50% - 4px)" : "1 0 100%", justifyContent: "center" }}
+                          title="ลบจุดล่าสุดที่วาด"
                         >
                           ↩️ ย้อนกลับ 1 จุด
                         </button>
