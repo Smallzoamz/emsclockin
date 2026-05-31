@@ -654,7 +654,7 @@ export default function RulesPage() {
     setSnappedVertex(null);
     if (freehandPoints.length > 2) {
       const ptsArray = freehandPoints.map(p => [p.x, p.y] as [number, number]);
-      const tolerance = Math.max(0.04, 0.16 / zoomScale);
+      const tolerance = Math.max(0.01, 0.04 / zoomScale);
       const simplified = simplifyDouglasPeucker(ptsArray, tolerance);
       const serialized = serializeOpenPoly(simplified);
       updateZonePoints(selectedDrawZone, serialized);
@@ -715,7 +715,7 @@ export default function RulesPage() {
 
     if (isDrawingFreehand && drawMode === "pencil") {
       const lastPt = freehandPoints[freehandPoints.length - 1];
-      if (!lastPt || Math.abs(lastPt.x - x) > 0.05 || Math.abs(lastPt.y - y) > 0.05) {
+      if (!lastPt || Math.abs(lastPt.x - x) > 0.02 || Math.abs(lastPt.y - y) > 0.02) {
         setFreehandPoints(prev => [...prev, { x, y }]);
       }
       return;
