@@ -261,3 +261,4 @@
 
 ## [2026-05-31 11:50] | File: src/app/dashboard/rules/page.tsx | Line: 2185 | Keyword: Adjust Pin Text Label Position | Status: ✅ Complete | Change: Moved pin text label position to sit directly under the marker on the map. Changed the y-offset of the text tag in the read-only view from + 2.0 to + 1.0 SVG units, removing the gap.
 
+## [2026-05-31 11:41] | File: src/app/dashboard/layout.tsx | Line: 81 | Keyword: Public Rules Layout Centering | Status: ✅ Complete | Change: Centered the public rules page layout horizontally when viewed by unauthenticated users by replacing the inline style 'marginLeft: 0' on the main element with 'margin: "0 auto"'. This ensures that the page layout aligns to the center of the viewport instead of sticking to the left side with a large empty space on the right.

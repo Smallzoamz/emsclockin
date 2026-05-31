@@ -78,7 +78,7 @@ export default async function DashboardLayout({
             </a>
           </header>
           <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-            <main className="main-content" style={{ marginLeft: 0, width: "100%", maxWidth: "1200px", padding: "24px 16px" }}>
+            <main className="main-content" style={{ margin: "0 auto", width: "100%", maxWidth: "1200px", padding: "24px 16px" }}>
               {children}
             </main>
           </div>
