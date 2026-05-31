@@ -2940,6 +2940,7 @@ body::before {
 }
 
 .map-pin-main:hover image,
+.map-pin-main.active image,
 .map-pin-main.active-wiggle image {
   animation: pinBounce 0.6s ease-in-out infinite;
   transform-origin: 50% 50%;
