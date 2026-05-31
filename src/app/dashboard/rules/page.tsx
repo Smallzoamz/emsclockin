@@ -108,6 +108,59 @@ export default function RulesPage() {
   const [draggedVertexIndex, setDraggedVertexIndex] = useState<number | null>(null);
   const [clickedCoord, setClickedCoord] = useState<{ x: number; y: number; label: string } | null>(null);
 
+  // Accordion states
+  const [expandedGroupTitles, setExpandedGroupTitles] = useState<Record<string, boolean>>({});
+
+  const toggleGroup = (title: string, index: number) => {
+    setExpandedGroupTitles(prev => {
+      const isExpanded = index === 0 ? prev[title] !== false : prev[title] === true;
+      return {
+        ...prev,
+        [title]: !isExpanded
+      };
+    });
+  };
+
+  const groupRulesByHeader = (rulesList: Rule[]) => {
+    const groups: { header: string; headerRuleId?: string; rules: Rule[] }[] = [];
+    let currentGroup: { header: string; headerRuleId?: string; rules: Rule[] } | null = null;
+
+    rulesList.forEach((rule) => {
+      if (rule.content.startsWith("[HEADER]")) {
+        currentGroup = {
+          header: rule.content.replace("[HEADER]", "").trim(),
+          headerRuleId: rule.id,
+          rules: []
+        };
+        groups.push(currentGroup);
+      } else {
+        if (!currentGroup) {
+          currentGroup = {
+            header: "ข้อปฏิบัติทั่วไป",
+            rules: []
+          };
+          groups.push(currentGroup);
+        }
+        currentGroup.rules.push(rule);
+      }
+    });
+
+    return groups;
+  };
+
+  const handleAddHeaderRule = (catId: string) => {
+    if (!editedRules) return;
+    const updatedCategories = editedRules.categories.map((cat) => {
+      if (cat.id !== catId) return cat;
+      const newId = `${catId.substring(0, 2)}_h_${Date.now()}`;
+      return {
+        ...cat,
+        rules: [...cat.rules, { id: newId, content: "[HEADER] หัวข้อกลุ่มใหม่" }]
+      };
+    });
+    setEditedRules({ ...editedRules, categories: updatedCategories });
+  };
+
   // States for freehand pencil drawing
   const [isDrawingFreehand, setIsDrawingFreehand] = useState(false);
   const [freehandPoints, setFreehandPoints] = useState<{ x: number; y: number }[]>([]);
@@ -1803,7 +1856,7 @@ export default function RulesPage() {
             setModalSearchQuery("");
           }
         }}>
-          <div className={`rules-modal-container ${activeCategory.id === "medical_fees" ? "modal-wide" : ""}`} onClick={(e) => e.stopPropagation()}>
+          <div className="rules-modal-container modal-wide" onClick={(e) => e.stopPropagation()}>
             
             {/* Modal Cover Banner Header */}
             <div className="rules-modal-cover-banner">
@@ -2391,372 +2444,641 @@ export default function RulesPage() {
                     )}
                   </div>
 
-                  {/* Right Column: Dashed Table */}
+                  {/* Right Column: Dashed Table wrapped in Accordions */}
                   <div className="medical-fees-right">
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
                       🪙
                       <span style={{ fontSize: "0.95rem", fontWeight: 800 }}>ตารางอัตราค่ารักษาพยาบาล</span>
                     </div>
 
-                    <div style={{ overflowX: "auto" }}>
-                      <table className="fee-dashed-table">
-                        <thead>
-                          <tr>
-                            <th style={{ width: "40px" }}>#</th>
-                            <th>รายละเอียดการรักษา</th>
-                            <th style={{ width: "160px", textAlign: "right" }}>ค่ารักษา</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(() => {
-                            const feeGroups = groupFeeRules(activeCategory.rules);
-                            const categoryKeys = ["mf_general", "mf_story", "mf_event", "mf_injection"];
-                            const categoryNames = ["เคสทั่วไป", "เคสสตอรี่", "เคสกิจกรรม", "ฉีดยา"];
-                            const categoryColors = feeColors;
+                    <div style={{ maxHeight: "62vh", overflowY: "auto", paddingRight: "6px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                      {(() => {
+                        const feeGroups = groupFeeRules(activeCategory.rules);
+                        const categoryKeys = ["mf_general", "mf_story", "mf_event", "mf_injection"];
+                        const categoryNames = ["เคสทั่วไป", "เคสสตอรี่", "เคสกิจกรรม", "ฉีดยา"];
+                        const categoryColors = feeColors;
 
-                            return categoryKeys.map((catKey, catIdx) => {
-                              const groupRules = feeGroups[catKey] || [];
-                              const catName = categoryNames[catIdx];
-                              const color = categoryColors[catIdx];
+                        return categoryKeys.map((catKey, catIdx) => {
+                          const groupRules = feeGroups[catKey] || [];
+                          const catName = categoryNames[catIdx];
+                          const color = categoryColors[catIdx];
+                          const isCatExpanded = catIdx === 0 
+                            ? expandedGroupTitles[catName] !== false 
+                            : expandedGroupTitles[catName] === true;
 
-                              return (
-                                <Fragment key={catKey}>
-                                  {/* Category Header Row */}
-                                  <tr className="fee-table-category-row">
-                                    <td colSpan={3} className="fee-table-category-header">
-                                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: color.text, fontWeight: 800 }}>
-                                        <span>{color.icon}</span>
-                                        <span>{catName}</span>
-                                      </div>
-                                    </td>
-                                  </tr>
+                          return (
+                            <div key={catKey} className={`rules-accordion-item ${isCatExpanded ? "expanded" : ""}`}>
+                              <div className="rules-accordion-header" onClick={() => toggleGroup(catName, catIdx)} style={{ background: "rgba(15, 23, 42, 0.3)" }}>
+                                <div className="rules-accordion-title">
+                                  <span>{color.icon}</span>
+                                  <span style={{ color: color.text }}>{catName}</span>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  <span className="rules-card-badge" style={{ fontSize: "0.68rem" }}>
+                                    {groupRules.length} รายการ
+                                  </span>
+                                  <span className="rules-accordion-chevron" style={{ transform: isCatExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+                                </div>
+                              </div>
 
-                                  {/* Sub-items */}
-                                  {groupRules.length === 0 ? (
-                                    <tr>
-                                      <td colSpan={3} style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.8rem", padding: "12px" }}>
-                                        ไม่มีรายการในหมวดหมู่นี้
-                                      </td>
-                                    </tr>
-                                  ) : (
-                                    groupRules.map((rule, idx) => {
-                                      const { description, fee: feeText } = parseMedicalFeeContent(rule.content);
-                                      const zoneKey = getZoneKey(description);
-                                      const isHighlighted = hoveredZone && zoneKey === hoveredZone;
-                                      const zoneColorKey = zoneKey ? getZoneColor(zoneKey) : null;
-                                       const highlightBorderColor = zoneColorKey ? (colorMap[zoneColorKey]?.hex || "transparent") : "transparent";
-
-                                      return (
-                                        <tr 
-                                          key={rule.id} 
-                                          className={`fee-table-item-row ${isHighlighted ? "row-highlight" : ""}`}
-                                          style={{
-                                            "--row-highlight-border-color": highlightBorderColor
-                                          } as React.CSSProperties}
-                                          onMouseEnter={() => {
-                                            if (!isEditMode && zoneKey) {
-                                              setHoveredZone(zoneKey);
-                                              const subLabel = getHoveredPinLabel(description);
-                                              setHoveredPinLabel(subLabel);
-                                            }
-                                          }}
-                                          onMouseLeave={() => {
-                                            if (!isEditMode) {
-                                              setHoveredZone(null);
-                                              setHoveredPinLabel(null);
-                                            }
-                                          }}
-                                        >
-                                          <td style={{ width: "36px", paddingRight: "0", verticalAlign: "middle" }}>
-                                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                                              #{idx + 1}
-                                            </span>
-                                          </td>
-                                          <td>
-                                            {isEditMode ? (
-                                              <textarea
-                                                value={description}
-                                                onChange={(e) => handleMedicalFeeFieldChange(rule.id, 0, e.target.value)}
-                                                className="rules-textarea"
-                                                placeholder="ระบุรายละเอียดการรักษา..."
-                                                style={{ minHeight: "50px", fontSize: "0.8rem", padding: "6px 10px" }}
-                                              />
-                                            ) : (
-                                              <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
-                                                {description || "—"}
-                                              </div>
-                                            )}
-                                          </td>
-                                          <td style={{ textAlign: "right", verticalAlign: "middle" }}>
-                                            <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                                              {isEditMode ? (
-                                                <>
-                                                  <input
-                                                    type="text"
-                                                    value={feeText}
-                                                    onChange={(e) => handleMedicalFeeFieldChange(rule.id, 1, e.target.value)}
-                                                    className="search-input"
-                                                    placeholder="3,000 IC"
-                                                    style={{ padding: "6px 10px", fontSize: "0.8rem", width: "90px", textAlign: "right" }}
-                                                  />
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => handleDeleteFeeRule(rule.id)}
-                                                    className="rule-btn-icon danger"
-                                                    title="ลบรายการนี้"
-                                                    style={{ width: "26px", height: "26px", padding: "0" }}
-                                                  >
-                                                    <TrashIcon size={12} />
-                                                  </button>
-                                                </>
-                                              ) : (
-                                                feeText ? (
-                                                  <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-                                                    <button
-                                                      onClick={() => copyFeeToClipboard(rule.id, feeText)}
-                                                      className="clickable-fee-badge"
-                                                      title="คลิกเพื่อคัดลอกตัวเลข"
-                                                    >
-                                                      <span className="font-mono" style={{ fontWeight: 700 }}>{feeText}</span>
-                                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
-                                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                                      </svg>
-                                                    </button>
-                                                    {copiedRuleId === rule.id && (
-                                                      <span className="copy-success-pill">
-                                                        คัดลอกแล้ว!
-                                                      </span>
-                                                    )}
-                                                  </div>
-                                                ) : (
-                                                  <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>—</span>
-                                                )
-                                              )}
-                                            </div>
+                              {isCatExpanded && (
+                                <div className="rules-accordion-content" style={{ padding: "0", background: "transparent", borderTop: "none" }}>
+                                  <table className="fee-dashed-table" style={{ margin: "0", width: "100%", borderCollapse: "collapse", border: "none" }}>
+                                    <tbody>
+                                      {groupRules.length === 0 ? (
+                                        <tr>
+                                          <td colSpan={3} style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.8rem", padding: "12px" }}>
+                                            ไม่มีรายการในหมวดหมู่นี้
                                           </td>
                                         </tr>
-                                      );
-                                    })
-                                  )}
+                                      ) : (
+                                        groupRules.map((rule, idx) => {
+                                          const { description, fee: feeText } = parseMedicalFeeContent(rule.content);
+                                          const zoneKey = getZoneKey(description);
+                                          const isHighlighted = hoveredZone && zoneKey === hoveredZone;
+                                          const zoneColorKey = zoneKey ? getZoneColor(zoneKey) : null;
+                                          const highlightBorderColor = zoneColorKey ? (colorMap[zoneColorKey]?.hex || "transparent") : "transparent";
 
-                                  {/* Add item row in edit mode */}
-                                  {isEditMode && (
-                                    <tr className="fee-table-add-row">
-                                      <td colSpan={3} style={{ padding: "6px 12px 14px 12px", borderBottom: "1px dashed rgba(255, 255, 255, 0.1)" }}>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleAddFeeRule(catKey)}
-                                          className="map-upload-trigger-btn"
-                                          style={{ width: "100%", padding: "6px 12px", fontSize: "0.72rem", justifyContent: "center" }}
-                                        >
-                                          + เพิ่มรายการใน {catName}
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  )}
-                                </Fragment>
-                              );
-                            });
-                          })()}
-                        </tbody>
-                      </table>
+                                          return (
+                                            <tr 
+                                              key={rule.id} 
+                                              className={`fee-table-item-row ${isHighlighted ? "row-highlight" : ""}`}
+                                              style={{
+                                                "--row-highlight-border-color": highlightBorderColor
+                                              } as React.CSSProperties}
+                                              onMouseEnter={() => {
+                                                if (!isEditMode && zoneKey) {
+                                                  setHoveredZone(zoneKey);
+                                                  const subLabel = getHoveredPinLabel(description);
+                                                  setHoveredPinLabel(subLabel);
+                                                }
+                                              }}
+                                              onMouseLeave={() => {
+                                                if (!isEditMode) {
+                                                  setHoveredZone(null);
+                                                  setHoveredPinLabel(null);
+                                                }
+                                              }}
+                                            >
+                                              <td style={{ width: "36px", paddingRight: "0", verticalAlign: "middle", paddingLeft: "14px" }}>
+                                                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                                                  #{idx + 1}
+                                                </span>
+                                              </td>
+                                              <td style={{ paddingLeft: "10px", paddingRight: "10px" }}>
+                                                {isEditMode ? (
+                                                  <textarea
+                                                    value={description}
+                                                    onChange={(e) => handleMedicalFeeFieldChange(rule.id, 0, e.target.value)}
+                                                    className="rules-textarea"
+                                                    placeholder="ระบุรายละเอียดการรักษา..."
+                                                    style={{ minHeight: "50px", fontSize: "0.8rem", padding: "6px 10px" }}
+                                                  />
+                                                ) : (
+                                                  <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                                                    {description || "—"}
+                                                  </div>
+                                                )}
+                                              </td>
+                                              <td style={{ textAlign: "right", verticalAlign: "middle", paddingRight: "14px" }}>
+                                                <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                                                  {isEditMode ? (
+                                                    <>
+                                                      <input
+                                                        type="text"
+                                                        value={feeText}
+                                                        onChange={(e) => handleMedicalFeeFieldChange(rule.id, 1, e.target.value)}
+                                                        className="search-input"
+                                                        placeholder="3,000 IC"
+                                                        style={{ padding: "6px 10px", fontSize: "0.8rem", width: "90px", textAlign: "right" }}
+                                                      />
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteFeeRule(rule.id)}
+                                                        className="rule-btn-icon danger"
+                                                        title="ลบรายการนี้"
+                                                        style={{ width: "26px", height: "26px", padding: "0" }}
+                                                      >
+                                                        <TrashIcon size={12} />
+                                                      </button>
+                                                    </>
+                                                  ) : (
+                                                    feeText ? (
+                                                      <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                                                        <button
+                                                          onClick={() => copyFeeToClipboard(rule.id, feeText)}
+                                                          className="clickable-fee-badge"
+                                                          title="คลิกเพื่อคัดลอกตัวเลข"
+                                                        >
+                                                          <span className="font-mono" style={{ fontWeight: 700 }}>{feeText}</span>
+                                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
+                                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                          </svg>
+                                                        </button>
+                                                        {copiedRuleId === rule.id && (
+                                                          <span className="copy-success-pill">
+                                                            คัดลอกแล้ว!
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                    ) : (
+                                                      <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>—</span>
+                                                    )
+                                                  )}
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          );
+                                        })
+                                      )}
+
+                                      {/* Add item row in edit mode */}
+                                      {isEditMode && (
+                                        <tr className="fee-table-add-row">
+                                          <td colSpan={3} style={{ padding: "6px 14px 14px 14px" }}>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleAddFeeRule(catKey)}
+                                              className="map-upload-trigger-btn"
+                                              style={{ width: "100%", padding: "6px 12px", fontSize: "0.72rem", justifyContent: "center" }}
+                                            >
+                                              + เพิ่มรายการใน {catName}
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 </div>
               ) : activeCategory.id === "blacklist" ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
-                  {filteredRules.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: "0.88rem" }}>
-                      ไม่มีข้อมูลบัญชีดำที่สอดคล้องกับคำค้นหา
+                <div className="rules-split-layout">
+                  {/* Left Column: Details & Local Search */}
+                  <div className="rules-split-left">
+                    <div className="rules-sidebar-card" style={{ borderColor: "rgba(239, 68, 68, 0.2)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                        {getCategoryIcon(activeCategory.id, 32)}
+                        <div>
+                          <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-primary)" }}>{activeCategory.name}</h4>
+                          <span style={{ fontSize: "0.72rem", color: "#fca5a5" }}>
+                            {activeCategory.rules.length} รายการแบล็คลิสต์
+                          </span>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.4, margin: 0 }}>
+                        รายชื่อบุคคลและกลุ่มแก๊งที่มีประวัติการกระทำผิด หรือค้างชำระค่าปรับ/ค่ารักษาพยาบาลสะสมภายในศูนย์การแพทย์
+                      </p>
                     </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                      {filteredRules.map((rule, idx) => {
-                        const parts = rule.content.split("\n");
-                        const description = parts[0] || "";
-                        const fine = parts[1] || "";
-                        const consequence = parts[2] || "";
 
-                        return (
-                          <div key={rule.id} className="blacklist-card">
-                            {isEditMode ? (
-                              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "8px" }}>
-                                  <span className="rules-card-badge" style={{ padding: "2px 8px", fontSize: "0.68rem" }}>
-                                    แบล็คลิสต์ข้อที่ {idx + 1}
-                                  </span>
-                                  
-                                  <div className="rule-edit-actions">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleMoveRule(activeCategory.id, rule.id, "up")}
-                                      disabled={idx === 0}
-                                      className="rule-btn-icon"
-                                      title="เลื่อนขึ้น"
-                                      style={{ opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? "not-allowed" : "pointer" }}
-                                    >
-                                      ▲
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleMoveRule(activeCategory.id, rule.id, "down")}
-                                      disabled={idx === activeCategory.rules.length - 1}
-                                      className="rule-btn-icon"
-                                      title="เลื่อนลง"
-                                      style={{ opacity: idx === activeCategory.rules.length - 1 ? 0.3 : 1, cursor: idx === activeCategory.rules.length - 1 ? "not-allowed" : "pointer" }}
-                                    >
-                                      ▼
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteRule(activeCategory.id, rule.id)}
-                                      className="rule-btn-icon danger"
-                                      title="ลบออก"
-                                    >
-                                      <TrashIcon size={12} />
-                                    </button>
-                                  </div>
-                                </div>
-
-                                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                    <label style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>1. รายละเอียด / เนื้อหาแบล็คลิสต์</label>
-                                    <textarea
-                                      value={description}
-                                      onChange={(e) => handleBlacklistFieldChange(activeCategory.id, rule.id, 0, e.target.value)}
-                                      className="rules-textarea"
-                                      placeholder="ระบุพฤติกรรมความผิด หรือลักษณะแบล็คลิสต์..."
-                                      style={{ minHeight: "60px" }}
-                                    />
-                                  </div>
-                                  
-                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                      <label style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>2. จำนวนเงินที่ต้องจ่ายชำระค่าปรับ (IC)</label>
-                                      <input
-                                        type="text"
-                                        value={fine}
-                                        onChange={(e) => handleBlacklistFieldChange(activeCategory.id, rule.id, 1, e.target.value)}
-                                        className="search-input"
-                                        placeholder="ตัวอย่าง: 100,000 IC"
-                                        style={{ padding: "8px 12px", fontSize: "0.82rem", width: "100%" }}
-                                      />
-                                    </div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                                      <label style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>3. สิ่งที่จะเกิดขึ้น หากไม่ชำระค่าปรับ</label>
-                                      <input
-                                        type="text"
-                                        value={consequence}
-                                        onChange={(e) => handleBlacklistFieldChange(activeCategory.id, rule.id, 2, e.target.value)}
-                                        className="search-input"
-                                        placeholder="ตัวอย่าง: ติดแบล็คลิสต์ 7 วัน / แจ้งความ"
-                                        style={{ padding: "8px 12px", fontSize: "0.82rem", width: "100%" }}
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                                <div className="blacklist-card-title">
-                                  <span style={{ color: "#ef4444" }}>🚫</span>
-                                  {getHighlightedText(description, modalSearchQuery)}
-                                </div>
-                                <div className="blacklist-card-meta">
-                                  <div className="blacklist-meta-row">
-                                    <span className="blacklist-meta-label">จำนวนเงินที่ Blacklist :</span>
-                                    <span className="blacklist-meta-value font-mono" style={{ color: "#ef4444" }}>{fine || "—"}</span>
-                                  </div>
-                                  <div className="blacklist-meta-row">
-                                    <span className="blacklist-meta-label">หากไม่ชำระค่าปรับ :</span>
-                                    <span className="blacklist-meta-value" style={{ color: "#fca5a5" }}>{consequence || "—"}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                filteredRules.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: "0.88rem" }}>
-                    ไม่มีข้อมูลกฏระเบียบที่สอดคล้องกับคำค้นหา
-                  </div>
-                ) : (
-                  filteredRules.map((rule, idx) => (
-                    <div key={rule.id} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      {isEditMode ? (
-                        <div className="rule-edit-card">
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                            <span className="rules-card-badge" style={{ padding: "2px 8px", fontSize: "0.68rem" }}>
-                              ข้อที่ {idx + 1}
-                            </span>
-                            
-                            <div className="rule-edit-actions">
-                              <button
-                                type="button"
-                                onClick={() => handleMoveRule(activeCategory.id, rule.id, "up")}
-                                disabled={idx === 0}
-                                className="rule-btn-icon"
-                                title="เลื่อนขึ้น"
-                                style={{ opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? "not-allowed" : "pointer" }}
-                              >
-                                ▲
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleMoveRule(activeCategory.id, rule.id, "down")}
-                                disabled={idx === activeCategory.rules.length - 1}
-                                className="rule-btn-icon"
-                                title="เลื่อนลง"
-                                style={{ opacity: idx === activeCategory.rules.length - 1 ? 0.3 : 1, cursor: idx === activeCategory.rules.length - 1 ? "not-allowed" : "pointer" }}
-                              >
-                                ▼
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteRule(activeCategory.id, rule.id)}
-                                className="rule-btn-icon danger"
-                                title="ลบออก"
-                              >
-                                <TrashIcon size={12} />
-                              </button>
-                            </div>
-                          </div>
-                          <textarea
-                            value={rule.content}
-                            onChange={(e) => handleRuleContentChange(activeCategory.id, rule.id, e.target.value)}
-                            className="rules-textarea"
-                            placeholder="ระบุกฏระเบียบข้อบังคับ..."
+                    {!isEditMode && (
+                      <div className="rules-sidebar-search-box">
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "6px", fontWeight: "bold" }}>
+                          ค้นหารายชื่อแบล็คลิสต์
+                        </div>
+                        <div className="search-container" style={{ maxWidth: "100%" }}>
+                          <input
+                            type="text"
+                            value={modalSearchQuery}
+                            onChange={(e) => setModalSearchQuery(e.target.value)}
+                            className="search-input"
+                            placeholder="พิมพ์ชื่อหรือกลุ่ม..."
+                            style={{ padding: "8px 12px 8px 34px", fontSize: "0.8rem" }}
                           />
+                          <svg
+                            className="search-icon-svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ left: 10 }}
+                          >
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="rules-sidebar-tip-card">
+                      <div style={{ display: "flex", gap: "6px", alignItems: "flex-start" }}>
+                        <InfoIcon size={14} style={{ color: "#ef4444", marginTop: "2px", flexShrink: 0 }} />
+                        <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                          {isEditMode ? (
+                            <div>
+                              <strong style={{ color: "var(--text-primary)" }}>ข้อความระวังการแก้ไข:</strong>
+                              <ul style={{ margin: "4px 0 0 12px", padding: 0, listStyleType: "disc" }}>
+                                <li>ระบุพฤติกรรม ค่าปรับ และโทษให้ชัดเจน</li>
+                                <li>ระบบจะแบ่งข้อมูลทั้ง 3 ส่วนด้วยการขึ้นบรรทัดใหม่</li>
+                              </ul>
+                            </div>
+                          ) : (
+                            <div>
+                              <strong style={{ color: "var(--text-primary)" }}>ระเบียบการปลดแบล็คลิสต์:</strong>
+                              <p style={{ margin: "4px 0 0 0" }}>ต้องชำระค่าปรับเต็มจำนวน ณ เคาน์เตอร์โรงพยาบาล หรือผ่านระบบโอนเงิน จึงจะได้รับการทำเรื่องปลดตามขั้นตอน</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Blacklist Content Card List */}
+                  <div className="rules-split-right">
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
+                      {filteredRules.length === 0 ? (
+                        <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: "0.88rem" }}>
+                          ไม่มีข้อมูลบัญชีดำที่สอดคล้องกับคำค้นหา
                         </div>
                       ) : (
-                        <div className="rules-modal-item">
-                          <div className="rules-modal-item-num">{idx + 1}</div>
-                          <div className="rules-modal-item-text">
-                            {getHighlightedText(rule.content, modalSearchQuery)}
-                          </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                          {filteredRules.map((rule, idx) => {
+                            const parts = rule.content.split("\n");
+                            const description = parts[0] || "";
+                            const fine = parts[1] || "";
+                            const consequence = parts[2] || "";
+
+                            return (
+                              <div key={rule.id} className="blacklist-card" style={{ margin: 0 }}>
+                                {isEditMode ? (
+                                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "8px" }}>
+                                      <span className="rules-card-badge" style={{ padding: "2px 8px", fontSize: "0.68rem" }}>
+                                        แบล็คลิสต์ข้อที่ {idx + 1}
+                                      </span>
+                                      
+                                      <div className="rule-edit-actions">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleMoveRule(activeCategory.id, rule.id, "up")}
+                                          disabled={idx === 0}
+                                          className="rule-btn-icon"
+                                          title="เลื่อนขึ้น"
+                                          style={{ opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? "not-allowed" : "pointer" }}
+                                        >
+                                          ▲
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleMoveRule(activeCategory.id, rule.id, "down")}
+                                          disabled={idx === activeCategory.rules.length - 1}
+                                          className="rule-btn-icon"
+                                          title="เลื่อนลง"
+                                          style={{ opacity: idx === activeCategory.rules.length - 1 ? 0.3 : 1, cursor: idx === activeCategory.rules.length - 1 ? "not-allowed" : "pointer" }}
+                                        >
+                                          ▼
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteRule(activeCategory.id, rule.id)}
+                                          className="rule-btn-icon danger"
+                                          title="ลบออก"
+                                        >
+                                          <TrashIcon size={12} />
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                        <label style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>1. รายละเอียด / เนื้อหาแบล็คลิสต์</label>
+                                        <textarea
+                                          value={description}
+                                          onChange={(e) => handleBlacklistFieldChange(activeCategory.id, rule.id, 0, e.target.value)}
+                                          className="rules-textarea"
+                                          placeholder="ระบุพฤติกรรมความผิด หรือลักษณะแบล็คลิสต์..."
+                                          style={{ minHeight: "60px" }}
+                                        />
+                                      </div>
+                                      
+                                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                          <label style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>2. จำนวนเงินที่ต้องจ่ายชำระค่าปรับ (IC)</label>
+                                          <input
+                                            type="text"
+                                            value={fine}
+                                            onChange={(e) => handleBlacklistFieldChange(activeCategory.id, rule.id, 1, e.target.value)}
+                                            className="search-input"
+                                            placeholder="ตัวอย่าง: 100,000 IC"
+                                            style={{ padding: "8px 12px", fontSize: "0.82rem", width: "100%" }}
+                                          />
+                                        </div>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                          <label style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>3. สิ่งที่จะเกิดขึ้น หากไม่ชำระค่าปรับ</label>
+                                          <input
+                                            type="text"
+                                            value={consequence}
+                                            onChange={(e) => handleBlacklistFieldChange(activeCategory.id, rule.id, 2, e.target.value)}
+                                            className="search-input"
+                                            placeholder="ตัวอย่าง: ติดแบล็คลิสต์ 7 วัน / แจ้งความ"
+                                            style={{ padding: "8px 12px", fontSize: "0.82rem", width: "100%" }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                    <div className="blacklist-card-title">
+                                      <span style={{ color: "#ef4444" }}>🚫</span>
+                                      {getHighlightedText(description, modalSearchQuery)}
+                                    </div>
+                                    <div className="blacklist-card-meta">
+                                      <div className="blacklist-meta-row">
+                                        <span className="blacklist-meta-label">จำนวนเงินที่ Blacklist :</span>
+                                        <span className="blacklist-meta-value font-mono" style={{ color: "#ef4444" }}>{fine || "—"}</span>
+                                      </div>
+                                      <div className="blacklist-meta-row">
+                                        <span className="blacklist-meta-label">หากไม่ชำระค่าปรับ :</span>
+                                        <span className="blacklist-meta-value" style={{ color: "#fca5a5" }}>{consequence || "—"}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
+                      {isEditMode && (
+                        <button
+                          type="button"
+                          onClick={() => handleAddRule(activeCategory.id)}
+                          className="btn-add-rule"
+                          style={{ marginTop: "6px" }}
+                        >
+                          <PlusIcon size={14} />
+                          เพิ่มรายการบัญชีดำใหม่
+                        </button>
+                      )}
                     </div>
-                  ))
-                )
-              )}
+                  </div>
+                </div>
+              ) : (
+                <div className="rules-split-layout">
+                  {/* Left Column: Side info & search */}
+                  <div className="rules-split-left">
+                    <div className="rules-sidebar-card">
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                        {getCategoryIcon(activeCategory.id, 32)}
+                        <div>
+                          <h4 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-primary)" }}>{activeCategory.name}</h4>
+                          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                            {activeCategory.rules.filter(r => !r.content.startsWith("[HEADER]")).length} ข้อปฏิบัติ
+                          </span>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.4, margin: 0 }}>
+                        {activeCategory.id === "hospital_area" && "ระเบียบข้อบังคับความปลอดภัยและการจัดระเบียบเรียบร้อยภายในพื้นที่ดูแลของโรงพยาบาล"}
+                        {activeCategory.id === "doctor_duty" && "หลักการจรรยาบรรณแพทย์ เครื่องแบบ และแนวทางการปฏิบัติหน้าที่ในการดูแลรักษาคนไข้"}
+                        {activeCategory.id === "case_story" && "กฏเกณฑ์การจัดเวร OP การรับเคสปะทะ สตอรี่สนาม และการดูแลคะแนนสตอรี่"}
+                      </p>
+                    </div>
 
-              {isEditMode && activeCategory.id !== "medical_fees" && (
-                <button
-                  type="button"
-                  onClick={() => handleAddRule(activeCategory.id)}
-                  className="btn-add-rule"
-                  style={{ marginTop: "6px" }}
-                >
-                  <PlusIcon size={14} />
-                  เพิ่มข้อปฏิบัติใหม่
-                </button>
+                    {!isEditMode && (
+                      <div className="rules-sidebar-search-box">
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "6px", fontWeight: "bold" }}>
+                          ค้นหาภายในหมวดหมู่นี้
+                        </div>
+                        <div className="search-container" style={{ maxWidth: "100%" }}>
+                          <input
+                            type="text"
+                            value={modalSearchQuery}
+                            onChange={(e) => setModalSearchQuery(e.target.value)}
+                            className="search-input"
+                            placeholder="พิมพ์คำค้นหา..."
+                            style={{ padding: "8px 12px 8px 34px", fontSize: "0.8rem" }}
+                          />
+                          <svg
+                            className="search-icon-svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ left: 10 }}
+                          >
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="rules-sidebar-tip-card">
+                      <div style={{ display: "flex", gap: "6px", alignItems: "flex-start" }}>
+                        <InfoIcon size={14} style={{ color: "var(--accent-light)", marginTop: "2px", flexShrink: 0 }} />
+                        <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                          {isEditMode ? (
+                            <div>
+                              <strong style={{ color: "var(--text-primary)" }}>โหมดผู้ดูแลระบบ:</strong>
+                              <ul style={{ margin: "4px 0 0 12px", padding: 0, listStyleType: "disc" }}>
+                                <li>หัวข้อกลุ่มสีฟ้าจะแยกประเภทข้อมูลในหน้าการอ่าน</li>
+                                <li>คุณสามารถลากสลับตำแหน่งการจัดลำดับได้</li>
+                                <li>อย่าลืมกดปุ่ม "บันทึกข้อมูล" หลังจากแก้ไขเสร็จ</li>
+                              </ul>
+                            </div>
+                          ) : (
+                            <div>
+                              <strong style={{ color: "var(--text-primary)" }}>คำแนะนำการใช้งาน:</strong>
+                              <p style={{ margin: "4px 0 0 0" }}>คลิกที่แถบหัวข้อกลุ่มเพื่อย่อหรือขยายเนื้อหากฎระเบียบ การสืบค้นจะทำการเปิดหัวข้อที่พบคำค้นหาให้โดยอัตโนมัติ</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Grouped Accordions or Flat edit cards */}
+                  <div className="rules-split-right">
+                    {isEditMode ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+                        {activeCategory.rules.map((rule, idx) => {
+                          const isHeader = rule.content.startsWith("[HEADER]");
+                          const displayContent = isHeader
+                            ? rule.content.replace("[HEADER]", "").trim()
+                            : rule.content;
+
+                          return (
+                            <div key={rule.id} className={`rule-edit-card ${isHeader ? "rule-edit-header-card" : ""}`} style={{ margin: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                                <span className="rules-card-badge" style={{ 
+                                  padding: "2px 8px", 
+                                  fontSize: "0.68rem",
+                                  background: isHeader ? "rgba(59, 130, 246, 0.18)" : "rgba(255, 255, 255, 0.05)",
+                                  color: isHeader ? "#93c5fd" : "var(--text-secondary)",
+                                  borderColor: isHeader ? "rgba(59, 130, 246, 0.3)" : "transparent",
+                                  borderWidth: "1px",
+                                  borderStyle: "solid"
+                                }}>
+                                  {isHeader ? "📂 หัวข้อกลุ่ม (Accordion Header)" : `ข้อที่ ${idx + 1}`}
+                                </span>
+                                
+                                <div className="rule-edit-actions" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newContent = isHeader
+                                        ? displayContent
+                                        : "[HEADER] " + displayContent;
+                                      handleRuleContentChange(activeCategory.id, rule.id, newContent);
+                                    }}
+                                    className="rule-btn-icon"
+                                    title={isHeader ? "แปลงเป็นข้อปฏิบัติทั่วไป" : "แปลงเป็นหัวข้อกลุ่ม (Accordion)"}
+                                    style={{ fontSize: "0.7rem", padding: "0 8px", width: "auto", height: "24px", display: "flex", alignItems: "center", gap: "4px", background: "rgba(255,255,255,0.04)" }}
+                                  >
+                                    {isHeader ? "📄 แปลงเป็นข้อธรรมดา" : "📂 แปลงเป็นหัวข้อ"}
+                                  </button>
+                                  
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveRule(activeCategory.id, rule.id, "up")}
+                                    disabled={idx === 0}
+                                    className="rule-btn-icon"
+                                    title="เลื่อนขึ้น"
+                                    style={{ opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? "not-allowed" : "pointer" }}
+                                  >
+                                    ▲
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveRule(activeCategory.id, rule.id, "down")}
+                                    disabled={idx === activeCategory.rules.length - 1}
+                                    className="rule-btn-icon"
+                                    title="เลื่อนลง"
+                                    style={{ opacity: idx === activeCategory.rules.length - 1 ? 0.3 : 1, cursor: idx === activeCategory.rules.length - 1 ? "not-allowed" : "pointer" }}
+                                  >
+                                    ▼
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteRule(activeCategory.id, rule.id)}
+                                    className="rule-btn-icon danger"
+                                    title="ลบออก"
+                                  >
+                                    <TrashIcon size={12} />
+                                  </button>
+                                </div>
+                              </div>
+                              <textarea
+                                value={displayContent}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  handleRuleContentChange(activeCategory.id, rule.id, isHeader ? "[HEADER] " + val : val);
+                                }}
+                                className="rules-textarea"
+                                placeholder={isHeader ? "ระบุชื่อหัวข้อกลุ่มข้อปฏิบัติ..." : "ระบุกฏระเบียบข้อบังคับ..."}
+                                style={{ minHeight: isHeader ? "40px" : "80px" }}
+                              />
+                            </div>
+                          );
+                        })}
+
+                        <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleAddRule(activeCategory.id)}
+                            className="btn-add-rule"
+                            style={{ flex: 1, margin: 0, justifyContent: "center" }}
+                          >
+                            <PlusIcon size={14} />
+                            เพิ่มข้อปฏิบัติใหม่
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAddHeaderRule(activeCategory.id)}
+                            className="btn-add-rule"
+                            style={{ flex: 1, margin: 0, justifyContent: "center", background: "rgba(59, 130, 246, 0.1)", border: "1px solid rgba(59, 130, 246, 0.2)", color: "#93c5fd" }}
+                          >
+                            <FolderIcon size={14} />
+                            เพิ่มหัวข้อกลุ่มใหม่
+                          </button>
+                        </div>
+                      </div>
+                    ) : (() => {
+                      // Filter first but KEEP ALL HEADERS
+                      const filteredGeneralRules = activeCategory.rules.filter((rule) => {
+                        if (rule.content.startsWith("[HEADER]")) {
+                          return true;
+                        }
+                        return rule.content.toLowerCase().includes(modalSearchQuery.toLowerCase());
+                      });
+
+                      const groups = groupRulesByHeader(filteredGeneralRules);
+                      const visibleGroups = groups.filter(g => g.rules.length > 0 || g.headerRuleId);
+
+                      if (visibleGroups.length === 0 || (visibleGroups.every(g => g.rules.length === 0) && modalSearchQuery)) {
+                        return (
+                          <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: "0.88rem" }}>
+                            ไม่พบข้อมูลกฏระเบียบที่สอดคล้องกับคำค้นหา
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+                          {visibleGroups.map((group, gIdx) => {
+                            if (modalSearchQuery && group.rules.length === 0) return null;
+
+                            const isExpanded = modalSearchQuery.trim() !== ""
+                              ? true
+                              : (gIdx === 0
+                                  ? expandedGroupTitles[group.header] !== false
+                                  : expandedGroupTitles[group.header] === true);
+
+                            return (
+                              <div key={group.headerRuleId || `g_${gIdx}`} className={`rules-accordion-item ${isExpanded ? "expanded" : ""}`}>
+                                <div 
+                                  className="rules-accordion-header" 
+                                  onClick={() => toggleGroup(group.header, gIdx)}
+                                  style={{ background: "rgba(15, 23, 42, 0.3)" }}
+                                >
+                                  <div className="rules-accordion-title">
+                                    <span>📁</span>
+                                    <span>{group.header}</span>
+                                  </div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <span className="rules-card-badge" style={{ fontSize: "0.68rem" }}>
+                                      {group.rules.length} ข้อปฏิบัติ
+                                    </span>
+                                    <span className="rules-accordion-chevron" style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+                                  </div>
+                                </div>
+
+                                {isExpanded && (
+                                  <div className="rules-accordion-content" style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "16px 20px" }}>
+                                    {group.rules.map((rule, rIdx) => (
+                                      <div key={rule.id} className="rules-modal-item" style={{ border: "none", background: "rgba(15, 23, 42, 0.15)", margin: 0 }}>
+                                        <div className="rules-modal-item-num">{rIdx + 1}</div>
+                                        <div className="rules-modal-item-text">
+                                          {getHighlightedText(rule.content, modalSearchQuery)}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
               )}
             </div>
 

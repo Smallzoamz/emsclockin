@@ -3066,9 +3066,134 @@ body::before {
     stroke-dashoffset: -100;
   }
 }
+/* Wide Modal Split Layout */
+.rules-split-layout {
+  display: flex;
+  flex-direction: row;
+  gap: 28px;
+  width: 100%;
+}
 
+.rules-split-left {
+  flex: 1 1 35%;
+  max-width: 35%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
+.rules-split-right {
+  flex: 1 1 65%;
+  max-width: 65%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
 
+/* Custom Scrollbar for Right Split Column */
+.rules-split-right::-webkit-scrollbar {
+  width: 6px;
+}
+.rules-split-right::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.01);
+  border-radius: 4px;
+}
+.rules-split-right::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+.rules-split-right::-webkit-scrollbar-thumb:hover {
+  background: var(--border-glow);
+}
 
+@media (max-width: 900px) {
+  .rules-split-layout {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .rules-split-left,
+  .rules-split-right {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+  .rules-split-right {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
 
+/* Accordion Component */
+.rules-accordion-item {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.01);
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rules-accordion-item:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.rules-accordion-item.expanded {
+  border-color: var(--border-glow);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), 0 0 15px color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.rules-accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(15, 23, 42, 0.2);
+  transition: all 0.2s ease;
+}
+
+.rules-accordion-header:hover {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.rules-accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.rules-accordion-chevron {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--text-muted);
+}
+
+.rules-accordion-item.expanded .rules-accordion-chevron {
+  transform: rotate(180deg);
+  color: var(--accent-light);
+}
+
+.rules-accordion-content {
+  background: rgba(6, 10, 19, 0.25);
+  border-top: 1px solid var(--border-subtle);
+  padding: 16px 20px;
+  animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Edit Mode Header Card styling */
+.rule-edit-header-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(6, 182, 212, 0.03) 100%) !important;
+  border: 1px solid rgba(59, 130, 246, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.05) !important;
+}
 
