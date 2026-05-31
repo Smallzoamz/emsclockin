@@ -3006,12 +3006,12 @@ body::before {
   fill: #ffffff;
   stroke: var(--vertex-stroke-color);
   stroke-width: 1.5;
-  transition: r 0.2s ease;
+  transition: transform 0.15s ease, filter 0.15s ease;
   cursor: pointer;
 }
 
 .editor-vertex-point:hover {
-  r: 3.5;
+  filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.8));
 }
 
 .editor-edge-line {
