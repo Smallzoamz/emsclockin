@@ -20,6 +20,7 @@ import {
   InfoIcon,
   UploadIcon
 } from "@/components/Icons";
+import polygonClipping from "polygon-clipping";
 
 interface Rule {
   id: string;
@@ -90,13 +91,155 @@ export default function RulesPage() {
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [selectedDrawZone, setSelectedDrawZone] = useState<string>("ในเมือง");
-  const [drawMode, setDrawMode] = useState<"polygon" | "pin">("polygon");
+  const [drawMode, setDrawMode] = useState<"polygon" | "pencil" | "pin">("polygon");
   const [newZoneName, setNewZoneName] = useState("");
   const [newZoneColor, setNewZoneColor] = useState("blue");
   const [zoomScale, setZoomScale] = useState(1);
   const [selectedVertexIndex, setSelectedVertexIndex] = useState<number | null>(null);
   const [draggedVertexIndex, setDraggedVertexIndex] = useState<number | null>(null);
   const [clickedCoord, setClickedCoord] = useState<{ x: number; y: number; label: string } | null>(null);
+
+  // States for freehand pencil drawing
+  const [isDrawingFreehand, setIsDrawingFreehand] = useState(false);
+  const [freehandPoints, setFreehandPoints] = useState<{ x: number; y: number }[]>([]);
+
+  // Helpers for coordinates parsing and Douglas-Peucker simplification
+  const parsePoints = (pointsStr: string): [number, number][] => {
+    return pointsStr
+      .split(" ")
+      .filter(Boolean)
+      .map(p => {
+        const [x, y] = p.split(",").map(Number);
+        return [x, y] as [number, number];
+      });
+  };
+
+  const parseClosedPoly = (pointsStr: string): [number, number][] => {
+    const pts = parsePoints(pointsStr);
+    if (pts.length > 2) {
+      const first = pts[0];
+      const last = pts[pts.length - 1];
+      if (first[0] !== last[0] || first[1] !== last[1]) {
+        pts.push([first[0], first[1]]);
+      }
+    }
+    return pts;
+  };
+
+  const serializeOpenPoly = (pts: [number, number][]): string => {
+    const openPts = [...pts];
+    if (openPts.length > 1) {
+      const first = openPts[0];
+      const last = openPts[openPts.length - 1];
+      if (first[0] === last[0] && first[1] === last[1]) {
+        openPts.pop();
+      }
+    }
+    const rounded = openPts.map(p => [
+      Math.round(p[0] * 10) / 10,
+      Math.round(p[1] * 10) / 10
+    ]);
+    return rounded.map(p => `${p[0]},${p[1]}`).join(" ");
+  };
+
+  // Douglas-Peucker line simplification algorithm
+  const getSqSegDist = (p: [number, number], p1: [number, number], p2: [number, number]): number => {
+    let x = p1[0];
+    let y = p1[1];
+    let dx = p2[0] - x;
+    let dy = p2[1] - y;
+    if (dx !== 0 || dy !== 0) {
+      const t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
+      if (t > 1) {
+        x = p2[0];
+        y = p2[1];
+      } else if (t > 0) {
+        x += dx * t;
+        y += dy * t;
+      }
+    }
+    dx = p[0] - x;
+    dy = p[1] - y;
+    return dx * dx + dy * dy;
+  };
+
+  const simplifyDPStep = (points: [number, number][], first: number, last: number, sqTolerance: number, simplified: [number, number][]) => {
+    let maxSqDist = sqTolerance;
+    let index = -1;
+    for (let i = first + 1; i < last; i++) {
+      const sqDist = getSqSegDist(points[i], points[first], points[last]);
+      if (sqDist > maxSqDist) {
+        index = i;
+        maxSqDist = sqDist;
+      }
+    }
+    if (maxSqDist > sqTolerance && index !== -1) {
+      if (index - first > 1) simplifyDPStep(points, first, index, sqTolerance, simplified);
+      simplified.push(points[index]);
+      if (last - index > 1) simplifyDPStep(points, index, last, sqTolerance, simplified);
+    }
+  };
+
+  const simplifyDouglasPeucker = (points: [number, number][], tolerance = 0.4): [number, number][] => {
+    if (points.length <= 2) return points;
+    const sqTolerance = tolerance * tolerance;
+    const last = points.length - 1;
+    const simplified: [number, number][] = [points[0]];
+    simplifyDPStep(points, 0, last, sqTolerance, simplified);
+    simplified.push(points[last]);
+    return simplified;
+  };
+
+  // Overlap auto subtraction clipping handler
+  const handleAutoClipOverlaps = async () => {
+    const medCat = (isEditMode ? editedRules : rules)?.categories.find(c => c.id === "medical_fees") as any;
+    if (!medCat) return;
+    const zones = medCat.zones || defaultZones;
+    const zoneNames = Object.keys(zones);
+
+    const currentPointsStr = getZonePoints(selectedDrawZone);
+    if (!currentPointsStr || currentPointsStr.split(" ").filter(Boolean).length < 3) {
+      showToast("พื้นที่ปัจจุบันต้องมีจุดพิกัดอย่างน้อย 3 จุดเพื่อใช้คำนวณตัดส่วนทับซ้อน", "error");
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: "ตัดพื้นที่ทับซ้อนอัตโนมัติ",
+      message: `ระบบจะคำนวณและตัดพื้นที่ในเขต "${selectedDrawZone}" ที่ซ้อนทับกับโซนอื่นออกอัตโนมัติ ยืนยันการทำงานหรือไม่?`,
+      variant: "warning",
+      confirmText: "ตัดพื้นที่ทับซ้อน",
+      cancelText: "ยกเลิก"
+    });
+    if (!confirmed) return;
+
+    let currentPoly = [parseClosedPoly(currentPointsStr)];
+    let clippedCount = 0;
+
+    for (const otherZoneName of zoneNames) {
+      if (otherZoneName === selectedDrawZone) continue;
+      const otherPointsStr = getZonePoints(otherZoneName);
+      if (!otherPointsStr || otherPointsStr.split(" ").filter(Boolean).length < 3) continue;
+
+      const otherPoly = [parseClosedPoly(otherPointsStr)];
+      try {
+        const diffResult = polygonClipping.difference(currentPoly as any, otherPoly as any);
+        if (diffResult && diffResult.length > 0 && diffResult[0].length > 0) {
+          currentPoly = diffResult[0] as any;
+          clippedCount++;
+        }
+      } catch (err) {
+        console.error("Clipping difference error with zone: " + otherZoneName, err);
+      }
+    }
+
+    if (clippedCount > 0) {
+      const newPointsStr = serializeOpenPoly(currentPoly[0]);
+      updateZonePoints(selectedDrawZone, newPointsStr);
+      showToast(`ลบส่วนซ้อนทับสำเร็จ (คำนวณขอบร่วม ${clippedCount} เขต)`, "success");
+    } else {
+      showToast("ไม่พบพิกัดส่วนใดซ้อนทับกับเขตอื่น ๆ", "success");
+    }
+  };
   
   const mapScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const wheelHandlerRef = useRef<((e: WheelEvent) => void) | null>(null);
@@ -441,8 +584,79 @@ export default function RulesPage() {
     return inside;
   };
 
+  const [snappedVertex, setSnappedVertex] = useState<{ x: number; y: number } | null>(null);
+
+  const getSnappedCoords = (x: number, y: number): { x: number; y: number; isSnapped: boolean } => {
+    const medCat = (isEditMode ? editedRules : rules)?.categories.find(c => c.id === "medical_fees") as any;
+    if (!medCat) return { x, y, isSnapped: false };
+    const zones = medCat.zones || defaultZones;
+    
+    let closestPt = { x, y };
+    let minDistance = Infinity;
+    
+    for (const zoneName of Object.keys(zones)) {
+      if (zoneName === selectedDrawZone) continue;
+      const pointsStr = zones[zoneName] as string;
+      if (!pointsStr) continue;
+      
+      const pts = pointsStr.split(" ").filter(Boolean).map((p: string) => {
+        const [px, py] = p.split(",").map(Number);
+        return { x: px, y: py };
+      });
+      
+      for (const pt of pts) {
+        const dist = Math.sqrt((pt.x - x) ** 2 + (pt.y - y) ** 2);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestPt = pt;
+        }
+      }
+    }
+    
+    if (minDistance < 1.5) {
+      return { x: closestPt.x, y: closestPt.y, isSnapped: true };
+    }
+    
+    return { x, y, isSnapped: false };
+  };
+
+  const handleMapMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDrawingMode || !isEditMode || drawMode !== "pencil") return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    
+    let x = Math.round((clickX / rect.width) * 100 * 10) / 10;
+    let y = Math.round((clickY / rect.height) * 133.3 * 10) / 10;
+    
+    const snapped = getSnappedCoords(x, y);
+    if (snapped.isSnapped) {
+      x = snapped.x;
+      y = snapped.y;
+      setSnappedVertex({ x, y });
+    } else {
+      setSnappedVertex(null);
+    }
+    
+    setIsDrawingFreehand(true);
+    setFreehandPoints([{ x, y }]);
+  };
+
+  const handleMapMouseUp = () => {
+    if (!isDrawingFreehand) return;
+    setIsDrawingFreehand(false);
+    setSnappedVertex(null);
+    if (freehandPoints.length > 2) {
+      const ptsArray = freehandPoints.map(p => [p.x, p.y] as [number, number]);
+      const simplified = simplifyDouglasPeucker(ptsArray, 0.4);
+      const serialized = serializeOpenPoly(simplified);
+      updateZonePoints(selectedDrawZone, serialized);
+    }
+    setFreehandPoints([]);
+  };
+
   const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDrawingMode || !isEditMode) return;
+    if (!isDrawingMode || !isEditMode || drawMode === "pencil") return;
     
     // If we clicked directly on a vertex, don't add a new point
     if ((e.target as HTMLElement).tagName === "circle" && (e.target as HTMLElement).classList.contains("editor-vertex-point")) {
@@ -453,8 +667,14 @@ export default function RulesPage() {
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    const x = Math.round((clickX / rect.width) * 100 * 10) / 10;
-    const y = Math.round((clickY / rect.height) * 133.3 * 10) / 10;
+    let x = Math.round((clickX / rect.width) * 100 * 10) / 10;
+    let y = Math.round((clickY / rect.height) * 133.3 * 10) / 10;
+
+    const snapped = getSnappedCoords(x, y);
+    if (snapped.isSnapped) {
+      x = snapped.x;
+      y = snapped.y;
+    }
 
     if (drawMode === "polygon") {
       const currentPointsStr = getZonePoints(selectedDrawZone);
@@ -468,21 +688,41 @@ export default function RulesPage() {
   };
 
   const handleMapMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDrawingMode || draggedVertexIndex === null || !isEditMode) return;
+    if (!isDrawingMode || !isEditMode) return;
+    
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    const x = Math.min(Math.max(Math.round((clickX / rect.width) * 100 * 10) / 10, 0), 100);
-    const y = Math.min(Math.max(Math.round((clickY / rect.height) * 133.3 * 10) / 10, 0), 133.3);
+    let x = Math.min(Math.max(Math.round((clickX / rect.width) * 100 * 10) / 10, 0), 100);
+    let y = Math.min(Math.max(Math.round((clickY / rect.height) * 133.3 * 10) / 10, 0), 133.3);
 
-    const currentPointsStr = getZonePoints(selectedDrawZone);
-    if (!currentPointsStr) return;
-    const points = currentPointsStr.split(" ").filter(Boolean);
-    
-    if (draggedVertexIndex >= 0 && draggedVertexIndex < points.length) {
-      points[draggedVertexIndex] = `${x},${y}`;
-      updateZonePoints(selectedDrawZone, points.join(" "));
+    const snapped = getSnappedCoords(x, y);
+    if (snapped.isSnapped) {
+      x = snapped.x;
+      y = snapped.y;
+      setSnappedVertex({ x, y });
+    } else {
+      setSnappedVertex(null);
+    }
+
+    if (isDrawingFreehand && drawMode === "pencil") {
+      const lastPt = freehandPoints[freehandPoints.length - 1];
+      if (!lastPt || Math.abs(lastPt.x - x) > 0.3 || Math.abs(lastPt.y - y) > 0.3) {
+        setFreehandPoints(prev => [...prev, { x, y }]);
+      }
+      return;
+    }
+
+    if (draggedVertexIndex !== null) {
+      const currentPointsStr = getZonePoints(selectedDrawZone);
+      if (!currentPointsStr) return;
+      const points = currentPointsStr.split(" ").filter(Boolean);
+      
+      if (draggedVertexIndex >= 0 && draggedVertexIndex < points.length) {
+        points[draggedVertexIndex] = `${x},${y}`;
+        updateZonePoints(selectedDrawZone, points.join(" "));
+      }
     }
   };
 
@@ -2526,6 +2766,9 @@ export default function RulesPage() {
               >
                 <div 
                   style={{ position: "relative", display: "inline-block", cursor: "crosshair" }}
+                  onMouseDown={handleMapMouseDown}
+                  onMouseUp={handleMapMouseUp}
+                  onMouseLeave={handleMapMouseUp}
                   onClick={handleMapClick}
                   onMouseMove={handleMapMouseMove}
                 >
@@ -2550,6 +2793,8 @@ export default function RulesPage() {
                     
                     const activeClipZone = hoveredZone || selectedDrawZone;
                     const activeZonePoints = activeClipZone ? getZonePoints(activeClipZone) : null;
+                    const selectedColorKey = getZoneColor(selectedDrawZone);
+                    const selectedColorHex = colorMap[selectedColorKey]?.hex || "#3b82f6";
 
                     return (
                       <svg
@@ -2585,6 +2830,33 @@ export default function RulesPage() {
                             style={{
                               filter: "brightness(1.15) contrast(1.05)",
                               pointerEvents: "none"
+                            }}
+                          />
+                        )}
+
+                        {/* Freehand Pencil Drawing Preview Path */}
+                        {drawMode === "pencil" && freehandPoints.length > 1 && (
+                          <polyline
+                            points={freehandPoints.map(p => `${p.x},${p.y}`).join(" ")}
+                            fill="none"
+                            stroke={selectedColorHex}
+                            strokeWidth={1.2 / zoomScale}
+                            strokeDasharray={`${2.0 / zoomScale},${1.5 / zoomScale}`}
+                          />
+                        )}
+
+                        {/* Snap Target Glow Helper */}
+                        {snappedVertex && (
+                          <circle
+                            cx={snappedVertex.x}
+                            cy={snappedVertex.y}
+                            r={3.0 / zoomScale}
+                            fill="none"
+                            stroke="#10b981"
+                            strokeWidth={1.0 / zoomScale}
+                            style={{
+                              filter: "drop-shadow(0 0 4px #10b981)",
+                              opacity: 0.95
                             }}
                           />
                         )}
@@ -2882,18 +3154,31 @@ export default function RulesPage() {
                     {/* Mode Selector */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px", textAlign: "left" }}>
                       <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>เลือกโหมดการปรับแต่งพิกัด:</label>
-                      <div style={{ display: "flex", gap: "4px" }}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDrawMode("polygon");
-                            setSelectedVertexIndex(null);
-                          }}
-                          className={"editor-btn editor-btn-outline " + (drawMode === "polygon" ? "active" : "")}
-                          style={{ flex: 1, justifyContent: "center", fontSize: "0.68rem" }}
-                        >
-                          🔴 ลากเส้นขอบ (Polygon)
-                        </button>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <div style={{ display: "flex", gap: "4px" }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDrawMode("polygon");
+                              setSelectedVertexIndex(null);
+                            }}
+                            className={"editor-btn editor-btn-outline " + (drawMode === "polygon" ? "active" : "")}
+                            style={{ flex: 1, justifyContent: "center", fontSize: "0.68rem" }}
+                          >
+                            🔴 คลิกจุด (Click)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDrawMode("pencil");
+                              setSelectedVertexIndex(null);
+                            }}
+                            className={"editor-btn editor-btn-outline " + (drawMode === "pencil" ? "active" : "")}
+                            style={{ flex: 1, justifyContent: "center", fontSize: "0.68rem" }}
+                          >
+                            ✏️ ดินสอขีดอิสระ (Pencil)
+                          </button>
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
@@ -2901,9 +3186,9 @@ export default function RulesPage() {
                             setSelectedVertexIndex(null);
                           }}
                           className={"editor-btn editor-btn-outline " + (drawMode === "pin" ? "active" : "")}
-                          style={{ flex: 1, justifyContent: "center", fontSize: "0.68rem" }}
+                          style={{ width: "100%", justifyContent: "center", fontSize: "0.68rem" }}
                         >
-                          📍 ปักหมุด/ป้าย (Pin)
+                          📍 ปักหมุด/ป้ายชื่อโซน (Pin)
                         </button>
                       </div>
                     </div>
@@ -2967,6 +3252,23 @@ export default function RulesPage() {
                           ↩️ ย้อนกลับ 1 จุด
                         </button>
                       )}
+                      {(drawMode === "polygon" || drawMode === "pencil") && (
+                        <button
+                          type="button"
+                          onClick={handleAutoClipOverlaps}
+                          className="editor-btn editor-btn-outline"
+                          style={{ 
+                            flex: drawMode === "polygon" ? "1 0 calc(50% - 4px)" : "1 0 100%", 
+                            justifyContent: "center", 
+                            color: "var(--accent)",
+                            borderColor: "rgba(var(--accent-rgb), 0.35)",
+                            boxShadow: "0 0 8px rgba(var(--accent-rgb), 0.15)"
+                          }}
+                          title="คำนวณลบเขตที่ทับซ้อนกับโซนอื่นออกอัตโนมัติ"
+                        >
+                          ✂️ ตัดพื้นที่ทับซ้อนอัตโนมัติ
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={handleClearPoints}
@@ -3000,11 +3302,21 @@ export default function RulesPage() {
                     >
                       {drawMode === "polygon" ? (
                         <span>
-                          💡 <strong>คู่มือลากเส้นขอบ (Polygon):</strong>
+                          💡 <strong>คู่มือคลิกจุดพิกัด (Polygon Click):</strong>
                           <ul style={{ margin: "4px 0 0 0", paddingLeft: "14px" }}>
                             <li>คลิกแผนที่เพื่อเพิ่มจุดพิกัดเชื่อมเส้นขอบ</li>
-                            <li><strong>คลิกลากที่จุดพิกัด</strong> เพื่อย้ายตำแหน่งพิกัดได้</li>
-                            <li><strong>ดับเบิ้ลคลิก</strong> ที่จุดพิกัด หรือกดปุ่ม <code>Backspace</code>/<code>Delete</code> บนคีย์บอร์ดเพื่อลบจุด</li>
+                            <li><strong>จุดจะดูดติด (Snap)</strong> พิกัดโซนอื่นทันทีเมื่อคลิกใกล้เคียง</li>
+                            <li>คลิกลากที่จุดพิกัดเพื่อย้ายตำแหน่งพิกัด (รองรับการดูดติดแม่เหล็ก)</li>
+                            <li>ดับเบิ้ลคลิกเพื่อลบจุด</li>
+                          </ul>
+                        </span>
+                      ) : drawMode === "pencil" ? (
+                        <span>
+                          💡 <strong>คู่มือลากเขียนอิสระ (Pencil):</strong>
+                          <ul style={{ margin: "4px 0 0 0", paddingLeft: "14px" }}>
+                            <li>กดเมาส์ค้างไว้แล้ว **ลากวาดเขียนไปตามขอบแผนที่** ได้อิสระ</li>
+                            <li>เมื่อปล่อยเมาส์ ระบบจะแปลงแนวเส้นเป็นพิกัดโซนและลดจุดส่วนเกินออกให้พอดี</li>
+                            <li>จุดจะดูดติดพิกัดรอยต่อโซนอื่นเมื่อลากเมาส์ไปใกล้ (Magnet Snap)</li>
                           </ul>
                         </span>
                       ) : (
