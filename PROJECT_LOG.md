@@ -233,5 +233,8 @@
 
 ## [2026-05-31 08:49] | File: src/app/dashboard/rules/page.tsx | Line: 2781 | Keyword: Prevent Browser Image Drag | Status: ✅ Complete | Change: Disabled native browser image drag-and-drop operations on the canvas map image by adding draggable={false} and onDragStart preventDefault, allowing fluid freehand mouse-drag drawing in Pencil mode.
 
+## [2026-05-31 08:57] | File: src/app/dashboard/rules/page.tsx | Line: 139 | Keyword: High-Precision Coordinate Drawing | Status: ✅ Complete | Change: Increased map coordinate precision from 1 decimal place to 2 decimal places. Lowered freehand drawing cursor move detection threshold from 0.3 down to 0.05 SVG units, and scaled Douglas-Peucker simplify tolerance dynamically (Math.max(0.04, 0.16 / zoomScale)) to preserve fine curves and jagged edges when drawing and zooming.
+
+
 
 

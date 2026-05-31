@@ -137,8 +137,8 @@ export default function RulesPage() {
       }
     }
     const rounded = openPts.map(p => [
-      Math.round(p[0] * 10) / 10,
-      Math.round(p[1] * 10) / 10
+      Math.round(p[0] * 100) / 100,
+      Math.round(p[1] * 100) / 100
     ]);
     return rounded.map(p => `${p[0]},${p[1]}`).join(" ");
   };
@@ -632,8 +632,8 @@ export default function RulesPage() {
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
     
-    let x = Math.round((clickX / rect.width) * 100 * 10) / 10;
-    let y = Math.round((clickY / rect.height) * 133.3 * 10) / 10;
+    let x = Math.round((clickX / rect.width) * 100 * 100) / 100;
+    let y = Math.round((clickY / rect.height) * 133.3 * 100) / 100;
     
     const snapped = getSnappedCoords(x, y, e.shiftKey || e.ctrlKey);
     if (snapped.isSnapped) {
@@ -654,7 +654,8 @@ export default function RulesPage() {
     setSnappedVertex(null);
     if (freehandPoints.length > 2) {
       const ptsArray = freehandPoints.map(p => [p.x, p.y] as [number, number]);
-      const simplified = simplifyDouglasPeucker(ptsArray, 0.4);
+      const tolerance = Math.max(0.04, 0.16 / zoomScale);
+      const simplified = simplifyDouglasPeucker(ptsArray, tolerance);
       const serialized = serializeOpenPoly(simplified);
       updateZonePoints(selectedDrawZone, serialized);
     }
@@ -673,8 +674,8 @@ export default function RulesPage() {
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    let x = Math.round((clickX / rect.width) * 100 * 10) / 10;
-    let y = Math.round((clickY / rect.height) * 133.3 * 10) / 10;
+    let x = Math.round((clickX / rect.width) * 100 * 100) / 100;
+    let y = Math.round((clickY / rect.height) * 133.3 * 100) / 100;
 
     const snapped = getSnappedCoords(x, y, e.shiftKey || e.ctrlKey);
     if (snapped.isSnapped) {
@@ -700,8 +701,8 @@ export default function RulesPage() {
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    let x = Math.min(Math.max(Math.round((clickX / rect.width) * 100 * 10) / 10, 0), 100);
-    let y = Math.min(Math.max(Math.round((clickY / rect.height) * 133.3 * 10) / 10, 0), 133.3);
+    let x = Math.min(Math.max(Math.round((clickX / rect.width) * 100 * 100) / 100, 0), 100);
+    let y = Math.min(Math.max(Math.round((clickY / rect.height) * 133.3 * 100) / 100, 0), 133.3);
 
     const snapped = getSnappedCoords(x, y, e.shiftKey || e.ctrlKey);
     if (snapped.isSnapped) {
@@ -714,7 +715,7 @@ export default function RulesPage() {
 
     if (isDrawingFreehand && drawMode === "pencil") {
       const lastPt = freehandPoints[freehandPoints.length - 1];
-      if (!lastPt || Math.abs(lastPt.x - x) > 0.3 || Math.abs(lastPt.y - y) > 0.3) {
+      if (!lastPt || Math.abs(lastPt.x - x) > 0.05 || Math.abs(lastPt.y - y) > 0.05) {
         setFreehandPoints(prev => [...prev, { x, y }]);
       }
       return;
@@ -1876,8 +1877,8 @@ export default function RulesPage() {
                                 const rect = e.currentTarget.getBoundingClientRect();
                                 const clickX = e.clientX - rect.left;
                                 const clickY = e.clientY - rect.top;
-                                const x = Math.round((clickX / rect.width) * 100 * 10) / 10;
-                                const y = Math.round((clickY / rect.height) * 133.3 * 10) / 10;
+                                const x = Math.round((clickX / rect.width) * 100 * 100) / 100;
+                                const y = Math.round((clickY / rect.height) * 133.3 * 100) / 100;
 
                                 // Find which zone is clicked
                                 const medCat = rules?.categories.find(c => c.id === "medical_fees") as any;
