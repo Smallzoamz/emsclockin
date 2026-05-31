@@ -243,3 +243,6 @@
 
 ## [2026-05-31 09:41] | File: src/app/dashboard/rules/page.tsx, src/app/globals.css | Line: 495, 2093, 3056, 2915 | Keyword: Main/Second Pin Animations & Zoom Bypass | Status: ✅ Complete | Change: Classified pins into Main Location (ในเมือง, นอกเมือง, เมืองบน) and Second Location (custom zones). Appended CSS keyframe animations for 'pinBounce' (y-axis translation) and 'pinWiggle' (rotation with bottom-center anchor). Updated SVG pin render components to apply correct map-pin animation classes on hover. Modified getMapTransform to return scale(1) when a Main Location is hovered, disabling the camera zoom effect for main locations.
 
+## [2026-05-31 09:52] | File: src/app/dashboard/rules/page.tsx | Line: 2085, 2125, 3050, 3088 | Keyword: Upscale Markers and Compact Tooltips | Status: ✅ Complete | Change: Increased marker pin dimensions by 120% (to 9.0x13.4 units) and adjusted the image vertical rendering offset (y = pin.y - h * 0.90) to align the bottom tip/shadow perfectly with target coordinate dots. Shrank the hover tooltip size (width = zoneName.length * 3.6 + 4, height = 3.2, font size = 2.0px) for cleaner, less intrusive text bubble overlays.
+
+

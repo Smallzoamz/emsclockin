@@ -2084,8 +2084,8 @@ export default function RulesPage() {
                                     const colorKey = getZoneColor(zoneName);
                                     const colorObj = colorMap[colorKey] || colorMap.blue;
                                     const markerUrl = getZoneMarkerUrl(zoneName);
-                                    const w = 7.5;
-                                    const h = 11.2;
+                                    const w = 9.0;
+                                    const h = 13.4;
                                     const isActive = hoveredZone === zoneName;
                                     const isMainLocation = zoneName === "ในเมือง" || zoneName === "นอกเมือง" || zoneName === "เมืองบน";
                                     
@@ -2122,7 +2122,7 @@ export default function RulesPage() {
                                         <image
                                           href={markerUrl}
                                           x={pin.x - w / 2}
-                                          y={pin.y - h}
+                                          y={pin.y - h * 0.90}
                                           width={w}
                                           height={h}
                                           preserveAspectRatio="xMidYMidMeet"
@@ -2132,21 +2132,21 @@ export default function RulesPage() {
                                         {isActive && (
                                           <g style={{ pointerEvents: "none" }}>
                                             <rect 
-                                              x={pin.x - (zoneName.length * 2.2 + 2.5)} 
-                                              y={pin.y + 1.2} 
-                                              width={zoneName.length * 4.4 + 5} 
-                                              height="4.5" 
-                                              rx="2.25" 
+                                              x={pin.x - (zoneName.length * 1.8 + 2)} 
+                                              y={pin.y + 0.8} 
+                                              width={zoneName.length * 3.6 + 4} 
+                                              height="3.2" 
+                                              rx="1.6" 
                                               fill="rgba(15, 23, 42, 0.95)" 
                                               stroke="rgba(255, 255, 255, 0.15)" 
                                               strokeWidth="0.3" 
                                             />
                                             <text 
                                               x={pin.x} 
-                                              y={pin.y + 3.45} 
+                                              y={pin.y + 2.4} 
                                               className="map-pin-label" 
                                               dominantBaseline="middle" 
-                                              style={{ fontSize: "2.8px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}
+                                              style={{ fontSize: "2.0px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}
                                             >
                                               {zoneName}
                                             </text>
@@ -3048,8 +3048,8 @@ export default function RulesPage() {
                           const colorKey = getZoneColor(zoneName);
                           const colorObj = colorMap[colorKey] || colorMap.blue;
                           const markerUrl = getZoneMarkerUrl(zoneName);
-                          const w = 7.5 / zoomScale;
-                          const h = 11.2 / zoomScale;
+                          const w = 9.0 / zoomScale;
+                          const h = 13.4 / zoomScale;
                           const isActive = hoveredZone === zoneName;
                           const isMainLocation = zoneName === "ในเมือง" || zoneName === "นอกเมือง" || zoneName === "เมืองบน";
                           
@@ -3086,7 +3086,7 @@ export default function RulesPage() {
                               <image
                                 href={markerUrl}
                                 x={pin.x - w / 2}
-                                y={pin.y - h}
+                                y={pin.y - h * 0.90}
                                 width={w}
                                 height={h}
                                 preserveAspectRatio="xMidYMidMeet"
@@ -3096,21 +3096,21 @@ export default function RulesPage() {
                               {isActive && (
                                 <g style={{ pointerEvents: "none" }}>
                                   <rect 
-                                    x={pin.x - (zoneName.length * 2.2 + 2.5) / zoomScale} 
-                                    y={pin.y + 1.2 / zoomScale} 
-                                    width={(zoneName.length * 4.4 + 5) / zoomScale} 
-                                    height={4.5 / zoomScale} 
-                                    rx={2.25 / zoomScale} 
+                                    x={pin.x - (zoneName.length * 1.8 + 2) / zoomScale} 
+                                    y={pin.y + 0.8 / zoomScale} 
+                                    width={(zoneName.length * 3.6 + 4) / zoomScale} 
+                                    height={3.2 / zoomScale} 
+                                    rx={1.6 / zoomScale} 
                                     fill="rgba(15, 23, 42, 0.95)" 
                                     stroke="rgba(255, 255, 255, 0.15)" 
                                     strokeWidth={0.3 / zoomScale} 
                                   />
                                   <text 
                                     x={pin.x} 
-                                    y={pin.y + 3.45 / zoomScale} 
+                                    y={pin.y + 2.4 / zoomScale} 
                                     className="map-pin-label" 
                                     dominantBaseline="middle" 
-                                    style={{ fontSize: (2.8 / zoomScale) + "px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}
+                                    style={{ fontSize: (2.0 / zoomScale) + "px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}
                                   >
                                     {zoneName}
                                   </text>
