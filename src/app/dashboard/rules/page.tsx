@@ -492,19 +492,11 @@ export default function RulesPage() {
         width: "100%"
       };
     }
-    // Read-only dynamic hover panning - disabled zoom for main locations as requested
-    if (hoveredZone === "ในเมือง" || hoveredZone === "นอกเมือง" || hoveredZone === "เมืองบน") {
+    // Read-only dynamic hover panning - disabled zoom for all locations as requested
+    if (hoveredZone) {
       return {
         transform: "scale(1)",
         transformOrigin: "center center"
-      };
-    }
-    // Hover custom zone dynamic panning
-    if (hoveredZone) {
-      const pin = getPinCoords(hoveredZone);
-      return {
-        transform: "scale(1.8)",
-        transformOrigin: `${pin.x}% ${pin.y}%`
       };
     }
     return {
@@ -2112,10 +2104,10 @@ export default function RulesPage() {
                                     const colorKey = getZoneColor(zoneName);
                                     const colorObj = colorMap[colorKey] || colorMap.blue;
                                     const markerUrl = getZoneMarkerUrl(zoneName);
-                                    const w = 18.75;
-                                    const h = 28.0;
-                                    const isActive = hoveredZone === zoneName;
                                     const isMainLocation = zoneName === "ในเมือง" || zoneName === "นอกเมือง" || zoneName === "เมืองบน";
+                                    const w = isMainLocation ? 18.75 : 11.25;
+                                    const h = isMainLocation ? 28.0 : 16.8;
+                                    const isActive = hoveredZone === zoneName;
                                     
                                     return pinsList.map((pin, pinIdx) => (
                                       <g
@@ -3076,12 +3068,12 @@ export default function RulesPage() {
                           const colorKey = getZoneColor(zoneName);
                           const colorObj = colorMap[colorKey] || colorMap.blue;
                           const markerUrl = getZoneMarkerUrl(zoneName);
-                          const baseW = 18.75;
-                          const baseH = 28.0;
+                          const isMainLocation = zoneName === "ในเมือง" || zoneName === "นอกเมือง" || zoneName === "เมืองบน";
+                          const baseW = isMainLocation ? 18.75 : 11.25;
+                          const baseH = isMainLocation ? 28.0 : 16.8;
                           const w = baseW / zoomScale;
                           const h = baseH / zoomScale;
                           const isActive = hoveredZone === zoneName;
-                          const isMainLocation = zoneName === "ในเมือง" || zoneName === "นอกเมือง" || zoneName === "เมืองบน";
                           
                           return pinsList.map((pin, pinIdx) => (
                             <g
