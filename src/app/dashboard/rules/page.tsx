@@ -97,6 +97,7 @@ export default function RulesPage() {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [copiedRuleId, setCopiedRuleId] = useState<string | null>(null);
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
+  const [hoveredPinLabel, setHoveredPinLabel] = useState<string | null>(null);
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [selectedDrawZone, setSelectedDrawZone] = useState<string>("ในเมือง");
   const [drawMode, setDrawMode] = useState<"polygon" | "pencil" | "pin">("polygon");
@@ -484,6 +485,23 @@ export default function RulesPage() {
     return null;
   };
 
+  const getHoveredPinLabel = (desc: string): string | null => {
+    if (!desc) return null;
+    const activeRulesSource = isEditMode ? editedRules : rules;
+    const medCat = activeRulesSource?.categories.find(c => c.id === "medical_fees") as any;
+    const zones = medCat?.zones || defaultZones;
+    const zoneNames = Object.keys(zones);
+    for (const zoneName of zoneNames) {
+      const pinsList = getZonePinsList(zoneName);
+      for (const pin of pinsList) {
+        if (pin.label && desc.includes(pin.label)) {
+          return pin.label;
+        }
+      }
+    }
+    return null;
+  };
+
   const getMapTransform = () => {
     if (isDrawingMode) {
       return {
@@ -514,7 +532,7 @@ export default function RulesPage() {
     return (defaultZones as any)[zoneName] || "";
   };
 
-  const getZonePinsList = (zoneName: string): { x: number; y: number }[] => {
+  const getZonePinsList = (zoneName: string): { x: number; y: number; label?: string }[] => {
     const activeRulesSource = isEditMode ? editedRules : rules;
     const medCat = activeRulesSource?.categories.find(c => c.id === "medical_fees") as any;
     const val = medCat?.pins?.[zoneName];
@@ -595,7 +613,7 @@ export default function RulesPage() {
     setEditedRules({ ...editedRules, categories: updatedCategories });
   };
 
-  const updatePinCoords = (zoneName: string, coords: { x: number; y: number } | { x: number; y: number }[]) => {
+  const updatePinCoords = (zoneName: string, coords: { x: number; y: number; label?: string } | { x: number; y: number; label?: string }[]) => {
     if (!editedRules) return;
     const updatedCategories = editedRules.categories.map((cat) => {
       if (cat.id !== "medical_fees") return cat;
@@ -1785,7 +1803,7 @@ export default function RulesPage() {
             setModalSearchQuery("");
           }
         }}>
-          <div className="rules-modal-container" onClick={(e) => e.stopPropagation()}>
+          <div className={`rules-modal-container ${activeCategory.id === "medical_fees" ? "modal-wide" : ""}`} onClick={(e) => e.stopPropagation()}>
             
             {/* Modal Cover Banner Header */}
             <div className="rules-modal-cover-banner">
@@ -2107,57 +2125,74 @@ export default function RulesPage() {
                                     const h = isMainLocation ? 28.0 : 16.8;
                                     const isActive = hoveredZone === zoneName;
                                     
-                                    return pinsList.map((pin, pinIdx) => (
-                                      <g
-                                        key={`pin-${zoneName}-${pinIdx}`}
-                                        className={`map-pin-group ${isMainLocation ? "map-pin-main" : "map-pin-second"} ${isActive ? "active" : ""}`}
-                                        style={{
-                                          opacity: (!hoveredZone || isActive) ? 1 : 0.2,
-                                          pointerEvents: "none",
-                                          transition: "opacity 0.3s ease"
-                                        }}
-                                      >
-                                        <circle 
-                                          cx={pin.x} 
-                                          cy={pin.y} 
-                                          r="1.2" 
-                                          fill="none" 
-                                          stroke={colorObj.hex} 
-                                          strokeWidth="0.3" 
-                                          className="map-pin-pulse" 
-                                        />
-                                        <circle 
-                                          cx={pin.x} 
-                                          cy={pin.y} 
-                                          r="0.4" 
-                                          fill={colorObj.hex} 
-                                          stroke="#fff" 
-                                          strokeWidth="0.15" 
-                                        />
-                                        
-                                        <image
-                                          href={markerUrl}
-                                          x={pin.x - w / 2}
-                                          y={pin.y - h / 2}
-                                          width={w}
-                                          height={h}
-                                          preserveAspectRatio="xMidYMid meet"
-                                        />
+                                    return pinsList.map((pin, pinIdx) => {
+                                      const isWiggling = hoveredPinLabel ? (pin.label === hoveredPinLabel) : false;
+                                      return (
+                                        <g
+                                          key={`pin-${zoneName}-${pinIdx}`}
+                                          className={`map-pin-group ${isMainLocation ? "map-pin-main" : "map-pin-second"} ${isActive ? "active" : ""} ${isWiggling ? "active-wiggle" : ""}`}
+                                          style={{
+                                            opacity: (!hoveredZone || isActive) ? 1 : 0.2,
+                                            pointerEvents: "auto",
+                                            transition: "opacity 0.3s ease"
+                                          }}
+                                          onMouseEnter={() => {
+                                            if (!isEditMode) {
+                                              setHoveredZone(zoneName);
+                                              if (pin.label) {
+                                                setHoveredPinLabel(pin.label);
+                                              }
+                                            }
+                                          }}
+                                          onMouseLeave={() => {
+                                            if (!isEditMode) {
+                                              setHoveredZone(null);
+                                              setHoveredPinLabel(null);
+                                            }
+                                          }}
+                                        >
+                                          <circle 
+                                            cx={pin.x} 
+                                            cy={pin.y} 
+                                            r="1.2" 
+                                            fill="none" 
+                                            stroke={colorObj.hex} 
+                                            strokeWidth="0.3" 
+                                            className="map-pin-pulse" 
+                                          />
+                                          <circle 
+                                            cx={pin.x} 
+                                            cy={pin.y} 
+                                            r="0.4" 
+                                            fill={colorObj.hex} 
+                                            stroke="#fff" 
+                                            strokeWidth="0.15" 
+                                          />
+                                          
+                                          <image
+                                            href={markerUrl}
+                                            x={pin.x - w / 2}
+                                            y={pin.y - h / 2}
+                                            width={w}
+                                            height={h}
+                                            preserveAspectRatio="xMidYMid meet"
+                                          />
 
-                                        {/* Always-visible compact label */}
-                                        <g style={{ pointerEvents: "none" }}>
-                                          <text 
-                                            x={pin.x} 
-                                            y={pin.y + h / 2 + 2.0} 
-                                            className="map-pin-label" 
-                                            dominantBaseline="middle" 
-                                            style={{ fontSize: "1.6px", fill: "#fff", textAnchor: "middle", fontWeight: "700", paintOrder: "stroke", stroke: "rgba(0,0,0,0.7)", strokeWidth: "0.3px" }}
-                                          >
-                                            {zoneName}
-                                          </text>
+                                          {/* Always-visible compact label */}
+                                          <g style={{ pointerEvents: "none" }}>
+                                            <text 
+                                              x={pin.x} 
+                                              y={pin.y + h / 2 + 2.0} 
+                                              className="map-pin-label" 
+                                              dominantBaseline="middle" 
+                                              style={{ fontSize: "1.6px", fill: "#fff", textAnchor: "middle", fontWeight: "700", paintOrder: "stroke", stroke: "rgba(0,0,0,0.7)", strokeWidth: "0.3px" }}
+                                            >
+                                              {pin.label || zoneName}
+                                            </text>
+                                          </g>
                                         </g>
-                                      </g>
-                                    ));
+                                      );
+                                    });
                                   })}
 
                                   {/* Click Target Pin Indicator */}
@@ -2421,11 +2456,14 @@ export default function RulesPage() {
                                           onMouseEnter={() => {
                                             if (!isEditMode && zoneKey) {
                                               setHoveredZone(zoneKey);
+                                              const subLabel = getHoveredPinLabel(description);
+                                              setHoveredPinLabel(subLabel);
                                             }
                                           }}
                                           onMouseLeave={() => {
                                             if (!isEditMode) {
                                               setHoveredZone(null);
+                                              setHoveredPinLabel(null);
                                             }
                                           }}
                                         >
@@ -3059,71 +3097,83 @@ export default function RulesPage() {
                           const h = baseH / zoomScale;
                           const isActive = hoveredZone === zoneName;
                           
-                          return pinsList.map((pin, pinIdx) => (
-                            <g
-                              key={"pin-" + zoneName + "-" + pinIdx}
-                              className={"map-pin-group " + (isMainLocation ? "map-pin-main" : "map-pin-second") + " " + (isActive ? "active" : "")}
-                              style={{
-                                opacity: (!hoveredZone || isActive) ? 1 : 0.25,
-                                pointerEvents: (!hoveredZone || isActive) ? "auto" : "none",
-                                transition: "opacity 0.3s ease"
-                              }}
-                              onMouseEnter={() => setHoveredZone(zoneName)}
-                              onMouseLeave={() => setHoveredZone(null)}
-                            >
-                              <circle 
-                                cx={pin.x} 
-                                cy={pin.y} 
-                                r={1.8 / zoomScale} 
-                                fill="none" 
-                                stroke={colorObj.hex} 
-                                strokeWidth={0.5 / zoomScale} 
-                                className="map-pin-pulse" 
-                              />
-                              <circle 
-                                cx={pin.x} 
-                                cy={pin.y} 
-                                r={0.5 / zoomScale} 
-                                fill={colorObj.hex} 
-                                stroke="#fff" 
-                                strokeWidth={0.2 / zoomScale} 
-                              />
-                              
-                              <image
-                                href={markerUrl}
-                                x={pin.x - w / 2}
-                                y={pin.y - h / 2}
-                                width={w}
-                                height={h}
-                                preserveAspectRatio="xMidYMidMeet"
-                                style={{ cursor: "pointer" }}
-                              />
+                          return pinsList.map((pin, pinIdx) => {
+                            const isWiggling = hoveredPinLabel ? (pin.label === hoveredPinLabel) : false;
+                            const labelText = pin.label || zoneName;
+                            return (
+                              <g
+                                key={"pin-" + zoneName + "-" + pinIdx}
+                                className={"map-pin-group " + (isMainLocation ? "map-pin-main" : "map-pin-second") + " " + (isActive ? "active" : "") + " " + (isWiggling ? "active-wiggle" : "")}
+                                style={{
+                                  opacity: (!hoveredZone || isActive) ? 1 : 0.25,
+                                  pointerEvents: (!hoveredZone || isActive) ? "auto" : "none",
+                                  transition: "opacity 0.3s ease"
+                                }}
+                                onMouseEnter={() => {
+                                  setHoveredZone(zoneName);
+                                  if (pin.label) {
+                                    setHoveredPinLabel(pin.label);
+                                  }
+                                }}
+                                onMouseLeave={() => {
+                                  setHoveredZone(null);
+                                  setHoveredPinLabel(null);
+                                }}
+                              >
+                                <circle 
+                                  cx={pin.x} 
+                                  cy={pin.y} 
+                                  r={1.8 / zoomScale} 
+                                  fill="none" 
+                                  stroke={colorObj.hex} 
+                                  strokeWidth={0.5 / zoomScale} 
+                                  className="map-pin-pulse" 
+                                />
+                                <circle 
+                                  cx={pin.x} 
+                                  cy={pin.y} 
+                                  r={0.5 / zoomScale} 
+                                  fill={colorObj.hex} 
+                                  stroke="#fff" 
+                                  strokeWidth={0.2 / zoomScale} 
+                                />
+                                
+                                <image
+                                  href={markerUrl}
+                                  x={pin.x - w / 2}
+                                  y={pin.y - h / 2}
+                                  width={w}
+                                  height={h}
+                                  preserveAspectRatio="xMidYMidMeet"
+                                  style={{ cursor: "pointer" }}
+                                />
 
-                              {isActive && (
-                                <g style={{ pointerEvents: "none" }}>
-                                  <rect 
-                                    x={pin.x - (zoneName.length * 1.8 + 2) / zoomScale} 
-                                    y={pin.y + (baseH / 2 + 1.0) / zoomScale} 
-                                    width={(zoneName.length * 3.6 + 4) / zoomScale} 
-                                    height={3.2 / zoomScale} 
-                                    rx={1.6 / zoomScale} 
-                                    fill="rgba(15, 23, 42, 0.95)" 
-                                    stroke="rgba(255, 255, 255, 0.15)" 
-                                    strokeWidth={0.3 / zoomScale} 
-                                  />
-                                  <text 
-                                    x={pin.x} 
-                                    y={pin.y + (baseH / 2 + 2.6) / zoomScale} 
-                                    className="map-pin-label" 
-                                    dominantBaseline="middle" 
-                                    style={{ fontSize: (2.0 / zoomScale) + "px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}
-                                  >
-                                    {zoneName}
-                                  </text>
-                                </g>
-                              )}
-                            </g>
-                          ));
+                                {isActive && (
+                                  <g style={{ pointerEvents: "none" }}>
+                                    <rect 
+                                      x={pin.x - (labelText.length * 1.8 + 2) / zoomScale} 
+                                      y={pin.y + (baseH / 2 + 1.0) / zoomScale} 
+                                      width={(labelText.length * 3.6 + 4) / zoomScale} 
+                                      height={3.2 / zoomScale} 
+                                      rx={1.6 / zoomScale} 
+                                      fill="rgba(15, 23, 42, 0.95)" 
+                                      stroke="rgba(255, 255, 255, 0.15)" 
+                                      strokeWidth={0.3 / zoomScale} 
+                                    />
+                                    <text 
+                                      x={pin.x} 
+                                      y={pin.y + (baseH / 2 + 2.6) / zoomScale} 
+                                      className="map-pin-label" 
+                                      dominantBaseline="middle" 
+                                      style={{ fontSize: (2.0 / zoomScale) + "px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}
+                                    >
+                                      {labelText}
+                                    </text>
+                                  </g>
+                                )}
+                              </g>
+                            );
+                          });
                         })}
 
                         {/* Draw Helper Vertices when Drawing Mode is active */}
@@ -3573,6 +3623,39 @@ export default function RulesPage() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Pin Labels Manager */}
+                    {drawMode === "pin" && selectedDrawZone && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px", textAlign: "left" }}>
+                        <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>🏷️ ป้ายชื่อหมุดย่อย ({selectedDrawZone}):</label>
+                        {(() => {
+                          const pins = getZonePinsList(selectedDrawZone);
+                          if (pins.length === 0) {
+                            return <p style={{ fontSize: "0.68rem", color: "var(--text-muted)", margin: 0 }}>ยังไม่มีการปักหมุดในโซนนี้</p>;
+                          }
+                          return (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "180px", overflowY: "auto", paddingRight: "4px" }}>
+                              {pins.map((pin, idx) => (
+                                <div key={idx} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                  <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", flexShrink: 0, width: "70px" }}>หมุดที่ {idx + 1} ({pin.x.toFixed(0)},{pin.y.toFixed(0)})</span>
+                                  <input
+                                    type="text"
+                                    value={pin.label || ""}
+                                    onChange={(e) => {
+                                      const updatedPins = pins.map((p, i) => i === idx ? { ...p, label: e.target.value } : p);
+                                      updatePinCoords(selectedDrawZone, updatedPins);
+                                    }}
+                                    placeholder="ป้ายชื่อ เช่น ภูเขาสูง"
+                                    className="search-input"
+                                    style={{ flex: 1, padding: "4px 8px", fontSize: "0.72rem", background: "rgba(15,23,42,0.6)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)", color: "#fff" }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
 
                     {/* Snapping Control */}
                     <div style={{ display: "flex", alignItems: "center", gap: "6px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "10px", marginTop: "4px" }}>
