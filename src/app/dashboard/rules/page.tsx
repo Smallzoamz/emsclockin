@@ -2771,23 +2771,27 @@ export default function RulesPage() {
                 }}
               >
                 <div 
-                  style={{ position: "relative", display: "inline-block", cursor: "crosshair" }}
+                  style={{ position: "relative", display: "inline-block", cursor: "crosshair", userSelect: "none" }}
                   onMouseDown={handleMapMouseDown}
                   onMouseUp={handleMapMouseUp}
                   onMouseLeave={handleMapMouseUp}
                   onClick={handleMapClick}
                   onMouseMove={handleMapMouseMove}
+                  onDragStart={(e) => e.preventDefault()}
                 >
                   <img
                     src={(activeCategory as any).mapUrl}
                     alt="Treatment Area Map"
                     className={"map-image " + (hoveredZone ? "dimmed" : "")}
+                    draggable={false}
+                    onDragStart={(e) => e.preventDefault()}
                     style={{ 
                       maxHeight: "80vh", 
                       width: "auto", 
                       display: "block",
                       borderRadius: "var(--radius-sm)",
-                      border: "1px solid rgba(255,255,255,0.05)"
+                      border: "1px solid rgba(255,255,255,0.05)",
+                      userSelect: "none"
                     }}
                   />
                   

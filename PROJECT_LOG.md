@@ -231,4 +231,7 @@
 
 ## [2026-05-31 08:40] | File: src/app/dashboard/rules/page.tsx | Line: 590 | Keyword: Optional Snapping and Zoom Scaling | Status: ✅ Complete | Change: Refactored magnet snapping to be optional and dynamic. Added a 'snapEnabled' state default to false, registered a UI checkbox toggle in the editor sidebar, and passed Shift/Ctrl modifier keys inside mouse handlers to allow manual snapping override. Scaled the snapping threshold inversely with zoom scale to ensure precise plotting when zoomed in. Added pointer-events: none to the snap target helper ring to prevent click interception.
 
+## [2026-05-31 08:49] | File: src/app/dashboard/rules/page.tsx | Line: 2781 | Keyword: Prevent Browser Image Drag | Status: ✅ Complete | Change: Disabled native browser image drag-and-drop operations on the canvas map image by adding draggable={false} and onDragStart preventDefault, allowing fluid freehand mouse-drag drawing in Pencil mode.
+
+
 
