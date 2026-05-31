@@ -275,6 +275,9 @@
 
 ## [2026-05-31 12:22] | File: src/app/dashboard/rules/page.tsx | Line: 3302 | Keyword: Rules Universal Warning Banner | Status: ✅ Complete | Change: Added a premium glassmorphic warning card at the bottom of the rules modal container body (`rules-modal-body`) across all categories, reminding doctors that violations may result in instant Blacklist and severe penalties from the country. Included card emojis 🟨🟧🟥 as requested.
 
+## [2026-05-31 12:25] | File: src/app/dashboard/rules/page.tsx | Line: 1220 | Keyword: Rules Update Changelog Modal Popup | Status: ✅ Complete | Change: Implemented rules change detection system. On save, old and new rulesets are compared dynamically using `generateRulesChangelog` to log additions, deletions, and modifications. On first load, client checks the database settings version against browser local storage and triggers a premium update changelog modal popup for unacknowledged versions. Displays modified rules showing the old text with a strikethrough and new text highlighted below. Integrates an acknowledge button to set local storage token and dismiss the popup modal.
+
+
 
 
 

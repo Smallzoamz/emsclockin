@@ -38,6 +38,17 @@ interface RulesData {
   title: string;
   coverUrl?: string;
   categories: Category[];
+  version?: number;
+  latestChangelog?: {
+    version: number;
+    timestamp: string;
+    changes: Array<{
+      type: "added" | "modified" | "deleted";
+      categoryName: string;
+      oldText?: string;
+      newText?: string;
+    }>;
+  };
 }
 
 const feeHeaders = ["เคสทั่วไป", "เคสสตอรี่", "เคสกิจกรรม", "ฉีดยา"];
@@ -80,6 +91,88 @@ const defaultMarkers = [
 
 
 
+function formatRuleDisplay(text: string) {
+  if (!text) return "";
+  if (text.includes("@@@FEE@@@")) {
+    const parts = text.split("@@@FEE@@@");
+    return `${parts[0] || ""} : ${parts[1] || ""}`;
+  }
+  if (text.includes("\n")) {
+    const parts = text.split("\n");
+    const desc = parts[0] || "";
+    const fine = parts[1] || "";
+    const consequence = parts[2] || "";
+    let meta = [];
+    if (fine) meta.push(`ค่าปรับ: ${fine}`);
+    if (consequence) meta.push(`โทษ: ${consequence}`);
+    return meta.length > 0 ? `${desc} (${meta.join(" / ")})` : desc;
+  }
+  return text;
+}
+
+function generateRulesChangelog(oldRules: RulesData, newRules: RulesData) {
+  if (!oldRules || !oldRules.categories || !newRules || !newRules.categories) return [];
+  const changes: Array<{
+    type: "added" | "modified" | "deleted";
+    categoryName: string;
+    oldText?: string;
+    newText?: string;
+  }> = [];
+
+  newRules.categories.forEach((newCat) => {
+    const oldCat = oldRules.categories.find((c) => c.id === newCat.id);
+    if (!oldCat) {
+      newCat.rules.forEach((r) => {
+        if (!r.content.startsWith("[HEADER]")) {
+          changes.push({
+            type: "added",
+            categoryName: newCat.name,
+            newText: r.content
+          });
+        }
+      });
+      return;
+    }
+
+    // Process added or modified rules in new ruleset
+    newCat.rules.forEach((newRule) => {
+      if (newRule.content.startsWith("[HEADER]")) return;
+
+      const oldRule = oldCat.rules.find((r) => r.id === newRule.id);
+      if (!oldRule) {
+        changes.push({
+          type: "added",
+          categoryName: newCat.name,
+          newText: newRule.content
+        });
+      } else if (oldRule.content !== newRule.content) {
+        changes.push({
+          type: "modified",
+          categoryName: newCat.name,
+          oldText: oldRule.content,
+          newText: newRule.content
+        });
+      }
+    });
+
+    // Process deleted rules in old ruleset
+    oldCat.rules.forEach((oldRule) => {
+      if (oldRule.content.startsWith("[HEADER]")) return;
+
+      const newRule = newCat.rules.find((r) => r.id === oldRule.id);
+      if (!newRule) {
+        changes.push({
+          type: "deleted",
+          categoryName: newCat.name,
+          oldText: oldRule.content
+        });
+      }
+    });
+  });
+
+  return changes;
+}
+
 export default function RulesPage() {
   const confirm = useConfirm();
   const [rules, setRules] = useState<RulesData | null>(null);
@@ -110,6 +203,7 @@ export default function RulesPage() {
 
   // Accordion states
   const [expandedGroupTitles, setExpandedGroupTitles] = useState<Record<string, boolean>>({});
+  const [showChangelogModal, setShowChangelogModal] = useState(false);
 
   const toggleGroup = (title: string, index: number) => {
     setExpandedGroupTitles(prev => {
@@ -1208,12 +1302,27 @@ export default function RulesPage() {
     setTimeout(() => setToast(null), 4000);
   }, []);
 
+  const handleAcknowledgeChangelog = () => {
+    if (rules && rules.version) {
+      localStorage.setItem("acknowledged_rules_version", rules.version.toString());
+    }
+    setShowChangelogModal(false);
+  };
+
   const fetchRules = async () => {
     try {
       const res = await fetch("/api/rules");
       const data = await res.json();
       if (data.rules) {
         setRules(data.rules);
+        
+        // Version check to show update modal popups
+        if (data.rules.version && data.rules.latestChangelog?.changes?.length > 0) {
+          const ackVersion = localStorage.getItem("acknowledged_rules_version");
+          if (!ackVersion || parseInt(ackVersion, 10) < data.rules.version) {
+            setShowChangelogModal(true);
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to fetch rules:", error);
@@ -1376,14 +1485,30 @@ export default function RulesPage() {
 
     setLoading(true);
     try {
+      const changes = rules ? generateRulesChangelog(rules, editedRules) : [];
+      const newVersion = Date.now();
+      const rulesToSave: RulesData = {
+        ...editedRules,
+        version: changes.length > 0 ? newVersion : (rules?.version || newVersion),
+        latestChangelog: changes.length > 0 ? {
+          version: newVersion,
+          timestamp: new Date().toISOString(),
+          changes
+        } : (rules?.latestChangelog || undefined)
+      };
+
       const res = await fetch("/api/rules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rules: editedRules })
+        body: JSON.stringify({ rules: rulesToSave })
       });
       const data = await res.json();
       if (data.success) {
-        setRules(editedRules);
+        setRules(rulesToSave);
+        // Acknowledge own changes for the admin
+        if (rulesToSave.version) {
+          localStorage.setItem("acknowledged_rules_version", rulesToSave.version.toString());
+        }
         setIsEditMode(false);
         showToast(data.message || "บันทึกข้อมูลเรียบร้อยแล้วค่ะ", "success");
       } else {
@@ -4389,6 +4514,159 @@ export default function RulesPage() {
               <CrossIcon size={18} />
             </button>
             <img src={lightboxUrl} alt="Fullscreen Map" className="lightbox-image" />
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Changelog Update Modal Notification */}
+      {showChangelogModal && rules?.latestChangelog?.changes && mounted && createPortal(
+        <div className="rules-modal-backdrop" style={{ zIndex: 99999 }}>
+          <div className="rules-modal-container" style={{ maxWidth: "620px", width: "90vw", border: "1px solid var(--border-glow)", boxShadow: "0 0 30px var(--accent-glow)", overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
+            
+            {/* Header */}
+            <div style={{
+              background: "linear-gradient(135deg, var(--accent) 0%, rgba(15,23,42,0.95) 100%)",
+              padding: "24px",
+              borderBottom: "1px solid var(--border-subtle)",
+              position: "relative"
+            }}>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", gap: "10px", margin: 0 }}>
+                📢 อัปเดตกฎระเบียบแพทย์ล่าสุด!
+              </h3>
+              <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.7)", margin: "6px 0 0 0" }}>
+                อัปเดตเมื่อ: {new Date(rules.latestChangelog.timestamp).toLocaleDateString("th-TH", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                })} น.
+              </p>
+            </div>
+
+            {/* Content Body */}
+            <div style={{
+              padding: "24px",
+              maxHeight: "60vh",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+              background: "rgba(15,23,42,0.6)"
+            }}>
+              <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                โปรดอ่านและทำความเข้าใจการเปลี่ยนแปลงข้อตกลงกฎระเบียบแพทย์ด้านล่างนี้ เพื่อประโยชน์ในการปฏิบัติหน้าที่อย่างถูกต้องและป้องกันการละเมิดกฎ:
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {/* Group changes by categoryName */}
+                {Object.entries(
+                  rules.latestChangelog.changes.reduce<Record<string, typeof rules.latestChangelog.changes>>((acc, change) => {
+                    const cat = change.categoryName || "ทั่วไป";
+                    if (!acc[cat]) acc[cat] = [];
+                    acc[cat].push(change);
+                    return acc;
+                  }, {})
+                ).map(([categoryName, catChanges]) => (
+                  <div key={categoryName} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: "bold", color: "var(--accent-light)", display: "flex", alignItems: "center", gap: "6px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "4px" }}>
+                      📁 หมวดหมู่: {categoryName}
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {catChanges.map((change, idx) => {
+                        const isAdded = change.type === "added";
+                        const isDeleted = change.type === "deleted";
+                        const isModified = change.type === "modified";
+
+                        let badgeColor = "rgba(16, 185, 129, 0.18)";
+                        let badgeBorder = "rgba(16, 185, 129, 0.3)";
+                        let badgeText = "#10b981";
+                        let labelText = "🟢 เพิ่มเติม";
+                        let cardBg = "rgba(16, 185, 129, 0.02)";
+
+                        if (isDeleted) {
+                          badgeColor = "rgba(239, 68, 68, 0.18)";
+                          badgeBorder = "rgba(239, 68, 68, 0.3)";
+                          badgeText = "#ef4444";
+                          labelText = "🔴 ยกเลิก/ลบออก";
+                          cardBg = "rgba(239, 68, 68, 0.02)";
+                        } else if (isModified) {
+                          badgeColor = "rgba(59, 130, 246, 0.18)";
+                          badgeBorder = "rgba(59, 130, 246, 0.3)";
+                          badgeText = "#3b82f6";
+                          labelText = "🔵 แก้ไขกฎ";
+                          cardBg = "rgba(59, 130, 246, 0.02)";
+                        }
+
+                        return (
+                          <div 
+                            key={idx} 
+                            style={{ 
+                              background: cardBg,
+                              border: `1px solid ${badgeBorder}`,
+                              borderRadius: "var(--radius-md)",
+                              padding: "12px",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "8px"
+                            }}
+                          >
+                            <div>
+                              <span style={{ 
+                                padding: "2px 6px", 
+                                borderRadius: "4px", 
+                                fontSize: "0.62rem", 
+                                fontWeight: "bold",
+                                background: badgeColor,
+                                border: `1px solid ${badgeBorder}`,
+                                color: badgeText
+                              }}>
+                                {labelText}
+                              </span>
+                            </div>
+
+                            <div style={{ fontSize: "0.82rem", lineHeight: 1.5 }}>
+                              {isModified ? (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                  <div style={{ textDecoration: "line-through", color: "var(--text-muted)", fontSize: "0.78rem" }}>
+                                    เดิม: {formatRuleDisplay(change.oldText || "")}
+                                  </div>
+                                  <div style={{ color: "var(--text-primary)", fontWeight: 500 }}>
+                                    ใหม่: {formatRuleDisplay(change.newText || "")}
+                                  </div>
+                                </div>
+                              ) : isDeleted ? (
+                                <div style={{ textDecoration: "line-through", color: "var(--text-muted)" }}>
+                                  {formatRuleDisplay(change.oldText || "")}
+                                </div>
+                              ) : (
+                                <div style={{ color: "var(--text-primary)" }}>
+                                  {formatRuleDisplay(change.newText || "")}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="rules-modal-footer" style={{ borderTop: "1px solid var(--border-subtle)", padding: "16px 24px", display: "flex", justifyContent: "center", background: "rgba(15,23,42,0.95)" }}>
+              <button 
+                onClick={handleAcknowledgeChangelog}
+                className="btn btn-primary"
+                style={{ width: "100%", padding: "10px 0", fontSize: "0.88rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "6px" }}
+              >
+                🤝 รับทราบและเข้าใจกฎระเบียบแพทย์
+              </button>
+            </div>
+
           </div>
         </div>,
         document.body
