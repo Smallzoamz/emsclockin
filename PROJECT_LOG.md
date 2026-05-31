@@ -247,5 +247,9 @@
 
 ## [2026-05-31 09:57] | File: src/app/dashboard/rules/page.tsx, src/app/globals.css | Line: 525, 773, 2109, 3073, 2710 | Keyword: Expand Map Layout and Multi-Pin Support | Status: ✅ Complete | Change: Resized side-by-side columns ratio inside medical fees dashboard (map column left expanded from 40% to 55% width, fee table right reduced from 60% to 45% width). Extended database state schema and helper functions to support an array of coordinate pins per zone (getZonePinsList, updatePinCoords). Overhauled handleMapClick to toggle pins inside pin mode (clicking close to an existing pin deletes it, clicking elsewhere appends a new pin), enabling multiple pin placements per zone.
 
+## [2026-05-31 10:05] | File: src/app/dashboard/rules/page.tsx, src/app/globals.css | Line: 2115, 3079, 2943, 2952 | Keyword: Center and Upscaled Pins | Status: ✅ Complete | Change: Moved custom map marker images to be center-aligned exactly on the pin coordinates (x = pin.x - w/2, y = pin.y - h/2) instead of bottom-aligned. Upscaled marker sizes by 250% (w = 18.75, h = 28.0) and shifted hover tooltips below the bottom edge of upscaled pins (y = pin.y + h/2 + offset) in both the read-only preview and the fullscreen drawing portal. Updated globals.css to use center (50% 50%) transform origins for wiggle/bounce animations.
+
+## [2026-05-31 10:10] | File: src/app/dashboard/rules/page.tsx | Line: 495, 2107, 3079 | Keyword: Second Location Marker Scale and Map Zoom Disable | Status: ✅ Complete | Change: Reduced the marker sizes for second locations (custom zones) to 60% of the main location sizes (w = 11.25, h = 16.8) in both preview and drawing portal views, letting tooltips dynamically adjust below them. Disabled camera zoom panning on hover for all locations in getMapTransform so that hovering main and second locations keeps the map at standard scale(1).
+
 
 
