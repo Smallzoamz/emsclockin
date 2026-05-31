@@ -1678,6 +1678,23 @@ export default function RulesPage() {
                                     
                                     const isSelected = selectedDrawZone === zoneName;
                                     const isActive = hoveredZone === zoneName || (isDrawingMode && isSelected);
+                                    const isAnyFocused = hoveredZone !== null || (isDrawingMode && selectedDrawZone !== null);
+                                    
+                                    let fillOpacity = 0.08;
+                                    let strokeColor = `rgba(${colorObj.rgb}, 0.35)`;
+                                    let strokeWidth = 0.5;
+
+                                    if (isAnyFocused) {
+                                      if (isActive) {
+                                        fillOpacity = 0.55;
+                                        strokeColor = colorObj.hex;
+                                        strokeWidth = 0.5;
+                                      } else {
+                                        fillOpacity = 0.02;
+                                        strokeColor = `rgba(${colorObj.rgb}, 0.08)`;
+                                        strokeWidth = 0.3;
+                                      }
+                                    }
                                     
                                     return (
                                       <polygon
@@ -1685,9 +1702,9 @@ export default function RulesPage() {
                                         points={pointsStr}
                                         className={`map-zone-path ${isActive ? "active" : ""}`}
                                         style={{
-                                          fill: isActive ? `rgba(${colorObj.rgb}, 0.45)` : `rgba(${colorObj.rgb}, 0.05)`,
-                                          stroke: isActive ? colorObj.hex : `rgba(${colorObj.rgb}, 0.35)`,
-                                          strokeWidth: isActive ? 1.0 : 0.6,
+                                          fill: `rgba(${colorObj.rgb}, ${fillOpacity})`,
+                                          stroke: strokeColor,
+                                          strokeWidth: strokeWidth,
                                           transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
                                           cursor: "pointer"
                                         } as React.CSSProperties}
@@ -2473,7 +2490,7 @@ export default function RulesPage() {
                   <img
                     src={(activeCategory as any).mapUrl}
                     alt="Treatment Area Map"
-                    className="map-image"
+                    className={"map-image " + (hoveredZone ? "dimmed" : "")}
                     style={{ 
                       maxHeight: "80vh", 
                       width: "auto", 
@@ -2511,6 +2528,23 @@ export default function RulesPage() {
                           
                           const isSelected = selectedDrawZone === zoneName;
                           const isActive = hoveredZone === zoneName || isSelected;
+                          const isAnyFocused = hoveredZone !== null || selectedDrawZone !== null;
+                          
+                          let fillOpacity = 0.08;
+                          let strokeColor = "rgba(" + colorObj.rgb + ", 0.4)";
+                          let strokeWidthVal = 0.5;
+
+                          if (isAnyFocused) {
+                            if (isActive) {
+                              fillOpacity = 0.55;
+                              strokeColor = colorObj.hex;
+                              strokeWidthVal = 0.5;
+                            } else {
+                              fillOpacity = 0.02;
+                              strokeColor = "rgba(" + colorObj.rgb + ", 0.08)";
+                              strokeWidthVal = 0.3;
+                            }
+                          }
                           
                           return (
                             <polygon
@@ -2518,9 +2552,9 @@ export default function RulesPage() {
                               points={pointsStr}
                               className={"map-zone-path " + (isActive ? "active" : "")}
                               style={{
-                                fill: isActive ? "rgba(" + colorObj.rgb + ", 0.48)" : "rgba(" + colorObj.rgb + ", 0.06)",
-                                stroke: isActive ? colorObj.hex : "rgba(" + colorObj.rgb + ", 0.4)",
-                                strokeWidth: (isActive ? 1.0 : 0.6) / zoomScale,
+                                fill: "rgba(" + colorObj.rgb + ", " + fillOpacity + ")",
+                                stroke: strokeColor,
+                                strokeWidth: strokeWidthVal / zoomScale,
                                 transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
                                 cursor: "pointer"
                               } as React.CSSProperties}
