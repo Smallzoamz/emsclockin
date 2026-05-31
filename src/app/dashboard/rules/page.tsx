@@ -3298,6 +3298,24 @@ export default function RulesPage() {
                   </div>
                 </div>
               )}
+
+              {/* Warning Banner at the bottom of the card always */}
+              <div className="rules-warning-card" style={{
+                marginTop: "16px",
+                background: "rgba(239, 68, 68, 0.03)",
+                border: "1px solid rgba(239, 68, 68, 0.18)",
+                borderRadius: "var(--radius-md)",
+                padding: "12px 18px",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                boxShadow: "0 4px 20px rgba(239, 68, 68, 0.03)"
+              }}>
+                <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 4px rgba(239, 68, 68, 0.4))" }}>⚠️</span>
+                <p style={{ fontSize: "0.76rem", color: "#fca5a5", lineHeight: 1.5, margin: 0 }}>
+                  หากมีการละเมิดกฏข้อใด อาจส่งผลให้ผู้ละเมิด <strong style={{ color: "#ef4444", textShadow: "0 0 6px rgba(239, 68, 68, 0.3)" }}>ถูก Blacklist จากแพทย์</strong> โดยไม่มีการตักเตือนก่อนทันที และอาจส่งผลร้ายแรงถึงขั้นถูกบทลงโทษจากทางประเทศ <span style={{ letterSpacing: "2px", marginLeft: "2px" }}>🟨🟧🟥</span> <strong style={{ color: "#fff" }}>กรุณาอ่านกฏทุกข้ออย่างมีสติ</strong>
+                </p>
+              </div>
             </div>
 
             {/* Modal Footer */}

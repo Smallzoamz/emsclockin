@@ -273,5 +273,8 @@
 
 ## [2026-05-31 12:07] | File: multiple | Line: 1 | Keyword: Hospital Area Boundary Map Uploads | Status: ✅ Complete | Change: Added support for uploading and managing two distinct map boundary images (Desert and Central hospitals) under the `hospital_area` category. Modified cover upload API endpoint to read and save Central/Desert URLs to `mapCentralUrl` and `mapDesertUrl` fields. Updated frontend page UI to render both map preview cards in read-only and edit modes, wire up respective uploader/delete buttons, use `useConfirm` dialog confirmations, and link to fullscreen lightbox zoom popup overlays.
 
+## [2026-05-31 12:22] | File: src/app/dashboard/rules/page.tsx | Line: 3302 | Keyword: Rules Universal Warning Banner | Status: ✅ Complete | Change: Added a premium glassmorphic warning card at the bottom of the rules modal container body (`rules-modal-body`) across all categories, reminding doctors that violations may result in instant Blacklist and severe penalties from the country. Included card emojis 🟨🟧🟥 as requested.
+
+
 
 
