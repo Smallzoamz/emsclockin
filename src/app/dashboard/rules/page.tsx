@@ -2006,7 +2006,7 @@ export default function RulesPage() {
                             <img
                               src={(activeCategory as any).mapUrl}
                               alt="Treatment Area Map"
-                              className="map-image"
+                              className={`map-image ${hoveredZone ? "dimmed" : ""}`}
                               style={{ width: "100%", display: "block" }}
                             />
                             
@@ -2031,8 +2031,31 @@ export default function RulesPage() {
                                     zIndex: 10
                                   }}
                                 >
+                                  <defs>
+                                    {activeZonePoints && (
+                                      <clipPath id="hovered-zone-clip-readonly">
+                                        <polygon points={activeZonePoints} />
+                                      </clipPath>
+                                    )}
+                                  </defs>
 
-                                  {/* Dynamic Zones Polygons */}
+                                  {hoveredZone && activeZonePoints && (
+                                    <image
+                                      href={(activeCategory as any).mapUrl}
+                                      x="0"
+                                      y="0"
+                                      width="100"
+                                      height="100"
+                                      preserveAspectRatio="xMidYMid meet"
+                                      clipPath="url(#hovered-zone-clip-readonly)"
+                                      style={{
+                                        filter: "brightness(1.15) contrast(1.05)",
+                                        pointerEvents: "none"
+                                      }}
+                                    />
+                                  )}
+
+                                  {/* Dynamic Zones Polygons - visual only, no map hover events */}
                                   {zoneNames.map(zoneName => {
                                     const pointsStr = getZonePoints(zoneName);
                                     if (!pointsStr) return null;
@@ -2066,16 +2089,14 @@ export default function RulesPage() {
                                           stroke: strokeColor,
                                           strokeWidth: strokeWidth,
                                           transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-                                          cursor: "pointer"
+                                          cursor: isDrawingMode ? "crosshair" : "default"
                                         } as React.CSSProperties}
-                                        pointerEvents="auto"
-                                        onMouseEnter={() => !isDrawingMode && setHoveredZone(zoneName)}
-                                        onMouseLeave={() => !isDrawingMode && setHoveredZone(null)}
+                                        pointerEvents={isDrawingMode ? "auto" : "none"}
                                       />
                                     );
                                   })}
 
-                                  {/* Dynamic Pins - always visible, no hover interaction */}
+                                  {/* Dynamic Pins - no map hover, but responds to table hover */}
                                   {zoneNames.map(zoneName => {
                                     const pinsList = getZonePinsList(zoneName);
                                     const colorKey = getZoneColor(zoneName);
@@ -2084,12 +2105,17 @@ export default function RulesPage() {
                                     const isMainLocation = zoneName === "ในเมือง" || zoneName === "นอกเมือง" || zoneName === "เมืองบน";
                                     const w = isMainLocation ? 18.75 : 11.25;
                                     const h = isMainLocation ? 28.0 : 16.8;
+                                    const isActive = hoveredZone === zoneName;
                                     
                                     return pinsList.map((pin, pinIdx) => (
                                       <g
                                         key={`pin-${zoneName}-${pinIdx}`}
-                                        className={`map-pin-group ${isMainLocation ? "map-pin-main" : "map-pin-second"}`}
-                                        style={{ pointerEvents: "none" }}
+                                        className={`map-pin-group ${isMainLocation ? "map-pin-main" : "map-pin-second"} ${isActive ? "active" : ""}`}
+                                        style={{
+                                          opacity: (!hoveredZone || isActive) ? 1 : 0.2,
+                                          pointerEvents: "none",
+                                          transition: "opacity 0.3s ease"
+                                        }}
                                       >
                                         <circle 
                                           cx={pin.x} 

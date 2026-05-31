@@ -2860,6 +2860,10 @@ body::before {
   transition: filter 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
+.map-image.dimmed {
+  filter: brightness(0.4) saturate(0.85) contrast(1.05);
+}
+
 /* Dynamic Interactive Pin Labels */
 .map-pin-group {
   cursor: pointer;
