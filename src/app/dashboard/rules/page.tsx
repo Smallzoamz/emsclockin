@@ -102,6 +102,7 @@ export default function RulesPage() {
   // States for freehand pencil drawing
   const [isDrawingFreehand, setIsDrawingFreehand] = useState(false);
   const [freehandPoints, setFreehandPoints] = useState<{ x: number; y: number }[]>([]);
+  const [snapEnabled, setSnapEnabled] = useState(false);
 
   // Helpers for coordinates parsing and Douglas-Peucker simplification
   const parsePoints = (pointsStr: string): [number, number][] => {
@@ -586,7 +587,11 @@ export default function RulesPage() {
 
   const [snappedVertex, setSnappedVertex] = useState<{ x: number; y: number } | null>(null);
 
-  const getSnappedCoords = (x: number, y: number): { x: number; y: number; isSnapped: boolean } => {
+  const getSnappedCoords = (x: number, y: number, isModifierPressed = false): { x: number; y: number; isSnapped: boolean } => {
+    if (!snapEnabled && !isModifierPressed) {
+      return { x, y, isSnapped: false };
+    }
+
     const medCat = (isEditMode ? editedRules : rules)?.categories.find(c => c.id === "medical_fees") as any;
     if (!medCat) return { x, y, isSnapped: false };
     const zones = medCat.zones || defaultZones;
@@ -613,7 +618,8 @@ export default function RulesPage() {
       }
     }
     
-    if (minDistance < 1.5) {
+    const snapThreshold = 1.2 / zoomScale;
+    if (minDistance < snapThreshold) {
       return { x: closestPt.x, y: closestPt.y, isSnapped: true };
     }
     
@@ -629,7 +635,7 @@ export default function RulesPage() {
     let x = Math.round((clickX / rect.width) * 100 * 10) / 10;
     let y = Math.round((clickY / rect.height) * 133.3 * 10) / 10;
     
-    const snapped = getSnappedCoords(x, y);
+    const snapped = getSnappedCoords(x, y, e.shiftKey || e.ctrlKey);
     if (snapped.isSnapped) {
       x = snapped.x;
       y = snapped.y;
@@ -670,7 +676,7 @@ export default function RulesPage() {
     let x = Math.round((clickX / rect.width) * 100 * 10) / 10;
     let y = Math.round((clickY / rect.height) * 133.3 * 10) / 10;
 
-    const snapped = getSnappedCoords(x, y);
+    const snapped = getSnappedCoords(x, y, e.shiftKey || e.ctrlKey);
     if (snapped.isSnapped) {
       x = snapped.x;
       y = snapped.y;
@@ -697,7 +703,7 @@ export default function RulesPage() {
     let x = Math.min(Math.max(Math.round((clickX / rect.width) * 100 * 10) / 10, 0), 100);
     let y = Math.min(Math.max(Math.round((clickY / rect.height) * 133.3 * 10) / 10, 0), 133.3);
 
-    const snapped = getSnappedCoords(x, y);
+    const snapped = getSnappedCoords(x, y, e.shiftKey || e.ctrlKey);
     if (snapped.isSnapped) {
       x = snapped.x;
       y = snapped.y;
@@ -2856,7 +2862,8 @@ export default function RulesPage() {
                             strokeWidth={1.0 / zoomScale}
                             style={{
                               filter: "drop-shadow(0 0 4px #10b981)",
-                              opacity: 0.95
+                              opacity: 0.95,
+                              pointerEvents: "none"
                             }}
                           />
                         )}
@@ -3193,6 +3200,23 @@ export default function RulesPage() {
                       </div>
                     </div>
 
+                    {/* Snapping Control */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "10px", marginTop: "4px" }}>
+                      <input
+                        type="checkbox"
+                        id="snap-enabled"
+                        checked={snapEnabled}
+                        onChange={(e) => setSnapEnabled(e.target.checked)}
+                        style={{ cursor: "pointer" }}
+                      />
+                      <label 
+                        htmlFor="snap-enabled" 
+                        style={{ fontSize: "0.68rem", color: "var(--text-muted)", cursor: "pointer", userSelect: "none" }}
+                      >
+                        🧲 เปิดใช้งาน Magnet Snap (หรือกดปุ่ม Shift ค้างไว้ขณะลาก/ปักจุด)
+                      </label>
+                    </div>
+
                     {/* Selected Vertex Card */}
                     {drawMode === "polygon" && selectedVertexIndex !== null && (() => {
                       const pointsStr = getZonePoints(selectedDrawZone);
@@ -3305,8 +3329,8 @@ export default function RulesPage() {
                           💡 <strong>คู่มือคลิกจุดพิกัด (Polygon Click):</strong>
                           <ul style={{ margin: "4px 0 0 0", paddingLeft: "14px" }}>
                             <li>คลิกแผนที่เพื่อเพิ่มจุดพิกัดเชื่อมเส้นขอบ</li>
-                            <li><strong>จุดจะดูดติด (Snap)</strong> พิกัดโซนอื่นทันทีเมื่อคลิกใกล้เคียง</li>
-                            <li>คลิกลากที่จุดพิกัดเพื่อย้ายตำแหน่งพิกัด (รองรับการดูดติดแม่เหล็ก)</li>
+                            <li><strong>จุดจะดูดติด (Snap)</strong> พิกัดโซนอื่นเมื่อเปิด Magnet Snap หรือกด <code>Shift</code>/<code>Ctrl</code> ค้างไว้</li>
+                            <li>คลิกลากที่จุดพิกัดเพื่อย้ายตำแหน่งพิกัด (รองรับการดูดติดแม่เหล็กเช่นกัน)</li>
                             <li>ดับเบิ้ลคลิกเพื่อลบจุด</li>
                           </ul>
                         </span>
@@ -3316,7 +3340,7 @@ export default function RulesPage() {
                           <ul style={{ margin: "4px 0 0 0", paddingLeft: "14px" }}>
                             <li>กดเมาส์ค้างไว้แล้ว **ลากวาดเขียนไปตามขอบแผนที่** ได้อิสระ</li>
                             <li>เมื่อปล่อยเมาส์ ระบบจะแปลงแนวเส้นเป็นพิกัดโซนและลดจุดส่วนเกินออกให้พอดี</li>
-                            <li>จุดจะดูดติดพิกัดรอยต่อโซนอื่นเมื่อลากเมาส์ไปใกล้ (Magnet Snap)</li>
+                            <li>จุดจะดูดติดพิกัดรอยต่อโซนอื่นเมื่อเปิด Magnet Snap หรือกด <code>Shift</code>/<code>Ctrl</code> ค้างไว้</li>
                           </ul>
                         </span>
                       ) : (
