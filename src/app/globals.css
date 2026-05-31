@@ -2541,7 +2541,7 @@ body::before {
 
 .map-image {
   width: 100%;
-  max-height: 380px;
+  max-height: 650px;
   object-fit: contain;
   border-radius: calc(var(--radius-md) - 4px);
   transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -2943,7 +2943,7 @@ body::before {
 
 .map-pin-main.active image {
   animation: pinBounce 0.6s ease-in-out infinite;
-  transform-origin: 50% 100%;
+  transform-origin: 50% 50%;
 }
 
 .map-pin-second image {
@@ -2952,7 +2952,7 @@ body::before {
 
 .map-pin-second.active image {
   animation: pinWiggle 0.4s ease-in-out infinite;
-  transform-origin: 50% 100%;
+  transform-origin: 50% 50%;
 }
 
 
