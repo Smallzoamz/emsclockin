@@ -2708,16 +2708,16 @@ body::before {
 }
 
 .medical-fees-left {
-  flex: 1 1 40%;
-  max-width: 40%;
+  flex: 1 1 55%;
+  max-width: 55%;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
 .medical-fees-right {
-  flex: 1 1 60%;
-  max-width: 60%;
+  flex: 1 1 45%;
+  max-width: 45%;
   display: flex;
   flex-direction: column;
   gap: 12px;

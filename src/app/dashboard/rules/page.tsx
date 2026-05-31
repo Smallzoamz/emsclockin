@@ -522,13 +522,26 @@ export default function RulesPage() {
     return (defaultZones as any)[zoneName] || "";
   };
 
-  const getPinCoords = (zoneName: string): { x: number; y: number } => {
+  const getZonePinsList = (zoneName: string): { x: number; y: number }[] => {
     const activeRulesSource = isEditMode ? editedRules : rules;
     const medCat = activeRulesSource?.categories.find(c => c.id === "medical_fees") as any;
-    if (medCat?.pins?.[zoneName] !== undefined) {
-      return medCat.pins[zoneName];
+    const val = medCat?.pins?.[zoneName];
+    if (Array.isArray(val)) {
+      return val;
     }
-    return (defaultPins as any)[zoneName] || { x: 50, y: 50 };
+    if (val && typeof val === "object" && typeof val.x === "number" && typeof val.y === "number") {
+      return [val];
+    }
+    const defPin = (defaultPins as any)[zoneName];
+    if (defPin) {
+      return [defPin];
+    }
+    return [];
+  };
+
+  const getPinCoords = (zoneName: string): { x: number; y: number } => {
+    const list = getZonePinsList(zoneName);
+    return list[0] || { x: 50, y: 50 };
   };
 
   const getZoneColor = (zoneName: string): string => {
@@ -590,7 +603,7 @@ export default function RulesPage() {
     setEditedRules({ ...editedRules, categories: updatedCategories });
   };
 
-  const updatePinCoords = (zoneName: string, coords: { x: number; y: number }) => {
+  const updatePinCoords = (zoneName: string, coords: { x: number; y: number } | { x: number; y: number }[]) => {
     if (!editedRules) return;
     const updatedCategories = editedRules.categories.map((cat) => {
       if (cat.id !== "medical_fees") return cat;
@@ -758,7 +771,22 @@ export default function RulesPage() {
       updateZonePoints(selectedDrawZone, points.join(" "));
       setSelectedVertexIndex(points.length - 1);
     } else if (drawMode === "pin") {
-      updatePinCoords(selectedDrawZone, { x, y });
+      const currentPins = getZonePinsList(selectedDrawZone);
+      const closeIndex = currentPins.findIndex(p => {
+        const dist = Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2));
+        return dist < 2.5;
+      });
+
+      let updatedPinsList = [...currentPins];
+      if (closeIndex > -1) {
+        updatedPinsList.splice(closeIndex, 1);
+        showToast("ลบจุดปักหมุดเรียบร้อยแล้วค่ะ", "success");
+      } else {
+        updatedPinsList.push({ x, y });
+        showToast("เพิ่มจุดปักหมุดเรียบร้อยแล้วค่ะ", "success");
+      }
+      
+      updatePinCoords(selectedDrawZone, updatedPinsList);
     }
   };
 
@@ -2080,7 +2108,7 @@ export default function RulesPage() {
 
                                   {/* Dynamic Pins */}
                                   {zoneNames.map(zoneName => {
-                                    const pin = getPinCoords(zoneName);
+                                    const pinsList = getZonePinsList(zoneName);
                                     const colorKey = getZoneColor(zoneName);
                                     const colorObj = colorMap[colorKey] || colorMap.blue;
                                     const markerUrl = getZoneMarkerUrl(zoneName);
@@ -2089,9 +2117,9 @@ export default function RulesPage() {
                                     const isActive = hoveredZone === zoneName;
                                     const isMainLocation = zoneName === "ในเมือง" || zoneName === "นอกเมือง" || zoneName === "เมืองบน";
                                     
-                                    return (
+                                    return pinsList.map((pin, pinIdx) => (
                                       <g
-                                        key={`pin-${zoneName}`}
+                                        key={`pin-${zoneName}-${pinIdx}`}
                                         className={`map-pin-group ${isMainLocation ? "map-pin-main" : "map-pin-second"} ${isActive ? "active" : ""}`}
                                         style={{
                                           opacity: (!hoveredZone || isActive) ? 1 : 0.2,
@@ -2153,7 +2181,7 @@ export default function RulesPage() {
                                           </g>
                                         )}
                                       </g>
-                                    );
+                                    ));
                                   })}
 
                                   {/* Click Target Pin Indicator */}
@@ -3044,7 +3072,7 @@ export default function RulesPage() {
 
                         {/* Dynamic Pins */}
                         {zoneNames.map(zoneName => {
-                          const pin = getPinCoords(zoneName);
+                          const pinsList = getZonePinsList(zoneName);
                           const colorKey = getZoneColor(zoneName);
                           const colorObj = colorMap[colorKey] || colorMap.blue;
                           const markerUrl = getZoneMarkerUrl(zoneName);
@@ -3053,9 +3081,9 @@ export default function RulesPage() {
                           const isActive = hoveredZone === zoneName;
                           const isMainLocation = zoneName === "ในเมือง" || zoneName === "นอกเมือง" || zoneName === "เมืองบน";
                           
-                          return (
+                          return pinsList.map((pin, pinIdx) => (
                             <g
-                              key={"pin-" + zoneName}
+                              key={"pin-" + zoneName + "-" + pinIdx}
                               className={"map-pin-group " + (isMainLocation ? "map-pin-main" : "map-pin-second") + " " + (isActive ? "active" : "")}
                               style={{
                                 opacity: (!hoveredZone || isActive) ? 1 : 0.25,
@@ -3117,7 +3145,7 @@ export default function RulesPage() {
                                 </g>
                               )}
                             </g>
-                          );
+                          ));
                         })}
 
                         {/* Draw Helper Vertices when Drawing Mode is active */}

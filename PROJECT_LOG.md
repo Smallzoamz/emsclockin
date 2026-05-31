@@ -245,4 +245,7 @@
 
 ## [2026-05-31 09:52] | File: src/app/dashboard/rules/page.tsx | Line: 2085, 2125, 3050, 3088 | Keyword: Upscale Markers and Compact Tooltips | Status: ✅ Complete | Change: Increased marker pin dimensions by 120% (to 9.0x13.4 units) and adjusted the image vertical rendering offset (y = pin.y - h * 0.90) to align the bottom tip/shadow perfectly with target coordinate dots. Shrank the hover tooltip size (width = zoneName.length * 3.6 + 4, height = 3.2, font size = 2.0px) for cleaner, less intrusive text bubble overlays.
 
+## [2026-05-31 09:57] | File: src/app/dashboard/rules/page.tsx, src/app/globals.css | Line: 525, 773, 2109, 3073, 2710 | Keyword: Expand Map Layout and Multi-Pin Support | Status: ✅ Complete | Change: Resized side-by-side columns ratio inside medical fees dashboard (map column left expanded from 40% to 55% width, fee table right reduced from 60% to 45% width). Extended database state schema and helper functions to support an array of coordinate pins per zone (getZonePinsList, updatePinCoords). Overhauled handleMapClick to toggle pins inside pin mode (clicking close to an existing pin deletes it, clicking elsewhere appends a new pin), enabling multiple pin placements per zone.
+
+
 
