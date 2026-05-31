@@ -271,4 +271,7 @@
 
 ## [2026-05-31 12:05] | File: src/app/dashboard/rules/page.tsx | Line: 2454 | Keyword: Remove Accordions from Medical Fees | Status: ✅ Complete | Change: Removed accordion containers from the medical fees category table column, restoring the standard scrollable unified table layout with category headers while keeping wide modal split layout and map outline features.
 
+## [2026-05-31 12:07] | File: multiple | Line: 1 | Keyword: Hospital Area Boundary Map Uploads | Status: ✅ Complete | Change: Added support for uploading and managing two distinct map boundary images (Desert and Central hospitals) under the `hospital_area` category. Modified cover upload API endpoint to read and save Central/Desert URLs to `mapCentralUrl` and `mapDesertUrl` fields. Updated frontend page UI to render both map preview cards in read-only and edit modes, wire up respective uploader/delete buttons, use `useConfirm` dialog confirmations, and link to fullscreen lightbox zoom popup overlays.
+
+
 

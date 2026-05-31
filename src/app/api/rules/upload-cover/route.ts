@@ -16,6 +16,7 @@ export async function POST(req: Request) {
     const deleteCover = formData.get("deleteCover") === "true";
     const catId = formData.get("catId") as string | null;
     const isMap = formData.get("isMap") === "true";
+    const mapType = formData.get("mapType") as string | null;
 
     // Custom Marker parameters
     const isMarker = formData.get("isMarker") === "true";
@@ -151,7 +152,13 @@ export async function POST(req: Request) {
         const cat = rulesData.categories.find((c: any) => c.id === catId);
         if (cat) {
           if (isMap) {
-            cat.mapUrl = "";
+            if (mapType === "central") {
+              cat.mapCentralUrl = "";
+            } else if (mapType === "desert") {
+              cat.mapDesertUrl = "";
+            } else {
+              cat.mapUrl = "";
+            }
           } else {
             cat.coverUrl = "";
           }
@@ -218,7 +225,13 @@ export async function POST(req: Request) {
       const cat = rulesData.categories.find((c: any) => c.id === catId);
       if (cat) {
         if (isMap) {
-          cat.mapUrl = coverUrl;
+          if (mapType === "central") {
+            cat.mapCentralUrl = coverUrl;
+          } else if (mapType === "desert") {
+            cat.mapDesertUrl = coverUrl;
+          } else {
+            cat.mapUrl = coverUrl;
+          }
         } else {
           cat.coverUrl = coverUrl;
         }

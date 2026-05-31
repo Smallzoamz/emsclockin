@@ -456,6 +456,119 @@ export default function RulesPage() {
     }
   };
 
+  const handleHospitalMapUpload = async (mapType: "central" | "desert", e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const mapName = mapType === "central" ? "โรงพยาบาลกลาง" : "โรงพยาบาลทะเลทราย";
+    const confirmed = await confirm({
+      title: `อัปโหลดรูปแผนที่ขอบเขต`,
+      message: `ต้องการอัปโหลดไฟล์ภาพนี้เป็นรูปขอบเขตพิกัด${mapName}หรือไม่?`,
+      confirmText: "อัปโหลด",
+      cancelText: "ยกเลิก",
+      variant: "info"
+    });
+    if (!confirmed) return;
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("cover", file);
+    formData.append("catId", "hospital_area");
+    formData.append("isMap", "true");
+    formData.append("mapType", mapType);
+
+    try {
+      const res = await fetch("/api/rules/upload-cover", {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updateMapUrl = (prev: RulesData | null) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            categories: prev.categories.map((c) => {
+              if (c.id !== "hospital_area") return c;
+              if (mapType === "central") {
+                return { ...c, mapCentralUrl: data.coverUrl };
+              } else {
+                return { ...c, mapDesertUrl: data.coverUrl };
+              }
+            })
+          };
+        };
+        setRules(updateMapUrl(rules));
+        if (editedRules) {
+          setEditedRules(updateMapUrl(editedRules));
+        }
+        showToast(`อัปโหลดรูปแผนที่${mapName}เรียบร้อยแล้วค่ะ`, "success");
+      } else {
+        showToast(data.error || "เกิดข้อผิดพลาดในการอัปโหลด", "error");
+      }
+    } catch (error) {
+      console.error("Hospital map upload error:", error);
+      showToast("เชื่อมต่อระบบล้มเหลว", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleHospitalMapDelete = async (mapType: "central" | "desert") => {
+    const mapName = mapType === "central" ? "โรงพยาบาลกลาง" : "โรงพยาบาลทะเลทราย";
+    const confirmed = await confirm({
+      title: `ลบรูปแผนที่ขอบเขต`,
+      message: `คุณแน่ใจหรือไม่ว่าต้องการลบรูปแผนที่ขอบเขตพิกัด${mapName}นี้?`,
+      confirmText: "ลบออก",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    });
+    if (!confirmed) return;
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("deleteCover", "true");
+    formData.append("catId", "hospital_area");
+    formData.append("isMap", "true");
+    formData.append("mapType", mapType);
+
+    try {
+      const res = await fetch("/api/rules/upload-cover", {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updateMapUrl = (prev: RulesData | null) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            categories: prev.categories.map((c) => {
+              if (c.id !== "hospital_area") return c;
+              if (mapType === "central") {
+                return { ...c, mapCentralUrl: "" };
+              } else {
+                return { ...c, mapDesertUrl: "" };
+              }
+            })
+          };
+        };
+        setRules(updateMapUrl(rules));
+        if (editedRules) {
+          setEditedRules(updateMapUrl(editedRules));
+        }
+        showToast(`ลบรูปแผนที่${mapName}เรียบร้อยแล้วค่ะ`, "success");
+      } else {
+        showToast(data.error || "เกิดข้อผิดพลาดในการลบรูปภาพ", "error");
+      }
+    } catch (error) {
+      console.error("Hospital map delete error:", error);
+      showToast("เชื่อมต่อระบบล้มเหลว", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const copyFeeToClipboard = (ruleId: string, text: string) => {
     const cleanNumbers = text.replace(/[^0-9]/g, "");
     const textToCopy = cleanNumbers || text;
@@ -2843,6 +2956,113 @@ export default function RulesPage() {
                         {activeCategory.id === "case_story" && "กฏเกณฑ์การจัดเวร OP การรับเคสปะทะ สตอรี่สนาม และการดูแลคะแนนสตอรี่"}
                       </p>
                     </div>
+
+                    {/* Hospital Maps Section */}
+                    {activeCategory.id === "hospital_area" && (
+                      <div className="hospital-maps-section" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "bold", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "6px" }}>
+                          📍 ขอบเขตพิกัดโรงพยาบาล
+                        </div>
+
+                        {/* Central Hospital Map */}
+                        <div className="hospital-map-card" style={{ background: "rgba(255,255,255,0.01)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-md)", padding: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.78rem", fontWeight: "bold", color: "var(--text-primary)" }}>🏥 โรงพยาบาลกลาง (Central)</span>
+                            {isEditMode && (
+                              <div style={{ display: "flex", gap: "4px" }}>
+                                <label className="map-upload-trigger-btn" style={{ padding: "4px 8px", fontSize: "0.65rem", margin: 0, height: "auto", display: "inline-flex", alignItems: "center", gap: "2px", width: "auto" }}>
+                                  <UploadIcon size={10} />
+                                  อัปโหลด
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => handleHospitalMapUpload("central", e)}
+                                    style={{ display: "none" }}
+                                  />
+                                </label>
+                                {(activeCategory as any).mapCentralUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleHospitalMapDelete("central")}
+                                    className="btn btn-danger"
+                                    style={{ padding: "4px 8px", fontSize: "0.65rem", display: "flex", alignItems: "center", gap: "2px", height: "auto" }}
+                                  >
+                                    <TrashIcon size={10} />
+                                    ลบ
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {(activeCategory as any).mapCentralUrl ? (
+                            <div 
+                              onClick={() => !isEditMode && setLightboxUrl((activeCategory as any).mapCentralUrl)}
+                              style={{ position: "relative", cursor: isEditMode ? "default" : "zoom-in", borderRadius: "var(--radius-sm)", overflow: "hidden", border: "1px solid rgba(255,255,255,0.05)" }}
+                            >
+                              <img src={(activeCategory as any).mapCentralUrl} alt="Central Hospital Map" style={{ width: "100%", maxHeight: "110px", objectFit: "cover", display: "block" }} />
+                              {!isEditMode && (
+                                <div style={{ position: "absolute", bottom: "4px", right: "4px", background: "rgba(0,0,0,0.7)", padding: "2px 4px", borderRadius: "2px", fontSize: "0.58rem", color: "#fff" }}>
+                                  🔎 คลิกขยาย
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ padding: "16px", textAlign: "center", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: "var(--radius-sm)", color: "var(--text-muted)", fontSize: "0.72rem" }}>
+                              ยังไม่มีการอัปโหลดแผนที่
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Desert Hospital Map */}
+                        <div className="hospital-map-card" style={{ background: "rgba(255,255,255,0.01)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-md)", padding: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.78rem", fontWeight: "bold", color: "var(--text-primary)" }}>🌵 โรงพยาบาลทะเลทราย (Sandy)</span>
+                            {isEditMode && (
+                              <div style={{ display: "flex", gap: "4px" }}>
+                                <label className="map-upload-trigger-btn" style={{ padding: "4px 8px", fontSize: "0.65rem", margin: 0, height: "auto", display: "inline-flex", alignItems: "center", gap: "2px", width: "auto" }}>
+                                  <UploadIcon size={10} />
+                                  อัปโหลด
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => handleHospitalMapUpload("desert", e)}
+                                    style={{ display: "none" }}
+                                  />
+                                </label>
+                                {(activeCategory as any).mapDesertUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleHospitalMapDelete("desert")}
+                                    className="btn btn-danger"
+                                    style={{ padding: "4px 8px", fontSize: "0.65rem", display: "flex", alignItems: "center", gap: "2px", height: "auto" }}
+                                  >
+                                    <TrashIcon size={10} />
+                                    ลบ
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {(activeCategory as any).mapDesertUrl ? (
+                            <div 
+                              onClick={() => !isEditMode && setLightboxUrl((activeCategory as any).mapDesertUrl)}
+                              style={{ position: "relative", cursor: isEditMode ? "default" : "zoom-in", borderRadius: "var(--radius-sm)", overflow: "hidden", border: "1px solid rgba(255,255,255,0.05)" }}
+                            >
+                              <img src={(activeCategory as any).mapDesertUrl} alt="Desert Hospital Map" style={{ width: "100%", maxHeight: "110px", objectFit: "cover", display: "block" }} />
+                              {!isEditMode && (
+                                <div style={{ position: "absolute", bottom: "4px", right: "4px", background: "rgba(0,0,0,0.7)", padding: "2px 4px", borderRadius: "2px", fontSize: "0.58rem", color: "#fff" }}>
+                                  🔎 คลิกขยาย
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ padding: "16px", textAlign: "center", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: "var(--radius-sm)", color: "var(--text-muted)", fontSize: "0.72rem" }}>
+                              ยังไม่มีการอัปโหลดแผนที่
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {!isEditMode && (
                       <div className="rules-sidebar-search-box">
