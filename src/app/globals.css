@@ -2915,6 +2915,47 @@ body::before {
   font-size: 5.2px;
 }
 
+/* Custom Marker Hover Animations */
+@keyframes pinBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2.2px); /* Bounce up in SVG units */
+  }
+}
+
+@keyframes pinWiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-6deg); /* Shake head left */
+  }
+  75% {
+    transform: rotate(6deg);  /* Shake head right */
+  }
+}
+
+.map-pin-main image {
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.map-pin-main.active image {
+  animation: pinBounce 0.6s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+.map-pin-second image {
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.map-pin-second.active image {
+  animation: pinWiggle 0.4s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+
 /* Table Row Highlight */
 .fee-table-item-row {
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;

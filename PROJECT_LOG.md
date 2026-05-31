@@ -239,8 +239,7 @@
 
 ## [2026-05-31 09:10] | File: src/app/dashboard/rules/page.tsx | Line: 631 | Keyword: Continuous Pencil Segment Drawing | Status: ✅ Complete | Change: Implemented continuous segment drawing in Pencil mode. Uses Refs to cache coordinates without React state delays, initializing with existing zone points on MouseDown to append new strokes instead of replacing the entire path. Adds loop-closure detection on MouseUp to auto-snap to the starting point if within 1.5 units, and enables the Undo button in Pencil mode.
 
+## [2026-05-31 09:34] | File: src/app/dashboard/rules/page.tsx, src/app/api/rules/upload-cover/route.ts | Line: 72, 555, 3337, 1-144 | Keyword: Custom Marker Image Overlay and Uploader | Status: ✅ Complete | Change: Replaced standard text-based map pins with custom PNG marker image symbols. Copied 4 design pin images (red, yellow, green, orange) to public resources. Created zone marker state lookup and mapping defaults. Integrated a marker selector dropdown in the map editor sidebar to associate specific markers per zone. Implemented custom marker image upload and management (upload to Supabase bucket proofs, assign custom labels/definitions, list uploaded files, and clean up associations on delete) directly in the admin map editor sidebar panel.
 
-
-
-
+## [2026-05-31 09:41] | File: src/app/dashboard/rules/page.tsx, src/app/globals.css | Line: 495, 2093, 3056, 2915 | Keyword: Main/Second Pin Animations & Zoom Bypass | Status: ✅ Complete | Change: Classified pins into Main Location (ในเมือง, นอกเมือง, เมืองบน) and Second Location (custom zones). Appended CSS keyframe animations for 'pinBounce' (y-axis translation) and 'pinWiggle' (rotation with bottom-center anchor). Updated SVG pin render components to apply correct map-pin animation classes on hover. Modified getMapTransform to return scale(1) when a Main Location is hovered, disabling the camera zoom effect for main locations.
 

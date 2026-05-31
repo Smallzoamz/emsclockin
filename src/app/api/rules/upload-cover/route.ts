@@ -17,6 +17,12 @@ export async function POST(req: Request) {
     const catId = formData.get("catId") as string | null;
     const isMap = formData.get("isMap") === "true";
 
+    // Custom Marker parameters
+    const isMarker = formData.get("isMarker") === "true";
+    const markerName = formData.get("markerName") as string | null;
+    const deleteMarker = formData.get("deleteMarker") === "true";
+    const markerId = formData.get("markerId") as string | null;
+
     // 1. Fetch current rules config
     let rulesData: any = null;
     const { data: currentDbData, error: getError } = await supabase
@@ -33,6 +39,111 @@ export async function POST(req: Request) {
       title: "กฏของโรงพยาบาล",
       categories: []
     };
+
+    // Handle Custom Marker Deletion
+    if (isMarker && deleteMarker) {
+      if (!markerId) {
+        return NextResponse.json({ error: "กรุณาระบุมาร์คเกอร์ ID ที่ต้องการลบ" }, { status: 400 });
+      }
+      
+      const cat = rulesData.categories.find((c: any) => c.id === "medical_fees");
+      if (cat) {
+        if (cat.custom_markers) {
+          cat.custom_markers = cat.custom_markers.filter((m: any) => m.id !== markerId);
+        }
+        // Cleanup zone_markers association if any zone used this deleted marker
+        if (cat.zone_markers) {
+          for (const zone in cat.zone_markers) {
+            if (cat.zone_markers[zone] === markerId) {
+              delete cat.zone_markers[zone];
+            }
+          }
+        }
+      }
+
+      const { error: dbError } = await supabase
+        .from("system_settings")
+        .upsert({
+          key: "doctor_rules",
+          value: rulesData,
+          updated_at: new Date().toISOString()
+        }, { onConflict: "key" });
+
+      if (dbError) throw dbError;
+
+      return NextResponse.json({
+        success: true,
+        rules: rulesData,
+        message: "ลบสัญลักษณ์มาร์คเกอร์เรียบร้อยแล้วค่ะ"
+      });
+    }
+
+    // Handle Custom Marker Upload
+    if (isMarker) {
+      if (!coverFile) {
+        return NextResponse.json({ error: "กรุณาแนบไฟล์รูปภาพมาร์คเกอร์" }, { status: 400 });
+      }
+      
+      const fileExt = coverFile.name.split('.').pop() || 'png';
+      const fileName = `theme/rules-marker-${Date.now()}.${fileExt}`;
+      const arrayBuffer = await coverFile.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      const { data: uploadData, error: uploadError } = await supabase
+        .storage
+        .from("proofs")
+        .upload(fileName, buffer, {
+          contentType: coverFile.type,
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error("[Marker Upload Error]", uploadError);
+        return NextResponse.json(
+          { error: "อัปโหลดรูปภาพมาร์คเกอร์ไม่สำเร็จ (ไม่สามารถบันทึกไฟล์ได้)" },
+          { status: 500 }
+        );
+      }
+
+      const { data: publicUrlData } = supabase
+        .storage
+        .from("proofs")
+        .getPublicUrl(fileName);
+        
+      const markerUrl = publicUrlData.publicUrl;
+
+      const cat = rulesData.categories.find((c: any) => c.id === "medical_fees");
+      if (cat) {
+        if (!cat.custom_markers) {
+          cat.custom_markers = [];
+        }
+        const newMarkerId = `marker_${Date.now()}`;
+        cat.custom_markers.push({
+          id: newMarkerId,
+          name: markerName || "หมุดที่อัปโหลด",
+          url: markerUrl
+        });
+      } else {
+        return NextResponse.json({ error: "ไม่พบหมวดหมู่ย่อยระบบค่ารักษาพยาบาล" }, { status: 404 });
+      }
+
+      const { error: dbError } = await supabase
+        .from("system_settings")
+        .upsert({
+          key: "doctor_rules",
+          value: rulesData,
+          updated_at: new Date().toISOString()
+        }, { onConflict: "key" });
+
+      if (dbError) throw dbError;
+
+      return NextResponse.json({
+        success: true,
+        rules: rulesData,
+        coverUrl: markerUrl,
+        message: "อัปโหลดรูปภาพมาร์คเกอร์เรียบร้อยแล้วค่ะ"
+      });
+    }
 
     // 2. Handle cover removal
     if (deleteCover) {

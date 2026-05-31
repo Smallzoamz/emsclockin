@@ -71,6 +71,14 @@ const colorMap: Record<string, { hex: string; name: string; rgb: string }> = {
   cyan: { hex: "#06b6d4", name: "ฟ้า", rgb: "6, 182, 212" }
 };
 
+const defaultMarkers = [
+  { id: "marker_red", name: "หมุดสีแดง (ในเมือง)", url: "/images/rules/marker_red.png" },
+  { id: "marker_yellow", name: "หมุดสีเหลือง (นอกเมือง)", url: "/images/rules/marker_yellow.png" },
+  { id: "marker_green", name: "หมุดสีเขียว (เมืองบน)", url: "/images/rules/marker_green.png" },
+  { id: "marker_orange", name: "หมุดสีส้ม (หัวกะโหลกไฟ)", url: "/images/rules/marker_orange.png" }
+];
+
+
 
 export default function RulesPage() {
   const confirm = useConfirm();
@@ -484,23 +492,11 @@ export default function RulesPage() {
         width: "100%"
       };
     }
-    // Read-only dynamic hover panning
-    if (hoveredZone === "ในเมือง") {
+    // Read-only dynamic hover panning - disabled zoom for main locations as requested
+    if (hoveredZone === "ในเมือง" || hoveredZone === "นอกเมือง" || hoveredZone === "เมืองบน") {
       return {
-        transform: "scale(1.9)",
-        transformOrigin: "43% 102%"
-      };
-    }
-    if (hoveredZone === "นอกเมือง") {
-      return {
-        transform: "scale(1.7)",
-        transformOrigin: "50% 67%"
-      };
-    }
-    if (hoveredZone === "เมืองบน") {
-      return {
-        transform: "scale(1.9)",
-        transformOrigin: "50% 33%"
+        transform: "scale(1)",
+        transformOrigin: "center center"
       };
     }
     // Hover custom zone dynamic panning
@@ -546,6 +542,43 @@ export default function RulesPage() {
     if (zoneName === "เมืองบน") return "green";
     return "blue";
   };
+
+  const getAvailableMarkers = () => {
+    const activeRulesSource = isEditMode ? editedRules : rules;
+    const medCat = activeRulesSource?.categories.find(c => c.id === "medical_fees") as any;
+    const customMarkers = medCat?.custom_markers || [];
+    return [...defaultMarkers, ...customMarkers];
+  };
+
+  const getZoneMarker = (zoneName: string): string => {
+    const activeRulesSource = isEditMode ? editedRules : rules;
+    const medCat = activeRulesSource?.categories.find(c => c.id === "medical_fees") as any;
+    if (medCat?.zone_markers?.[zoneName] !== undefined) {
+      return medCat.zone_markers[zoneName];
+    }
+    if (zoneName === "ในเมือง") return "marker_red";
+    if (zoneName === "นอกเมือง") return "marker_yellow";
+    if (zoneName === "เมืองบน") return "marker_green";
+    return "marker_orange";
+  };
+
+  const getZoneMarkerUrl = (zoneName: string): string => {
+    const markerId = getZoneMarker(zoneName);
+    const available = getAvailableMarkers();
+    const found = available.find(m => m.id === markerId);
+    return found ? found.url : "/images/rules/marker_orange.png";
+  };
+
+  const updateZoneMarker = (zoneName: string, markerKey: string) => {
+    if (!editedRules) return;
+    const updatedCategories = editedRules.categories.map((cat) => {
+      if (cat.id !== "medical_fees") return cat;
+      const zone_markers = { ...(cat as any).zone_markers || {}, [zoneName]: markerKey };
+      return { ...cat, zone_markers };
+    });
+    setEditedRules({ ...editedRules, categories: updatedCategories });
+  };
+
 
   const updateZonePoints = (zoneName: string, pointsStr: string) => {
     if (!editedRules) return;
@@ -831,7 +864,8 @@ export default function RulesPage() {
       const updatedZones = { ...((cat as any).zones || defaultZones), [name]: "" };
       const updatedPins = { ...((cat as any).pins || defaultPins), [name]: { x: 50, y: 50 } };
       const zone_colors = { ...((cat as any).zone_colors || {}), [name]: newZoneColor };
-      return { ...cat, zones: updatedZones, pins: updatedPins, zone_colors };
+      const zone_markers = { ...((cat as any).zone_markers || {}), [name]: "marker_orange" };
+      return { ...cat, zones: updatedZones, pins: updatedPins, zone_colors, zone_markers };
     });
 
     setEditedRules({ ...editedRules, categories: updatedCategories });
@@ -856,17 +890,19 @@ export default function RulesPage() {
       const zones = { ...((cat as any).zones || defaultZones) };
       const pins = { ...((cat as any).pins || defaultPins) };
       const zone_colors = { ...((cat as any).zone_colors || {}) };
+      const zone_markers = { ...((cat as any).zone_markers || {}) };
       
       delete zones[zoneName];
       delete pins[zoneName];
       delete zone_colors[zoneName];
+      delete zone_markers[zoneName];
 
       let fallback_zone = (cat as any).fallback_zone || "";
       if (fallback_zone === zoneName) {
         fallback_zone = "";
       }
 
-      return { ...cat, zones, pins, zone_colors, fallback_zone };
+      return { ...cat, zones, pins, zone_colors, zone_markers, fallback_zone };
     });
 
     setEditedRules({ ...editedRules, categories: updatedCategories });
@@ -2047,22 +2083,75 @@ export default function RulesPage() {
                                     const pin = getPinCoords(zoneName);
                                     const colorKey = getZoneColor(zoneName);
                                     const colorObj = colorMap[colorKey] || colorMap.blue;
+                                    const markerUrl = getZoneMarkerUrl(zoneName);
+                                    const w = 7.5;
+                                    const h = 11.2;
+                                    const isActive = hoveredZone === zoneName;
+                                    const isMainLocation = zoneName === "ในเมือง" || zoneName === "นอกเมือง" || zoneName === "เมืองบน";
+                                    
                                     return (
                                       <g
                                         key={`pin-${zoneName}`}
-                                        className={`map-pin-group ${hoveredZone === zoneName ? "active" : ""}`}
+                                        className={`map-pin-group ${isMainLocation ? "map-pin-main" : "map-pin-second"} ${isActive ? "active" : ""}`}
                                         style={{
-                                          opacity: (!hoveredZone || hoveredZone === zoneName) ? 1 : 0.25,
-                                          pointerEvents: (!hoveredZone || hoveredZone === zoneName) ? "auto" : "none",
+                                          opacity: (!hoveredZone || isActive) ? 1 : 0.2,
+                                          pointerEvents: (!hoveredZone || isActive) ? "auto" : "none",
                                           transition: "opacity 0.3s ease"
                                         }}
                                         onMouseEnter={() => !isDrawingMode && setHoveredZone(zoneName)}
                                         onMouseLeave={() => !isDrawingMode && setHoveredZone(null)}
                                       >
-                                        <circle cx={pin.x} cy={pin.y} r="2.0" fill="none" stroke={colorObj.hex} strokeWidth="0.6" className="map-pin-pulse" />
-                                        <circle cx={pin.x} cy={pin.y} r="1.0" fill={colorObj.hex} stroke="#fff" strokeWidth="0.3" className="map-pin-circle" />
-                                        <rect x={pin.x - (zoneName.length * 2.2 + 2.5)} y={pin.y + 3} width={zoneName.length * 4.4 + 5} height="5.0" rx="2.5" fill={colorObj.hex} stroke="#fff" strokeWidth="0.4" opacity="0.95" />
-                                        <text x={pin.x} y={pin.y + 5.5} className="map-pin-label" dominantBaseline="middle" style={{ fontSize: "3.2px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}>{zoneName}</text>
+                                        <circle 
+                                          cx={pin.x} 
+                                          cy={pin.y} 
+                                          r="1.8" 
+                                          fill="none" 
+                                          stroke={colorObj.hex} 
+                                          strokeWidth="0.5" 
+                                          className="map-pin-pulse" 
+                                        />
+                                        <circle 
+                                          cx={pin.x} 
+                                          cy={pin.y} 
+                                          r="0.5" 
+                                          fill={colorObj.hex} 
+                                          stroke="#fff" 
+                                          strokeWidth="0.2" 
+                                        />
+                                        
+                                        <image
+                                          href={markerUrl}
+                                          x={pin.x - w / 2}
+                                          y={pin.y - h}
+                                          width={w}
+                                          height={h}
+                                          preserveAspectRatio="xMidYMidMeet"
+                                          style={{ cursor: "pointer" }}
+                                        />
+
+                                        {isActive && (
+                                          <g style={{ pointerEvents: "none" }}>
+                                            <rect 
+                                              x={pin.x - (zoneName.length * 2.2 + 2.5)} 
+                                              y={pin.y + 1.2} 
+                                              width={zoneName.length * 4.4 + 5} 
+                                              height="4.5" 
+                                              rx="2.25" 
+                                              fill="rgba(15, 23, 42, 0.95)" 
+                                              stroke="rgba(255, 255, 255, 0.15)" 
+                                              strokeWidth="0.3" 
+                                            />
+                                            <text 
+                                              x={pin.x} 
+                                              y={pin.y + 3.45} 
+                                              className="map-pin-label" 
+                                              dominantBaseline="middle" 
+                                              style={{ fontSize: "2.8px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}
+                                            >
+                                              {zoneName}
+                                            </text>
+                                          </g>
+                                        )}
                                       </g>
                                     );
                                   })}
@@ -2958,22 +3047,75 @@ export default function RulesPage() {
                           const pin = getPinCoords(zoneName);
                           const colorKey = getZoneColor(zoneName);
                           const colorObj = colorMap[colorKey] || colorMap.blue;
+                          const markerUrl = getZoneMarkerUrl(zoneName);
+                          const w = 7.5 / zoomScale;
+                          const h = 11.2 / zoomScale;
+                          const isActive = hoveredZone === zoneName;
+                          const isMainLocation = zoneName === "ในเมือง" || zoneName === "นอกเมือง" || zoneName === "เมืองบน";
+                          
                           return (
                             <g
                               key={"pin-" + zoneName}
-                              className={"map-pin-group " + (hoveredZone === zoneName ? "active" : "")}
+                              className={"map-pin-group " + (isMainLocation ? "map-pin-main" : "map-pin-second") + " " + (isActive ? "active" : "")}
                               style={{
-                                opacity: (!hoveredZone || hoveredZone === zoneName) ? 1 : 0.3,
-                                pointerEvents: (!hoveredZone || hoveredZone === zoneName) ? "auto" : "none",
+                                opacity: (!hoveredZone || isActive) ? 1 : 0.25,
+                                pointerEvents: (!hoveredZone || isActive) ? "auto" : "none",
                                 transition: "opacity 0.3s ease"
                               }}
                               onMouseEnter={() => setHoveredZone(zoneName)}
                               onMouseLeave={() => setHoveredZone(null)}
                             >
-                              <circle cx={pin.x} cy={pin.y} r={2.0 / zoomScale} fill="none" stroke={colorObj.hex} strokeWidth={0.6 / zoomScale} className="map-pin-pulse" />
-                              <circle cx={pin.x} cy={pin.y} r={1.0 / zoomScale} fill={colorObj.hex} stroke="#fff" strokeWidth={0.3 / zoomScale} className="map-pin-circle" />
-                              <rect x={pin.x - (zoneName.length * 2.2 + 2.5) / zoomScale} y={pin.y + 3 / zoomScale} width={(zoneName.length * 4.4 + 5) / zoomScale} height={5.0 / zoomScale} rx={2.5 / zoomScale} fill={colorObj.hex} stroke="#fff" strokeWidth={0.4 / zoomScale} opacity="0.95" />
-                              <text x={pin.x} y={pin.y + 5.5 / zoomScale} className="map-pin-label" dominantBaseline="middle" style={{ fontSize: (3.2 / zoomScale) + "px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}>{zoneName}</text>
+                              <circle 
+                                cx={pin.x} 
+                                cy={pin.y} 
+                                r={1.8 / zoomScale} 
+                                fill="none" 
+                                stroke={colorObj.hex} 
+                                strokeWidth={0.5 / zoomScale} 
+                                className="map-pin-pulse" 
+                              />
+                              <circle 
+                                cx={pin.x} 
+                                cy={pin.y} 
+                                r={0.5 / zoomScale} 
+                                fill={colorObj.hex} 
+                                stroke="#fff" 
+                                strokeWidth={0.2 / zoomScale} 
+                              />
+                              
+                              <image
+                                href={markerUrl}
+                                x={pin.x - w / 2}
+                                y={pin.y - h}
+                                width={w}
+                                height={h}
+                                preserveAspectRatio="xMidYMidMeet"
+                                style={{ cursor: "pointer" }}
+                              />
+
+                              {isActive && (
+                                <g style={{ pointerEvents: "none" }}>
+                                  <rect 
+                                    x={pin.x - (zoneName.length * 2.2 + 2.5) / zoomScale} 
+                                    y={pin.y + 1.2 / zoomScale} 
+                                    width={(zoneName.length * 4.4 + 5) / zoomScale} 
+                                    height={4.5 / zoomScale} 
+                                    rx={2.25 / zoomScale} 
+                                    fill="rgba(15, 23, 42, 0.95)" 
+                                    stroke="rgba(255, 255, 255, 0.15)" 
+                                    strokeWidth={0.3 / zoomScale} 
+                                  />
+                                  <text 
+                                    x={pin.x} 
+                                    y={pin.y + 3.45 / zoomScale} 
+                                    className="map-pin-label" 
+                                    dominantBaseline="middle" 
+                                    style={{ fontSize: (2.8 / zoomScale) + "px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}
+                                  >
+                                    {zoneName}
+                                  </text>
+                                </g>
+                              )}
                             </g>
                           );
                         })}
@@ -3180,6 +3322,190 @@ export default function RulesPage() {
                           เพิ่ม
                         </button>
                       </div>
+                    </div>
+
+                    {/* Marker Selector for Selected Zone */}
+                    {selectedDrawZone && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px", textAlign: "left" }}>
+                        <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                          📌 สัญลักษณ์มาร์คเกอร์สำหรับ "{selectedDrawZone}":
+                        </label>
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                          <img
+                            src={getZoneMarkerUrl(selectedDrawZone)}
+                            alt="Preview"
+                            style={{
+                              width: "24px",
+                              height: "32px",
+                              objectFit: "contain",
+                              borderRadius: "4px",
+                              background: "rgba(255,255,255,0.05)",
+                              padding: "2px",
+                              flexShrink: 0
+                            }}
+                          />
+                          <select
+                            value={getZoneMarker(selectedDrawZone)}
+                            onChange={(e) => updateZoneMarker(selectedDrawZone, e.target.value)}
+                            className="search-input"
+                            style={{ padding: "6px 10px", fontSize: "0.75rem", background: "rgba(15,23,42,0.6)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)", color: "var(--text-primary)", flex: 1 }}
+                          >
+                            {getAvailableMarkers().map(marker => (
+                              <option key={marker.id} value={marker.id} style={{ background: "#0f172a", color: "#fff" }}>
+                                {marker.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Custom Marker Manager and Upload */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px", textAlign: "left" }}>
+                      <label style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                        📁 อัปโหลดสัญลักษณ์มาร์คเกอร์ใหม่:
+                      </label>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <input
+                          type="text"
+                          id="new-marker-name-input"
+                          placeholder="ชื่อจุดมาร์คเกอร์ เช่น จุดสตอรี่..."
+                          className="search-input"
+                          style={{
+                            padding: "6px 10px",
+                            fontSize: "0.75rem",
+                            background: "rgba(15,23,42,0.6)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "var(--radius-sm)",
+                            color: "var(--text-primary)",
+                            width: "100%"
+                          }}
+                        />
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <input
+                            type="file"
+                            id="new-marker-file-input"
+                            accept="image/*"
+                            style={{ display: "none" }}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              const nameInput = document.getElementById("new-marker-name-input") as HTMLInputElement;
+                              const name = nameInput?.value?.trim() || "";
+                              
+                              if (!file) return;
+                              if (!name) {
+                                showToast("กรุณากรอกชื่อสัญลักษณ์มาร์คเกอร์ก่อนค่ะ", "error");
+                                e.target.value = "";
+                                return;
+                              }
+
+                              try {
+                                const formData = new FormData();
+                                formData.append("cover", file);
+                                formData.append("isMarker", "true");
+                                formData.append("markerName", name);
+
+                                const res = await fetch("/api/rules/upload-cover", {
+                                  method: "POST",
+                                  body: formData
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                  showToast("อัปโหลดมาร์คเกอร์สำเร็จแล้วค่ะ", "success");
+                                  if (data.rules) {
+                                    setEditedRules(data.rules);
+                                    setRules(data.rules);
+                                  }
+                                  nameInput.value = "";
+                                  e.target.value = "";
+                                } else {
+                                  showToast(data.error || "เกิดข้อผิดพลาดในการอัปโหลด", "error");
+                                }
+                              } catch (err) {
+                                console.error(err);
+                                showToast("อัปโหลดไม่สำเร็จค่ะ", "error");
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById("new-marker-file-input")?.click()}
+                            className="editor-btn editor-btn-outline"
+                            style={{ flex: 1, fontSize: "0.72rem", padding: "6px 8px", justifyContent: "center" }}
+                          >
+                            📤 เลือกไฟล์ภาพ
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* List of Custom Markers */}
+                      {(() => {
+                        const medCat = (isEditMode ? editedRules : rules)?.categories.find(c => c.id === "medical_fees") as any;
+                        const customMarkers = medCat?.custom_markers || [];
+                        if (customMarkers.length === 0) return null;
+                        return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px", background: "rgba(0,0,0,0.2)", borderRadius: "var(--radius-sm)", padding: "6px", maxHeight: "120px", overflowY: "auto", marginTop: "4px" }}>
+                            <span style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 600 }}>รายการมาร์คเกอร์ที่อัปโหลด:</span>
+                            {customMarkers.map((marker: any) => (
+                              <div key={marker.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", padding: "3px 4px", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <img src={marker.url} alt="Marker" style={{ width: "16px", height: "24px", objectFit: "contain" }} />
+                                  <span style={{ fontSize: "0.7rem", color: "var(--text-primary)" }}>{marker.name}</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const confirmed = await confirm({
+                                      title: "ยืนยันการลบมาร์คเกอร์",
+                                      message: `คุณแน่ใจหรือไม่ว่าต้องการลบมาร์คเกอร์ "${marker.name}"? โซนที่ผูกกับมาร์คเกอร์นี้จะเปลี่ยนไปใช้มาร์คเกอร์หลัก`,
+                                      confirmText: "ลบ",
+                                      cancelText: "ยกเลิก",
+                                      variant: "danger"
+                                    });
+                                    if (!confirmed) return;
+
+                                    try {
+                                      const formData = new FormData();
+                                      formData.append("isMarker", "true");
+                                      formData.append("deleteMarker", "true");
+                                      formData.append("markerId", marker.id);
+
+                                      const res = await fetch("/api/rules/upload-cover", {
+                                        method: "POST",
+                                        body: formData
+                                      });
+                                      const data = await res.json();
+                                      if (data.success) {
+                                        showToast("ลบมาร์คเกอร์เรียบร้อยแล้วค่ะ", "success");
+                                        if (data.rules) {
+                                          setEditedRules(data.rules);
+                                          setRules(data.rules);
+                                        }
+                                      } else {
+                                        showToast(data.error || "เกิดข้อผิดพลาด", "error");
+                                      }
+                                    } catch (err) {
+                                      console.error(err);
+                                      showToast("ลบไม่สำเร็จค่ะ", "error");
+                                    }
+                                  }}
+                                  style={{
+                                    background: "transparent",
+                                    border: "none",
+                                    color: "var(--text-muted)",
+                                    cursor: "pointer",
+                                    fontSize: "0.72rem",
+                                    padding: "2px 4px"
+                                  }}
+                                  title="ลบสัญลักษณ์นี้"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Fallback Zone Selector */}
