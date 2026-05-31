@@ -1655,6 +1655,8 @@ export default function RulesPage() {
                               const medCat = (isEditMode ? editedRules : rules)?.categories.find(c => c.id === "medical_fees") as any;
                               const zones = medCat?.zones || defaultZones;
                               const zoneNames = Object.keys(zones);
+                              const activeZonePoints = hoveredZone ? getZonePoints(hoveredZone) : null;
+
                               return (
                                 <svg
                                   viewBox="0 0 100 133.3"
@@ -1669,6 +1671,30 @@ export default function RulesPage() {
                                     zIndex: 10
                                   }}
                                 >
+                                  <defs>
+                                    {activeZonePoints && (
+                                      <clipPath id="hovered-zone-clip-readonly">
+                                        <polygon points={activeZonePoints} />
+                                      </clipPath>
+                                    )}
+                                  </defs>
+
+                                  {hoveredZone && activeZonePoints && (
+                                    <image
+                                      href={(activeCategory as any).mapUrl}
+                                      x="0"
+                                      y="0"
+                                      width="100"
+                                      height="133.3"
+                                      preserveAspectRatio="none"
+                                      clipPath="url(#hovered-zone-clip-readonly)"
+                                      style={{
+                                        filter: "brightness(1.15) contrast(1.05)",
+                                        pointerEvents: "none"
+                                      }}
+                                    />
+                                  )}
+
                                   {/* Dynamic Zones Polygons */}
                                   {zoneNames.map(zoneName => {
                                     const pointsStr = getZonePoints(zoneName);
@@ -1680,17 +1706,14 @@ export default function RulesPage() {
                                     const isActive = hoveredZone === zoneName || (isDrawingMode && isSelected);
                                     const isAnyFocused = hoveredZone !== null || (isDrawingMode && selectedDrawZone !== null);
                                     
-                                    let fillOpacity = 0.08;
                                     let strokeColor = `rgba(${colorObj.rgb}, 0.35)`;
                                     let strokeWidth = 0.5;
 
                                     if (isAnyFocused) {
                                       if (isActive) {
-                                        fillOpacity = 0.55;
                                         strokeColor = colorObj.hex;
                                         strokeWidth = 0.5;
                                       } else {
-                                        fillOpacity = 0.02;
                                         strokeColor = `rgba(${colorObj.rgb}, 0.08)`;
                                         strokeWidth = 0.3;
                                       }
@@ -1702,7 +1725,7 @@ export default function RulesPage() {
                                         points={pointsStr}
                                         className={`map-zone-path ${isActive ? "active" : ""}`}
                                         style={{
-                                          fill: `rgba(${colorObj.rgb}, ${fillOpacity})`,
+                                          fill: "none",
                                           stroke: strokeColor,
                                           strokeWidth: strokeWidth,
                                           transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -2505,6 +2528,10 @@ export default function RulesPage() {
                     const medCat = (isEditMode ? editedRules : rules)?.categories.find(c => c.id === "medical_fees") as any;
                     const zones = medCat?.zones || defaultZones;
                     const zoneNames = Object.keys(zones);
+                    
+                    const activeClipZone = hoveredZone || selectedDrawZone;
+                    const activeZonePoints = activeClipZone ? getZonePoints(activeClipZone) : null;
+
                     return (
                       <svg
                         viewBox="0 0 100 133.3"
@@ -2519,6 +2546,30 @@ export default function RulesPage() {
                           zIndex: 10
                         }}
                       >
+                        <defs>
+                          {activeZonePoints && (
+                            <clipPath id="hovered-zone-clip-portal">
+                              <polygon points={activeZonePoints} />
+                            </clipPath>
+                          )}
+                        </defs>
+
+                        {activeClipZone && activeZonePoints && (
+                          <image
+                            href={(activeCategory as any).mapUrl}
+                            x="0"
+                            y="0"
+                            width="100"
+                            height="133.3"
+                            preserveAspectRatio="none"
+                            clipPath="url(#hovered-zone-clip-portal)"
+                            style={{
+                              filter: "brightness(1.15) contrast(1.05)",
+                              pointerEvents: "none"
+                            }}
+                          />
+                        )}
+
                         {/* Dynamic Zones Polygons */}
                         {zoneNames.map(zoneName => {
                           const pointsStr = getZonePoints(zoneName);
@@ -2530,17 +2581,14 @@ export default function RulesPage() {
                           const isActive = hoveredZone === zoneName || isSelected;
                           const isAnyFocused = hoveredZone !== null || selectedDrawZone !== null;
                           
-                          let fillOpacity = 0.08;
                           let strokeColor = "rgba(" + colorObj.rgb + ", 0.4)";
                           let strokeWidthVal = 0.5;
 
                           if (isAnyFocused) {
                             if (isActive) {
-                              fillOpacity = 0.55;
                               strokeColor = colorObj.hex;
                               strokeWidthVal = 0.5;
                             } else {
-                              fillOpacity = 0.02;
                               strokeColor = "rgba(" + colorObj.rgb + ", 0.08)";
                               strokeWidthVal = 0.3;
                             }
@@ -2552,7 +2600,7 @@ export default function RulesPage() {
                               points={pointsStr}
                               className={"map-zone-path " + (isActive ? "active" : "")}
                               style={{
-                                fill: "rgba(" + colorObj.rgb + ", " + fillOpacity + ")",
+                                fill: "none",
                                 stroke: strokeColor,
                                 strokeWidth: strokeWidthVal / zoomScale,
                                 transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
