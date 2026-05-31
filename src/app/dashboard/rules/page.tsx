@@ -115,9 +115,29 @@ export default function RulesPage() {
         e.preventDefault();
         const zoomStep = 0.25;
         const direction = e.deltaY < 0 ? 1 : -1;
+        
+        const rect = node.getBoundingClientRect();
+        const xMouse = e.clientX - rect.left;
+        const yMouse = e.clientY - rect.top;
+        
+        const scrollLeftVal = node.scrollLeft;
+        const scrollTopVal = node.scrollTop;
+
         setZoomScale(prev => {
-          const next = prev + direction * zoomStep;
-          return Math.min(Math.max(next, 1), 20); // Max zoom 20x (2000% zoom!)
+          const next = Math.min(Math.max(prev + direction * zoomStep, 1), 20); // Max zoom 20x (2000% zoom!)
+          
+          if (next !== prev) {
+            const ratio = next / prev;
+            const newScrollLeft = ratio * scrollLeftVal + (ratio - 1) * xMouse;
+            const newScrollTop = ratio * scrollTopVal + (ratio - 1) * yMouse;
+            
+            requestAnimationFrame(() => {
+              node.scrollLeft = newScrollLeft;
+              node.scrollTop = newScrollTop;
+            });
+          }
+          
+          return next;
         });
       };
       wheelHandlerRef.current = handleWheel;
@@ -2500,7 +2520,6 @@ export default function RulesPage() {
                 style={{
                   transform: "scale(" + zoomScale + ")",
                   transformOrigin: "top left",
-                  transition: "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                   position: "relative",
                   display: "inline-block"
                 }}
