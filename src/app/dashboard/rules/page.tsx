@@ -2182,7 +2182,7 @@ export default function RulesPage() {
                                           <g style={{ pointerEvents: "none" }}>
                                             <text 
                                               x={pin.x} 
-                                              y={pin.y + h / 2 + 2.0} 
+                                              y={pin.y + h / 2 + 1.0} 
                                               className="map-pin-label" 
                                               dominantBaseline="middle" 
                                               style={{ fontSize: "1.6px", fill: "#fff", textAnchor: "middle", fontWeight: "700", paintOrder: "stroke", stroke: "rgba(0,0,0,0.7)", strokeWidth: "0.3px" }}
