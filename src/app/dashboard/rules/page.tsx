@@ -2451,171 +2451,169 @@ export default function RulesPage() {
                       <span style={{ fontSize: "0.95rem", fontWeight: 800 }}>ตารางอัตราค่ารักษาพยาบาล</span>
                     </div>
 
-                    <div style={{ maxHeight: "62vh", overflowY: "auto", paddingRight: "6px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {(() => {
-                        const feeGroups = groupFeeRules(activeCategory.rules);
-                        const categoryKeys = ["mf_general", "mf_story", "mf_event", "mf_injection"];
-                        const categoryNames = ["เคสทั่วไป", "เคสสตอรี่", "เคสกิจกรรม", "ฉีดยา"];
-                        const categoryColors = feeColors;
+                    <div style={{ overflowX: "auto" }}>
+                      <table className="fee-dashed-table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: "40px" }}>#</th>
+                            <th>รายละเอียดการรักษา</th>
+                            <th style={{ width: "160px", textAlign: "right" }}>ค่ารักษา</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(() => {
+                            const feeGroups = groupFeeRules(activeCategory.rules);
+                            const categoryKeys = ["mf_general", "mf_story", "mf_event", "mf_injection"];
+                            const categoryNames = ["เคสทั่วไป", "เคสสตอรี่", "เคสกิจกรรม", "ฉีดยา"];
+                            const categoryColors = feeColors;
 
-                        return categoryKeys.map((catKey, catIdx) => {
-                          const groupRules = feeGroups[catKey] || [];
-                          const catName = categoryNames[catIdx];
-                          const color = categoryColors[catIdx];
-                          const isCatExpanded = catIdx === 0 
-                            ? expandedGroupTitles[catName] !== false 
-                            : expandedGroupTitles[catName] === true;
+                            return categoryKeys.map((catKey, catIdx) => {
+                              const groupRules = feeGroups[catKey] || [];
+                              const catName = categoryNames[catIdx];
+                              const color = categoryColors[catIdx];
 
-                          return (
-                            <div key={catKey} className={`rules-accordion-item ${isCatExpanded ? "expanded" : ""}`}>
-                              <div className="rules-accordion-header" onClick={() => toggleGroup(catName, catIdx)} style={{ background: "rgba(15, 23, 42, 0.3)" }}>
-                                <div className="rules-accordion-title">
-                                  <span>{color.icon}</span>
-                                  <span style={{ color: color.text }}>{catName}</span>
-                                </div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                  <span className="rules-card-badge" style={{ fontSize: "0.68rem" }}>
-                                    {groupRules.length} รายการ
-                                  </span>
-                                  <span className="rules-accordion-chevron" style={{ transform: isCatExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
-                                </div>
-                              </div>
+                              return (
+                                <Fragment key={catKey}>
+                                  {/* Category Header Row */}
+                                  <tr className="fee-table-category-row">
+                                    <td colSpan={3} className="fee-table-category-header">
+                                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: color.text, fontWeight: 800 }}>
+                                        <span>{color.icon}</span>
+                                        <span>{catName}</span>
+                                      </div>
+                                    </td>
+                                  </tr>
 
-                              {isCatExpanded && (
-                                <div className="rules-accordion-content" style={{ padding: "0", background: "transparent", borderTop: "none" }}>
-                                  <table className="fee-dashed-table" style={{ margin: "0", width: "100%", borderCollapse: "collapse", border: "none" }}>
-                                    <tbody>
-                                      {groupRules.length === 0 ? (
-                                        <tr>
-                                          <td colSpan={3} style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.8rem", padding: "12px" }}>
-                                            ไม่มีรายการในหมวดหมู่นี้
+                                  {/* Sub-items */}
+                                  {groupRules.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={3} style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.8rem", padding: "12px" }}>
+                                        ไม่มีรายการในหมวดหมู่นี้
+                                      </td>
+                                    </tr>
+                                  ) : (
+                                    groupRules.map((rule, idx) => {
+                                      const { description, fee: feeText } = parseMedicalFeeContent(rule.content);
+                                      const zoneKey = getZoneKey(description);
+                                      const isHighlighted = hoveredZone && zoneKey === hoveredZone;
+                                      const zoneColorKey = zoneKey ? getZoneColor(zoneKey) : null;
+                                      const highlightBorderColor = zoneColorKey ? (colorMap[zoneColorKey]?.hex || "transparent") : "transparent";
+
+                                      return (
+                                        <tr 
+                                          key={rule.id} 
+                                          className={`fee-table-item-row ${isHighlighted ? "row-highlight" : ""}`}
+                                          style={{
+                                            "--row-highlight-border-color": highlightBorderColor
+                                          } as React.CSSProperties}
+                                          onMouseEnter={() => {
+                                            if (!isEditMode && zoneKey) {
+                                              setHoveredZone(zoneKey);
+                                              const subLabel = getHoveredPinLabel(description);
+                                              setHoveredPinLabel(subLabel);
+                                            }
+                                          }}
+                                          onMouseLeave={() => {
+                                            if (!isEditMode) {
+                                              setHoveredZone(null);
+                                              setHoveredPinLabel(null);
+                                            }
+                                          }}
+                                        >
+                                          <td style={{ width: "36px", paddingRight: "0", verticalAlign: "middle" }}>
+                                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                                              #{idx + 1}
+                                            </span>
                                           </td>
-                                        </tr>
-                                      ) : (
-                                        groupRules.map((rule, idx) => {
-                                          const { description, fee: feeText } = parseMedicalFeeContent(rule.content);
-                                          const zoneKey = getZoneKey(description);
-                                          const isHighlighted = hoveredZone && zoneKey === hoveredZone;
-                                          const zoneColorKey = zoneKey ? getZoneColor(zoneKey) : null;
-                                          const highlightBorderColor = zoneColorKey ? (colorMap[zoneColorKey]?.hex || "transparent") : "transparent";
-
-                                          return (
-                                            <tr 
-                                              key={rule.id} 
-                                              className={`fee-table-item-row ${isHighlighted ? "row-highlight" : ""}`}
-                                              style={{
-                                                "--row-highlight-border-color": highlightBorderColor
-                                              } as React.CSSProperties}
-                                              onMouseEnter={() => {
-                                                if (!isEditMode && zoneKey) {
-                                                  setHoveredZone(zoneKey);
-                                                  const subLabel = getHoveredPinLabel(description);
-                                                  setHoveredPinLabel(subLabel);
-                                                }
-                                              }}
-                                              onMouseLeave={() => {
-                                                if (!isEditMode) {
-                                                  setHoveredZone(null);
-                                                  setHoveredPinLabel(null);
-                                                }
-                                              }}
-                                            >
-                                              <td style={{ width: "36px", paddingRight: "0", verticalAlign: "middle", paddingLeft: "14px" }}>
-                                                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                                                  #{idx + 1}
-                                                </span>
-                                              </td>
-                                              <td style={{ paddingLeft: "10px", paddingRight: "10px" }}>
-                                                {isEditMode ? (
-                                                  <textarea
-                                                    value={description}
-                                                    onChange={(e) => handleMedicalFeeFieldChange(rule.id, 0, e.target.value)}
-                                                    className="rules-textarea"
-                                                    placeholder="ระบุรายละเอียดการรักษา..."
-                                                    style={{ minHeight: "50px", fontSize: "0.8rem", padding: "6px 10px" }}
+                                          <td>
+                                            {isEditMode ? (
+                                              <textarea
+                                                value={description}
+                                                onChange={(e) => handleMedicalFeeFieldChange(rule.id, 0, e.target.value)}
+                                                className="rules-textarea"
+                                                placeholder="ระบุรายละเอียดการรักษา..."
+                                                style={{ minHeight: "50px", fontSize: "0.8rem", padding: "6px 10px" }}
+                                              />
+                                            ) : (
+                                              <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                                                {description || "—"}
+                                              </div>
+                                            )}
+                                          </td>
+                                          <td style={{ textAlign: "right", verticalAlign: "middle" }}>
+                                            <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                                              {isEditMode ? (
+                                                <>
+                                                  <input
+                                                    type="text"
+                                                    value={feeText}
+                                                    onChange={(e) => handleMedicalFeeFieldChange(rule.id, 1, e.target.value)}
+                                                    className="search-input"
+                                                    placeholder="3,000 IC"
+                                                    style={{ padding: "6px 10px", fontSize: "0.8rem", width: "90px", textAlign: "right" }}
                                                   />
-                                                ) : (
-                                                  <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
-                                                    {description || "—"}
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteFeeRule(rule.id)}
+                                                    className="rule-btn-icon danger"
+                                                    title="ลบรายการนี้"
+                                                    style={{ width: "26px", height: "26px", padding: "0" }}
+                                                  >
+                                                    <TrashIcon size={12} />
+                                                  </button>
+                                                </>
+                                              ) : (
+                                                feeText ? (
+                                                  <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                                                    <button
+                                                      onClick={() => copyFeeToClipboard(rule.id, feeText)}
+                                                      className="clickable-fee-badge"
+                                                      title="คลิกเพื่อคัดลอกตัวเลข"
+                                                    >
+                                                      <span className="font-mono" style={{ fontWeight: 700 }}>{feeText}</span>
+                                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
+                                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                      </svg>
+                                                    </button>
+                                                    {copiedRuleId === rule.id && (
+                                                      <span className="copy-success-pill">
+                                                        คัดลอกแล้ว!
+                                                      </span>
+                                                    )}
                                                   </div>
-                                                )}
-                                              </td>
-                                              <td style={{ textAlign: "right", verticalAlign: "middle", paddingRight: "14px" }}>
-                                                <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                                                  {isEditMode ? (
-                                                    <>
-                                                      <input
-                                                        type="text"
-                                                        value={feeText}
-                                                        onChange={(e) => handleMedicalFeeFieldChange(rule.id, 1, e.target.value)}
-                                                        className="search-input"
-                                                        placeholder="3,000 IC"
-                                                        style={{ padding: "6px 10px", fontSize: "0.8rem", width: "90px", textAlign: "right" }}
-                                                      />
-                                                      <button
-                                                        type="button"
-                                                        onClick={() => handleDeleteFeeRule(rule.id)}
-                                                        className="rule-btn-icon danger"
-                                                        title="ลบรายการนี้"
-                                                        style={{ width: "26px", height: "26px", padding: "0" }}
-                                                      >
-                                                        <TrashIcon size={12} />
-                                                      </button>
-                                                    </>
-                                                  ) : (
-                                                    feeText ? (
-                                                      <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-                                                        <button
-                                                          onClick={() => copyFeeToClipboard(rule.id, feeText)}
-                                                          className="clickable-fee-badge"
-                                                          title="คลิกเพื่อคัดลอกตัวเลข"
-                                                        >
-                                                          <span className="font-mono" style={{ fontWeight: 700 }}>{feeText}</span>
-                                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
-                                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                                          </svg>
-                                                        </button>
-                                                        {copiedRuleId === rule.id && (
-                                                          <span className="copy-success-pill">
-                                                            คัดลอกแล้ว!
-                                                          </span>
-                                                        )}
-                                                      </div>
-                                                    ) : (
-                                                      <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>—</span>
-                                                    )
-                                                  )}
-                                                </div>
-                                              </td>
-                                            </tr>
-                                          );
-                                        })
-                                      )}
-
-                                      {/* Add item row in edit mode */}
-                                      {isEditMode && (
-                                        <tr className="fee-table-add-row">
-                                          <td colSpan={3} style={{ padding: "6px 14px 14px 14px" }}>
-                                            <button
-                                              type="button"
-                                              onClick={() => handleAddFeeRule(catKey)}
-                                              className="map-upload-trigger-btn"
-                                              style={{ width: "100%", padding: "6px 12px", fontSize: "0.72rem", justifyContent: "center" }}
-                                            >
-                                              + เพิ่มรายการใน {catName}
-                                            </button>
+                                                ) : (
+                                                  <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>—</span>
+                                                )
+                                              )}
+                                            </div>
                                           </td>
                                         </tr>
-                                      )}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        });
-                      })()}
+                                      );
+                                    })
+                                  )}
+
+                                  {/* Add item row in edit mode */}
+                                  {isEditMode && (
+                                    <tr className="fee-table-add-row">
+                                      <td colSpan={3} style={{ padding: "6px 12px 14px 12px", borderBottom: "1px dashed rgba(255, 255, 255, 0.1)" }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAddFeeRule(catKey)}
+                                          className="map-upload-trigger-btn"
+                                          style={{ width: "100%", padding: "6px 12px", fontSize: "0.72rem", justifyContent: "center" }}
+                                        >
+                                          + เพิ่มรายการใน {catName}
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </Fragment>
+                              );
+                            });
+                          })()}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>

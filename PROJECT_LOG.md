@@ -269,3 +269,6 @@
 
 ## [2026-05-31 12:00] | File: multiple | Line: 1 | Keyword: Rules Modal Wide Format and Accordion Grouping | Status: ✅ Complete | Change: Enlarged rules modal container to wide format (1100px) universally. Restructured Blacklist and general rules categories in modal body to use rules-split-layout (left-column info card & local search, right-column rules content). Implemented groupRulesByHeader parser and expandedGroupTitles state to group rules under collapsible accordion items in read-only view. In edit mode, rendered header rules starting with '[HEADER]' as gradient blue cards with special badges, added a button to append headers, and added toggles to convert rules between normal and header states.
 
+## [2026-05-31 12:05] | File: src/app/dashboard/rules/page.tsx | Line: 2454 | Keyword: Remove Accordions from Medical Fees | Status: ✅ Complete | Change: Removed accordion containers from the medical fees category table column, restoring the standard scrollable unified table layout with category headers while keeping wide modal split layout and map outline features.
+
+
