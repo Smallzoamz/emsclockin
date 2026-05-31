@@ -1685,9 +1685,9 @@ export default function RulesPage() {
                                         points={pointsStr}
                                         className={`map-zone-path ${isActive ? "active" : ""}`}
                                         style={{
-                                          fill: isActive ? `rgba(${colorObj.rgb}, 0.25)` : `rgba(${colorObj.rgb}, 0.05)`,
+                                          fill: isActive ? `rgba(${colorObj.rgb}, 0.45)` : `rgba(${colorObj.rgb}, 0.05)`,
                                           stroke: isActive ? colorObj.hex : `rgba(${colorObj.rgb}, 0.35)`,
-                                          strokeWidth: isActive ? 2.2 : 0.8,
+                                          strokeWidth: isActive ? 1.0 : 0.6,
                                           transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
                                           cursor: "pointer"
                                         } as React.CSSProperties}
@@ -2518,9 +2518,9 @@ export default function RulesPage() {
                               points={pointsStr}
                               className={"map-zone-path " + (isActive ? "active" : "")}
                               style={{
-                                fill: isActive ? "rgba(" + colorObj.rgb + ", 0.28)" : "rgba(" + colorObj.rgb + ", 0.06)",
+                                fill: isActive ? "rgba(" + colorObj.rgb + ", 0.48)" : "rgba(" + colorObj.rgb + ", 0.06)",
                                 stroke: isActive ? colorObj.hex : "rgba(" + colorObj.rgb + ", 0.4)",
-                                strokeWidth: (isActive ? 2.5 : 1) / zoomScale,
+                                strokeWidth: (isActive ? 1.0 : 0.6) / zoomScale,
                                 transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
                                 cursor: "pointer"
                               } as React.CSSProperties}
