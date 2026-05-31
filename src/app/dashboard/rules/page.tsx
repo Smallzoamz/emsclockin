@@ -673,7 +673,7 @@ export default function RulesPage() {
     const clickY = e.clientY - rect.top;
     
     let x = Math.round((clickX / rect.width) * 100 * 100) / 100;
-    let y = Math.round((clickY / rect.height) * 133.3 * 100) / 100;
+    let y = Math.round((clickY / rect.height) * 100 * 100) / 100;
     
     const snapped = getSnappedCoords(x, y, e.shiftKey || e.ctrlKey);
     if (snapped.isSnapped) {
@@ -748,7 +748,7 @@ export default function RulesPage() {
     const clickY = e.clientY - rect.top;
 
     let x = Math.round((clickX / rect.width) * 100 * 100) / 100;
-    let y = Math.round((clickY / rect.height) * 133.3 * 100) / 100;
+    let y = Math.round((clickY / rect.height) * 100 * 100) / 100;
 
     const snapped = getSnappedCoords(x, y, e.shiftKey || e.ctrlKey);
     if (snapped.isSnapped) {
@@ -790,7 +790,7 @@ export default function RulesPage() {
     const clickY = e.clientY - rect.top;
 
     let x = Math.min(Math.max(Math.round((clickX / rect.width) * 100 * 100) / 100, 0), 100);
-    let y = Math.min(Math.max(Math.round((clickY / rect.height) * 133.3 * 100) / 100, 0), 133.3);
+    let y = Math.min(Math.max(Math.round((clickY / rect.height) * 100 * 100) / 100, 0), 100);
 
     const snapped = getSnappedCoords(x, y, e.shiftKey || e.ctrlKey);
     if (snapped.isSnapped) {
@@ -1953,13 +1953,13 @@ export default function RulesPage() {
                     </div>
 
                     {(activeCategory as any).mapUrl ? (
-                      <div className="map-container" style={{ position: "relative", overflow: "auto", maxHeight: "680px", width: "100%" }}>
+                      <div className="map-container" style={{ position: "relative", overflow: "auto", width: "100%" }}>
                         <div 
                           className="map-zoom-wrapper"
                           style={getMapTransform()}
                         >
                           <div 
-                            style={{ position: "relative", display: "inline-block", maxWidth: "100%", cursor: isDrawingMode ? "crosshair" : "zoom-in" }}
+                            style={{ position: "relative", display: "inline-block", maxWidth: "100%", cursor: isDrawingMode ? "crosshair" : "default" }}
                             onClick={(e) => {
                               if (isDrawingMode) {
                                 handleMapClick(e);
@@ -1971,7 +1971,7 @@ export default function RulesPage() {
                                 const clickX = e.clientX - rect.left;
                                 const clickY = e.clientY - rect.top;
                                 const x = Math.round((clickX / rect.width) * 100 * 100) / 100;
-                                const y = Math.round((clickY / rect.height) * 133.3 * 100) / 100;
+                                const y = Math.round((clickY / rect.height) * 100 * 100) / 100;
 
                                 // Find which zone is clicked
                                 const medCat = rules?.categories.find(c => c.id === "medical_fees") as any;
@@ -2006,8 +2006,8 @@ export default function RulesPage() {
                             <img
                               src={(activeCategory as any).mapUrl}
                               alt="Treatment Area Map"
-                              className={`map-image ${hoveredZone ? "dimmed" : ""}`}
-                              style={{ maxHeight: "320px", display: "block" }}
+                              className="map-image"
+                              style={{ width: "100%", display: "block" }}
                             />
                             
                             {/* SVG Interactive Overlay */}
@@ -2019,8 +2019,8 @@ export default function RulesPage() {
 
                               return (
                                 <svg
-                                  viewBox="0 0 100 133.3"
-                                  preserveAspectRatio="none"
+                                  viewBox="0 0 100 100"
+                                  preserveAspectRatio="xMidYMid meet"
                                   style={{
                                     position: "absolute",
                                     top: 0,
@@ -2031,29 +2031,6 @@ export default function RulesPage() {
                                     zIndex: 10
                                   }}
                                 >
-                                  <defs>
-                                    {activeZonePoints && (
-                                      <clipPath id="hovered-zone-clip-readonly">
-                                        <polygon points={activeZonePoints} />
-                                      </clipPath>
-                                    )}
-                                  </defs>
-
-                                  {hoveredZone && activeZonePoints && (
-                                    <image
-                                      href={(activeCategory as any).mapUrl}
-                                      x="0"
-                                      y="0"
-                                      width="100"
-                                      height="133.3"
-                                      preserveAspectRatio="none"
-                                      clipPath="url(#hovered-zone-clip-readonly)"
-                                      style={{
-                                        filter: "brightness(1.15) contrast(1.05)",
-                                        pointerEvents: "none"
-                                      }}
-                                    />
-                                  )}
 
                                   {/* Dynamic Zones Polygons */}
                                   {zoneNames.map(zoneName => {
@@ -2098,7 +2075,7 @@ export default function RulesPage() {
                                     );
                                   })}
 
-                                  {/* Dynamic Pins */}
+                                  {/* Dynamic Pins - always visible, no hover interaction */}
                                   {zoneNames.map(zoneName => {
                                     const pinsList = getZonePinsList(zoneName);
                                     const colorKey = getZoneColor(zoneName);
@@ -2107,36 +2084,29 @@ export default function RulesPage() {
                                     const isMainLocation = zoneName === "ในเมือง" || zoneName === "นอกเมือง" || zoneName === "เมืองบน";
                                     const w = isMainLocation ? 18.75 : 11.25;
                                     const h = isMainLocation ? 28.0 : 16.8;
-                                    const isActive = hoveredZone === zoneName;
                                     
                                     return pinsList.map((pin, pinIdx) => (
                                       <g
                                         key={`pin-${zoneName}-${pinIdx}`}
-                                        className={`map-pin-group ${isMainLocation ? "map-pin-main" : "map-pin-second"} ${isActive ? "active" : ""}`}
-                                        style={{
-                                          opacity: (!hoveredZone || isActive) ? 1 : 0.2,
-                                          pointerEvents: (!hoveredZone || isActive) ? "auto" : "none",
-                                          transition: "opacity 0.3s ease"
-                                        }}
-                                        onMouseEnter={() => !isDrawingMode && setHoveredZone(zoneName)}
-                                        onMouseLeave={() => !isDrawingMode && setHoveredZone(null)}
+                                        className={`map-pin-group ${isMainLocation ? "map-pin-main" : "map-pin-second"}`}
+                                        style={{ pointerEvents: "none" }}
                                       >
                                         <circle 
                                           cx={pin.x} 
                                           cy={pin.y} 
-                                          r="1.8" 
+                                          r="1.2" 
                                           fill="none" 
                                           stroke={colorObj.hex} 
-                                          strokeWidth="0.5" 
+                                          strokeWidth="0.3" 
                                           className="map-pin-pulse" 
                                         />
                                         <circle 
                                           cx={pin.x} 
                                           cy={pin.y} 
-                                          r="0.5" 
+                                          r="0.4" 
                                           fill={colorObj.hex} 
                                           stroke="#fff" 
-                                          strokeWidth="0.2" 
+                                          strokeWidth="0.15" 
                                         />
                                         
                                         <image
@@ -2145,33 +2115,21 @@ export default function RulesPage() {
                                           y={pin.y - h / 2}
                                           width={w}
                                           height={h}
-                                          preserveAspectRatio="xMidYMidMeet"
-                                          style={{ cursor: "pointer" }}
+                                          preserveAspectRatio="xMidYMid meet"
                                         />
 
-                                        {isActive && (
-                                          <g style={{ pointerEvents: "none" }}>
-                                            <rect 
-                                              x={pin.x - (zoneName.length * 1.8 + 2)} 
-                                              y={pin.y + h / 2 + 1.0} 
-                                              width={zoneName.length * 3.6 + 4} 
-                                              height="3.2" 
-                                              rx="1.6" 
-                                              fill="rgba(15, 23, 42, 0.95)" 
-                                              stroke="rgba(255, 255, 255, 0.15)" 
-                                              strokeWidth="0.3" 
-                                            />
-                                            <text 
-                                              x={pin.x} 
-                                              y={pin.y + h / 2 + 2.6} 
-                                              className="map-pin-label" 
-                                              dominantBaseline="middle" 
-                                              style={{ fontSize: "2.0px", fill: "#fff", textAnchor: "middle", fontWeight: "bold" }}
-                                            >
-                                              {zoneName}
-                                            </text>
-                                          </g>
-                                        )}
+                                        {/* Always-visible compact label */}
+                                        <g style={{ pointerEvents: "none" }}>
+                                          <text 
+                                            x={pin.x} 
+                                            y={pin.y + h / 2 + 2.0} 
+                                            className="map-pin-label" 
+                                            dominantBaseline="middle" 
+                                            style={{ fontSize: "1.6px", fill: "#fff", textAnchor: "middle", fontWeight: "700", paintOrder: "stroke", stroke: "rgba(0,0,0,0.7)", strokeWidth: "0.3px" }}
+                                          >
+                                            {zoneName}
+                                          </text>
+                                        </g>
                                       </g>
                                     ));
                                   })}
@@ -2955,8 +2913,8 @@ export default function RulesPage() {
 
                     return (
                       <svg
-                        viewBox="0 0 100 133.3"
-                        preserveAspectRatio="none"
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="xMidYMid meet"
                         style={{
                           position: "absolute",
                           top: 0,
@@ -2981,8 +2939,8 @@ export default function RulesPage() {
                             x="0"
                             y="0"
                             width="100"
-                            height="133.3"
-                            preserveAspectRatio="none"
+                            height="100"
+                            preserveAspectRatio="xMidYMid meet"
                             clipPath="url(#hovered-zone-clip-portal)"
                             style={{
                               filter: "brightness(1.15) contrast(1.05)",

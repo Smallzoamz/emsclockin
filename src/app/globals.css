@@ -2535,21 +2535,14 @@ body::before {
 }
 
 .map-container:hover {
-  border-color: var(--accent);
-  box-shadow: 0 0 15px var(--accent-glow);
+  border-color: var(--border-subtle);
 }
 
 .map-image {
   width: 100%;
-  max-height: 650px;
   object-fit: contain;
   border-radius: calc(var(--radius-md) - 4px);
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   display: block;
-}
-
-.map-container:hover .map-image {
-  transform: scale(1.015);
 }
 
 /* Lightbox Modal styles */
@@ -2865,10 +2858,6 @@ body::before {
 
 .map-image {
   transition: filter 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-.map-image.dimmed {
-  filter: brightness(0.4) saturate(0.85) contrast(1.05);
 }
 
 /* Dynamic Interactive Pin Labels */
