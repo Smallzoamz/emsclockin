@@ -277,6 +277,9 @@
 
 ## [2026-05-31 12:25] | File: src/app/dashboard/rules/page.tsx | Line: 1220 | Keyword: Rules Update Changelog Modal Popup | Status: ✅ Complete | Change: Implemented rules change detection system. On save, old and new rulesets are compared dynamically using `generateRulesChangelog` to log additions, deletions, and modifications. On first load, client checks the database settings version against browser local storage and triggers a premium update changelog modal popup for unacknowledged versions. Displays modified rules showing the old text with a strikethrough and new text highlighted below. Integrates an acknowledge button to set local storage token and dismiss the popup modal.
 
+## [2026-05-31 12:29] | File: src/app/dashboard/rules/page.tsx | Line: 3430 | Keyword: Relocate Rules Warning Banner to Footer | Status: ✅ Complete | Change: Relocated the red warning banner from the scrollable rules modal body into the modal footer container, aligning it horizontally on the same row as the "ปิดหน้าต่าง" / "บันทึกข้อมูล" buttons for optimal space usage as requested.
+
+
 
 
 

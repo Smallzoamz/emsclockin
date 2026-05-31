@@ -3424,57 +3424,62 @@ export default function RulesPage() {
                 </div>
               )}
 
-              {/* Warning Banner at the bottom of the card always */}
-              <div className="rules-warning-card" style={{
-                marginTop: "16px",
-                background: "rgba(239, 68, 68, 0.03)",
-                border: "1px solid rgba(239, 68, 68, 0.18)",
-                borderRadius: "var(--radius-md)",
-                padding: "12px 18px",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                boxShadow: "0 4px 20px rgba(239, 68, 68, 0.03)"
-              }}>
-                <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 4px rgba(239, 68, 68, 0.4))" }}>⚠️</span>
-                <p style={{ fontSize: "0.76rem", color: "#fca5a5", lineHeight: 1.5, margin: 0 }}>
-                  หากมีการละเมิดกฏข้อใด อาจส่งผลให้ผู้ละเมิด <strong style={{ color: "#ef4444", textShadow: "0 0 6px rgba(239, 68, 68, 0.3)" }}>ถูก Blacklist จากแพทย์</strong> โดยไม่มีการตักเตือนก่อนทันที และอาจส่งผลร้ายแรงถึงขั้นถูกบทลงโทษจากทางประเทศ <span style={{ letterSpacing: "2px", marginLeft: "2px" }}>🟨🟧🟥</span> <strong style={{ color: "#fff" }}>กรุณาอ่านกฏทุกข้ออย่างมีสติ</strong>
-                </p>
-              </div>
             </div>
 
             {/* Modal Footer */}
-            <footer className="rules-modal-footer">
-              {isEditMode ? (
-                <>
+            <footer className="rules-modal-footer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap", width: "100%" }}>
+              <div style={{ 
+                flex: "1 1 300px", 
+                display: "flex", 
+                alignItems: "center", 
+                gap: "8px", 
+                color: "#fca5a5", 
+                fontSize: "0.72rem", 
+                lineHeight: 1.4,
+                background: "rgba(239, 68, 68, 0.05)",
+                border: "1px solid rgba(239, 68, 68, 0.15)",
+                borderRadius: "var(--radius-sm)",
+                padding: "6px 12px",
+                margin: 0
+              }}>
+                <span style={{ fontSize: "1rem" }}>⚠️</span>
+                <span>
+                  หากมีการละเมิดกฏข้อใด อาจส่งผลให้ผู้ละเมิด <strong style={{ color: "#ef4444" }}>ถูก Blacklist จากแพทย์</strong> โดยไม่มีการตักเตือนก่อนทันที และอาจส่งผลร้ายแรงถึงขั้นถูกบทลงโทษจากทางประเทศ <span style={{ letterSpacing: "2px", marginLeft: "2px" }}>🟨🟧🟥</span> <strong style={{ color: "#fff" }}>กรุณาอ่านกฏทุกข้ออย่างมีสติ</strong>
+                </span>
+              </div>
+              
+              <div style={{ display: "flex", gap: "12px", alignItems: "center", flexShrink: 0, marginLeft: "auto" }}>
+                {isEditMode ? (
+                  <>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="btn btn-ghost"
+                      style={{ fontSize: "0.82rem", padding: "8px 16px" }}
+                    >
+                      ยกเลิกการแก้
+                    </button>
+                    <button
+                      onClick={handleSaveChanges}
+                      className="btn btn-primary"
+                      style={{ fontSize: "0.82rem", padding: "8px 16px" }}
+                    >
+                      <SaveIcon size={14} />
+                      บันทึกข้อมูล
+                    </button>
+                  </>
+                ) : (
                   <button
-                    onClick={handleCancelEdit}
-                    className="btn btn-ghost"
-                    style={{ fontSize: "0.82rem", padding: "8px 16px" }}
-                  >
-                    ยกเลิกการแก้
-                  </button>
-                  <button
-                    onClick={handleSaveChanges}
+                    onClick={() => {
+                      setActiveCategoryId(null);
+                      setModalSearchQuery("");
+                    }}
                     className="btn btn-primary"
-                    style={{ fontSize: "0.82rem", padding: "8px 16px" }}
+                    style={{ fontSize: "0.82rem", padding: "8px 20px" }}
                   >
-                    <SaveIcon size={14} />
-                    บันทึกข้อมูล
+                    ปิดหน้าต่าง
                   </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => {
-                    setActiveCategoryId(null);
-                    setModalSearchQuery("");
-                  }}
-                  className="btn btn-primary"
-                  style={{ fontSize: "0.82rem", padding: "8px 20px" }}
-                >
-                  ปิดหน้าต่าง
-                </button>
-              )}
+                )}
+              </div>
             </footer>
 
           </div>
