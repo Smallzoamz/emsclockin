@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS blacklist_records (
   penalty TEXT,
   fine NUMERIC,
   multiplier INTEGER DEFAULT 1,
+  target_type VARCHAR(50) DEFAULT 'ประชาชน',
   status VARCHAR(50) DEFAULT 'active', -- 'active' or 'released'
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   created_by VARCHAR(255), -- doctor email or name

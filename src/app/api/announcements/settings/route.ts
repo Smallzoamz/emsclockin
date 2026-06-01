@@ -14,7 +14,7 @@ const defaultTemplates = [
     id: "tpl_blacklist",
     categoryId: "cat_blacklist",
     title: "ประกาศติด Blacklist",
-    content: "**[ประกาศ Blacklist บุคคล]**\nชื่อ-นามสกุล: [ชื่อคน]\nเบอร์โทรศัพท์: [เบอร์โทร]\nชื่อกลุ่ม/แก๊ง: [ชื่อแก๊ง]\nความผิด: [โทษ]\nค่าปรับ: [ค่าปรับ] (จำนวนซ้ำ x[ตัวคูณ])\nสถานะ: ห้ามรักษา / ห้ามชุบชีวิต"
+    content: "**[ประกาศ Blacklist [ประเภท]]**\nชื่อ-นามสกุล: [ชื่อคน]\nเบอร์โทรศัพท์: [เบอร์โทร]\nชื่อกลุ่ม/แก๊ง: [ชื่อแก๊ง]\nความผิด: [โทษ]\nค่าปรับ: [ค่าปรับ] (จำนวนซ้ำ x[ตัวคูณ])\nสถานะ: ห้ามรักษา / ห้ามชุบชีวิต"
   },
   {
     id: "tpl_notfound",
@@ -126,7 +126,7 @@ export async function GET() {
     const penalties = settingsMap["blacklist_penalties"] || defaultPenalties;
     const commandPrefix = settingsMap["announcement_command_prefix"] || "/ems";
     const announcementWebhookUrl = settingsMap["discord_announcement_webhook_url"] || "";
-    const blacklistReleaseTemplate = settingsMap["blacklist_release_template"] || "**[ปลด Blacklist บุคคล]**\nชื่อ-นามสกุล: [ชื่อคน]\nเบอร์โทรศัพท์: [เบอร์โทร]\nชื่อกลุ่ม/แก๊ง: [ชื่อแก๊ง]\nสถานะ: ปลดแบล็คลิสต์ เรียบร้อยแล้วค่ะ";
+    const blacklistReleaseTemplate = settingsMap["blacklist_release_template"] || "**[ปลด Blacklist [ประเภท]]**\nชื่อ-นามสกุล: [ชื่อคน]\nเบอร์โทรศัพท์: [เบอร์โทร]\nชื่อกลุ่ม/แก๊ง: [ชื่อแก๊ง]\nสถานะ: ปลดแบล็คลิสต์ เรียบร้อยแล้วค่ะ";
 
     return NextResponse.json({
       categories,
@@ -144,7 +144,7 @@ export async function GET() {
       penalties: defaultPenalties,
       commandPrefix: "/ems",
       announcementWebhookUrl: "",
-      blacklistReleaseTemplate: "**[ปลด Blacklist บุคคล]**\nชื่อ-นามสกุล: [ชื่อคน]\nเบอร์โทรศัพท์: [เบอร์โทร]\nชื่อกลุ่ม/แก๊ง: [ชื่อแก๊ง]\nสถานะ: ปลดแบล็คลิสต์ เรียบร้อยแล้วค่ะ"
+      blacklistReleaseTemplate: "**[ปลด Blacklist [ประเภท]]**\nชื่อ-นามสกุล: [ชื่อคน]\nเบอร์โทรศัพท์: [เบอร์โทร]\nชื่อกลุ่ม/แก๊ง: [ชื่อแก๊ง]\nสถานะ: ปลดแบล็คลิสต์ เรียบร้อยแล้วค่ะ"
     });
   }
 }

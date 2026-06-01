@@ -84,6 +84,7 @@ export default function AnnouncementsPage() {
   const [gang, setGang] = useState("");
   const [gangA, setGangA] = useState("");
   const [gangB, setGangB] = useState("");
+  const [targetType, setTargetType] = useState("ประชาชน");
   const [selectedPenaltyId, setSelectedPenaltyId] = useState("");
   const [multiplier, setMultiplier] = useState(1);
   const [commandPrefix, setCommandPrefix] = useState("/ems");
@@ -127,7 +128,7 @@ export default function AnnouncementsPage() {
   // ─── Settings Mode States (Admin Only) ───
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  const [activeSettingsTab, setActiveSettingsTab] = useState<"templates" | "categories" | "penalties">("templates");
+  const [activeSettingsTab, setActiveSettingsTab] = useState<"templates" | "categories" | "penalties" | "general">("templates");
 
   // Settings Form States - Category
   const [newCatName, setNewCatName] = useState("");
@@ -283,7 +284,7 @@ export default function AnnouncementsPage() {
     setFixedStartTime(null);
     setFixedEndTime(null);
     setLoggedBlacklistId(null);
-  }, [name, phone, gang, gangA, gangB, JSON.stringify(storyPairs), selectedPenaltyId, multiplier, cooldownMinutes, commandPrefix, selectedTplId, selectedCatId]);
+  }, [name, phone, gang, gangA, gangB, JSON.stringify(storyPairs), selectedPenaltyId, multiplier, cooldownMinutes, commandPrefix, selectedTplId, selectedCatId, targetType]);
 
   // Reset pagination when search query or category filter changes
   useEffect(() => {
@@ -332,6 +333,7 @@ export default function AnnouncementsPage() {
     text = text.replaceAll("[โทษ]", penaltyText || "________________");
     text = text.replaceAll("[ค่าปรับ]", activePenalty ? `${formattedFine} IC` : "________________");
     text = text.replaceAll("[ตัวคูณ]", multiplier > 1 ? `${multiplier}` : "1");
+    text = text.replaceAll("[ประเภท]", targetType);
 
     const formattedPairs = storyPairs
       .filter(p => p.gangA.trim() || p.gangB.trim() || p.scoreA || p.scoreB)
@@ -385,7 +387,8 @@ export default function AnnouncementsPage() {
           gang: gang.trim(),
           penalty: activePenalty ? activePenalty.name : "",
           fine: totalFine,
-          multiplier: multiplier
+          multiplier: multiplier,
+          targetType: targetType
         })
       });
       if (res.ok) {
@@ -491,6 +494,7 @@ export default function AnnouncementsPage() {
       text = text.replaceAll("[โทษ]", record.penalty || "");
       text = text.replaceAll("[ค่าปรับ]", record.fine ? `${Number(record.fine).toLocaleString()} IC` : "0 IC");
       text = text.replaceAll("[ตัวคูณ]", record.multiplier ? `${record.multiplier}` : "1");
+      text = text.replaceAll("[ประเภท]", record.target_type || "ประชาชน");
 
       const clipboardText = commandPrefix.trim() ? `${commandPrefix.trim()} ${text}` : text;
       await navigator.clipboard.writeText(clipboardText);
@@ -735,7 +739,7 @@ export default function AnnouncementsPage() {
               <button onClick={() => { setMode("settings"); setActiveSettingsTab("penalties"); }} className={`announce-tab-btn ${mode === "settings" && activeSettingsTab === "penalties" ? "active" : ""}`}>
                 ข้อหา & ค่าปรับ
               </button>
-              <button onClick={() => { setMode("settings"); setActiveSettingsTab("general" as any); }} className={`announce-tab-btn ${mode === "settings" && activeSettingsTab === ("general" as any) ? "active" : ""}`}>
+              <button onClick={() => { setMode("settings"); setActiveSettingsTab("general"); }} className={`announce-tab-btn ${mode === "settings" && activeSettingsTab === "general" ? "active" : ""}`}>
                 ตั้งค่าการแจ้งเตือน
               </button>
             </>
@@ -902,6 +906,27 @@ export default function AnnouncementsPage() {
                       <h3 style={{ fontSize: "1.05rem", color: "var(--accent-light)", margin: 0, fontWeight: "bold" }}>2. กรอกรายละเอียดข้อความประกาศ</h3>
 
                       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        {hasPlaceholder("[ประเภท]") && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>🏷️ ประเภทเป้าหมาย (Target Type)</label>
+                            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", background: "var(--bg-secondary)", padding: "10px 14px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                              {["ประชาชน", "แก๊ง", "แฟม", "MC"].map((type) => (
+                                <label key={type} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.85rem", color: "var(--text-primary)" }}>
+                                  <input
+                                    type="radio"
+                                    name="targetType"
+                                    value={type}
+                                    checked={targetType === type}
+                                    onChange={(e) => setTargetType(e.target.value)}
+                                    style={{ accentColor: "var(--accent)" }}
+                                  />
+                                  {type}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {hasPlaceholder("[ชื่อคน]") && (
                           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                             <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>👤 ชื่อ-นามสกุล คนไข้/บุคคล</label>
@@ -1248,7 +1273,7 @@ export default function AnnouncementsPage() {
                               {record.penalty || "ข้อหาแบล็คลิสต์"} : {record.name}
                             </div>
                             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                              เบอร์โทร: {record.phone || "-"} | สังกัด: {record.gang || "-"}
+                              เบอร์โทร: {record.phone || "-"} | สังกัด: {record.gang || "-"} {record.target_type && `(${record.target_type})`}
                             </div>
                           </td>
 
@@ -1404,7 +1429,7 @@ export default function AnnouncementsPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
 
           {/* TAB: General & Webhooks Settings */}
-          {activeSettingsTab === ("general" as any) && (
+          {activeSettingsTab === "general" && (
             <section className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
               <h2 style={{ fontSize: "1.1rem", color: "var(--accent-light)", margin: 0, borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
                 <SettingsIcon size={20} />
@@ -1426,7 +1451,7 @@ export default function AnnouncementsPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
                 <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>รูปแบบประกาศปลด Blacklist (Release Template)</label>
                 <textarea placeholder="พิมพ์โครงสร้างประกาศปลดแบล็คลิสต์..." value={blacklistReleaseTemplate} onChange={(e) => setBlacklistReleaseTemplate(e.target.value)} rows={4} style={{ ...inputStyle, width: "100%", fontFamily: "var(--font-mono)", resize: "vertical", lineHeight: "1.5" }} />
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>โครงสร้างข้อความปลดแบล็คลิสต์ (รองรับ [ชื่อคน], [เบอร์โทร], [ชื่อแก๊ง], [โทษ], [ค่าปรับ], [ตัวคูณ])</span>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>โครงสร้างข้อความปลดแบล็คลิสต์ (รองรับ [ชื่อคน], [เบอร์โทร], [ชื่อแก๊ง], [โทษ], [ค่าปรับ], [ตัวคูณ], [ประเภท])</span>
               </div>
 
               <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "4px" }}>
@@ -1480,6 +1505,7 @@ export default function AnnouncementsPage() {
                       { label: "👤 [ชื่อคน]", placeholder: "[ชื่อคน]" },
                       { label: "📞 [เบอร์โทร]", placeholder: "[เบอร์โทร]" },
                       { label: "🏴‍☠️ [ชื่อแก๊ง]", placeholder: "[ชื่อแก๊ง]" },
+                      { label: "🏷️ [ประเภท]", placeholder: "[ประเภท]" },
                       { label: "💥 [แก๊งA]", placeholder: "[แก๊งA]" },
                       { label: "💥 [แก๊งB]", placeholder: "[แก๊งB]" },
                       { label: "📊 [คะแนนสตอรี่]", placeholder: "[คะแนนสตอรี่]" },

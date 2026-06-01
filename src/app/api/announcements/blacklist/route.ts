@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { id, name, phone, gang, penalty, fine, multiplier } = body;
+    const { id, name, phone, gang, penalty, fine, multiplier, targetType } = body;
 
     if (!name) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -57,24 +57,49 @@ export async function POST(req: Request) {
       created_by: email
     };
 
+    const targetTypeVal = targetType || body.target_type || "ประชาชน";
+
     let data, error;
     if (id) {
-      // Update existing record
+      // Try to update with target_type first
       const res = await supabase
         .from("blacklist_records")
-        .update(recordData)
+        .update({ ...recordData, target_type: targetTypeVal })
         .eq("id", id)
         .select();
-      data = res.data;
-      error = res.error;
+      
+      if (res.error && (res.error.code === "42703" || res.error.message?.includes("target_type") || res.error.message?.includes("does not exist"))) {
+        // Fallback: update without target_type
+        const retryRes = await supabase
+          .from("blacklist_records")
+          .update(recordData)
+          .eq("id", id)
+          .select();
+        data = retryRes.data;
+        error = retryRes.error;
+      } else {
+        data = res.data;
+        error = res.error;
+      }
     } else {
-      // Insert new active record
+      // Try to insert with target_type first
       const res = await supabase
         .from("blacklist_records")
-        .insert({ ...recordData, status: "active" })
+        .insert({ ...recordData, target_type: targetTypeVal, status: "active" })
         .select();
-      data = res.data;
-      error = res.error;
+
+      if (res.error && (res.error.code === "42703" || res.error.message?.includes("target_type") || res.error.message?.includes("does not exist"))) {
+        // Fallback: insert without target_type
+        const retryRes = await supabase
+          .from("blacklist_records")
+          .insert({ ...recordData, status: "active" })
+          .select();
+        data = retryRes.data;
+        error = retryRes.error;
+      } else {
+        data = res.data;
+        error = res.error;
+      }
     }
 
     if (error) {
