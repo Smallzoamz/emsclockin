@@ -27,29 +27,119 @@ export function PortalClient({
 }: PortalClientProps) {
   // Carousel State
   const [activeSlide, setActiveSlide] = useState(0);
-  const slides = [
-    {
-      badge: "🏥 รับสมัครบุคลากรทางการแพทย์",
-      title: "เปิดรับสมัครแพทย์ EMS รุ่นที่ 15",
-      description: "โรงพยาบาลกลางเปิดทดสอบความรู้และทักษะเพื่อบรรจุเข้ารับราชการเป็นแพทย์ประจำการเมืองประชารัฐ ตั้งแต่วันนี้ถึงวันที่ 15 มิถุนายนนี้เท่านั้น",
-      actionText: "ส่งใบสมัครออนไลน์",
-      actionUrl: "https://discord.gg/ems-hospital"
-    },
-    {
-      badge: "📢 ประกาศคะแนนสตอรี่ล่าสุด",
-      title: "สรุปตารางคะแนนและสถิติไฟท์ล่าสุด",
-      description: "ตารางสรุปผลการปฏิบัติการหน่วยงานช่วยเหลือนอกสถานที่และสตอรี่ความร่วมมือคะแนนคู่ปะทะ สามารถตรวจสอบตารางคะแนนแบบเต็มได้ที่กลุ่มประชาสัมพันธ์",
-      actionText: "อ่านรายละเอียดกฎสตอรี่",
-      actionUrl: "#rules"
-    },
-    {
-      badge: "⚠️ ข้อมูลฉุกเฉิน / ประชาสัมพันธ์",
-      title: "แนวทางปฏิบัติเมื่อพบเคสหมดสติในจุดสุ่มเสี่ยง",
-      description: "กรุณาแจ้งพิกัดและรายละเอียดผ่านสัญญาณวิทยุช่องหลัก และรอการอนุมัติความปลอดภัยจากตำรวจก่อนปฏิบัติงานช่วยเหลือนอกพื้นที่ทุกครั้ง",
-      actionText: "ดาวน์โหลดคู่มือปฐมพยาบาล",
-      actionUrl: "#fees"
+
+  // Live Counter & Active Doctor Roster State
+  const [activeCount, setActiveCount] = useState<number | null>(null);
+  const [activeDoctors, setActiveDoctors] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [stats, setStats] = useState({ totalDoctors: 0, weeklyShifts: 0 });
+  const [recruitmentQuota, setRecruitmentQuota] = useState({ target: 30, current: 22, batch: 15, end_date: "2026-06-15T23:59:59+07:00" });
+  const [now, setNow] = useState(new Date());
+
+  // Dynamic Rules and Fees State
+  const [rules, setRules] = useState<any>(null);
+  const [loadingRules, setLoadingRules] = useState(true);
+
+  // Rules Explorer UI tab & search states
+  const [explorerCat, setExplorerCat] = useState("hospital_area");
+  const [explorerSearch, setExplorerSearch] = useState("");
+
+  // Modals States
+  const [activeModal, setActiveModal] = useState<"rules" | "fees" | "blacklist" | null>(null);
+
+  // Blacklist Search States
+  const [blacklistSearch, setBlacklistSearch] = useState("");
+  const [blacklistData, setBlacklistData] = useState<any[]>([]);
+  const [blacklistLoading, setBlacklistLoading] = useState(false);
+
+  // Fetch Blacklist data
+  async function fetchBlacklist() {
+    setBlacklistLoading(true);
+    try {
+      const { data } = await supabase
+        .from("blacklist_records")
+        .select("*")
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+      if (data) setBlacklistData(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBlacklistLoading(false);
     }
-  ];
+  }
+
+  // Load blacklist records on page mount
+  useEffect(() => {
+    fetchBlacklist();
+  }, []);
+
+  // Fetch public active rules and treatments
+  const treatments = React.useMemo(() => {
+    const defaultTreatments = [
+      { id: "cpr", label: "ปฐมพยาบาลเบื้องต้น (CPR)", price: 1000 },
+      { id: "stitch", label: "เย็บแผลทำแผลหัตถการเคสทั่วไป", price: 3000 },
+      { id: "medicine", label: "จ่ายยาระงับอาการประสาท/ยาควบคุม", price: 1500 },
+      { id: "checkup", label: "ตรวจวินิจฉัยโรคและประเมินอาการ", price: 1000 },
+    ];
+    if (!rules || !Array.isArray(rules.categories)) return defaultTreatments;
+    const feesCat = rules.categories.find((c: any) => c.id === "medical_fees");
+    if (!feesCat || !Array.isArray(feesCat.rules)) return defaultTreatments;
+
+    const parsed = feesCat.rules.map((rule: any) => {
+      const content = rule.content || "";
+      if (content.startsWith("[HEADER]")) return null;
+      
+      const colonIdx = content.indexOf(":");
+      if (colonIdx > -1) {
+        const label = content.substring(0, colonIdx).trim();
+        const priceStr = content.substring(colonIdx + 1).replace(/[^0-9]/g, "");
+        const price = parseInt(priceStr) || 0;
+        if (price > 0) {
+          return { id: rule.id, label, price };
+        }
+      }
+      return null;
+    }).filter(Boolean);
+
+    return parsed.length > 0 ? parsed : defaultTreatments;
+  }, [rules]);
+
+  // Dynamic slides carousel from active DB data
+  const slides = React.useMemo(() => {
+    const latest = blacklistData[0];
+    const blacklistSlide = latest ? {
+      badge: `🚫 บัญชีดำล่าสุด: ${latest.name}`,
+      title: `ติดแบล็กลิสต์: ${latest.name} ${latest.gang ? `(แก๊ง: ${latest.gang})` : "(บุคคลทั่วไป)"}`,
+      description: `ข้อหา: ${latest.penalty || "ไม่ระบุ"} | ค่าปรับค้างจ่าย: ${Number(latest.fine * (latest.multiplier || 1)).toLocaleString()} IC | ประกาศโดยแพทย์: ${latest.created_by?.split("@")[0]}`,
+      actionText: "ค้นหาทำเนียบบัญชีดำ",
+      actionUrl: "#blacklist"
+    } : {
+      badge: "🚫 ทำเนียบบัญชีดำ (EMS Blacklist)",
+      title: "ไม่มีรายชื่อผู้ติดแบล็กลิสต์ขณะนี้",
+      description: "สภาพแวดล้อมความปลอดภัยในพื้นที่รักษาพยาบาลดีเยี่ยม ไม่มีพลเมืองทำร้ายร่างกายเจ้าหน้าที่หรือก่อการกวนเมือง",
+      actionText: "ตรวจสอบกฎระเบียบ",
+      actionUrl: "#rules"
+    };
+
+    return [
+      blacklistSlide,
+      {
+        badge: "💊 อัตราค่ารักษาพยาบาลฉบับล่าสุด",
+        title: "อัตราหัตถการกู้ชีพ & ค่าตัวคูณโซนพื้นที่",
+        description: `ค่ารักษาพยาบาลเริ่มต้นที่ ${treatments[0]?.price?.toLocaleString() || "1,000"} IC ตามนโยบายศูนย์สุขภาพกลาง และปรับตามโซนตัวคูณเขตเกิดเหตุ (ในเมือง x1.0, นอกเมือง x2.0, เมืองบน x3.0)`,
+        actionText: "คำนวณอัตราค่ารักษาพยาบาล",
+        actionUrl: "#citizen-services"
+      },
+      {
+        badge: "🚑 เจ้าหน้าที่เวรกู้ชีพฉุกเฉิน",
+        title: `มีแพทย์ขึ้นเวรดูแลความเรียบร้อยขณะนี้ ${activeCount ?? 0} ท่าน`,
+        description: "ติดตามและตรวจสอบทำเนียบคงที่ของรายชื่อแพทย์เวรฉุกเฉิน (Active Duty Roster) ได้ทางส่วนบริการข้างล่างนี้",
+        actionText: "ดูทำเนียบแพทย์เวรปฏิบัติหน้าที่",
+        actionUrl: "#hero"
+      }
+    ];
+  }, [blacklistData, treatments, activeCount]);
 
   // Auto-play Slider
   useEffect(() => {
@@ -59,16 +149,13 @@ export function PortalClient({
     return () => clearInterval(timer);
   }, [slides.length]);
 
-  // Live Counter & Active Doctor Roster State
-  const [activeCount, setActiveCount] = useState<number | null>(null);
-  const [activeDoctors, setActiveDoctors] = useState<any[]>([]);
-  const [now, setNow] = useState(new Date());
-
+  // Timer Effect
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
 
+  // Fetch Public Active Doctors, Recent Activity and Weekly Stats
   useEffect(() => {
     async function fetchOnDuty() {
       try {
@@ -81,6 +168,15 @@ export function PortalClient({
           if (data.activeDoctors && Array.isArray(data.activeDoctors)) {
             setActiveDoctors(data.activeDoctors);
           }
+          if (data.recentActivity && Array.isArray(data.recentActivity)) {
+            setRecentActivity(data.recentActivity);
+          }
+          if (data.stats) {
+            setStats(data.stats);
+          }
+          if (data.recruitmentQuota) {
+            setRecruitmentQuota(data.recruitmentQuota);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch on-duty count:", err);
@@ -91,113 +187,47 @@ export function PortalClient({
     return () => clearInterval(poll);
   }, []);
 
-  // Modals States
-  const [activeModal, setActiveModal] = useState<"rules" | "fees" | "blacklist" | null>(null);
-
-  // Blacklist Search States
-  const [blacklistSearch, setBlacklistSearch] = useState("");
-  const [blacklistData, setBlacklistData] = useState<any[]>([]);
-  const [blacklistLoading, setBlacklistLoading] = useState(false);
-
+  // Fetch Public Doctor Rules & Fees from API
   useEffect(() => {
-    if (activeModal === "blacklist") {
-      fetchBlacklist();
+    async function fetchRules() {
+      try {
+        const res = await fetch("/api/rules");
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.rules) {
+            setRules(data.rules);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch rules:", err);
+      } finally {
+        setLoadingRules(false);
+      }
     }
-  }, [activeModal]);
-
-  async function fetchBlacklist() {
-    setBlacklistLoading(true);
-    try {
-      const { data } = await supabase
-        .from("blacklist_records")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (data) setBlacklistData(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setBlacklistLoading(false);
-    }
-  }
+    fetchRules();
+  }, []);
 
   const filteredBlacklist = blacklistData.filter((item) => {
     const term = blacklistSearch.toLowerCase();
     return (
-      (item.person_name && item.person_name.toLowerCase().includes(term)) ||
-      (item.gang_name && item.gang_name.toLowerCase().includes(term)) ||
-      (item.reason && item.reason.toLowerCase().includes(term)) ||
-      (item.doctor_name && item.doctor_name.toLowerCase().includes(term))
+      (item.name && item.name.toLowerCase().includes(term)) ||
+      (item.gang && item.gang.toLowerCase().includes(term)) ||
+      (item.penalty && item.penalty.toLowerCase().includes(term)) ||
+      (item.created_by && item.created_by.toLowerCase().includes(term))
     );
   });
-
-  // Animated Stat Counters
-  const [casesCount, setCasesCount] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const end = 1420;
-    const duration = 1200; // 1.2 seconds
-    const increment = Math.ceil(end / (duration / 16)); // ~60fps step
-    
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= end) {
-        setCasesCount(end);
-        clearInterval(timer);
-      } else {
-        setCasesCount(start);
-      }
-    }, 16);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Live Operations Feed Simulator
-  const [feedItems, setFeedItems] = useState([
-    { id: 1, text: "🚑 รถพยาบาลฉุกเฉินออกตรวจพื้นที่ ในเมือง", time: "เมื่อสักครู่" },
-    { id: 2, text: "❤️ ทำการ CPR ผู้ป่วยวิกฤตหน้าสภา สำเร็จ", time: "2 นาทีที่แล้ว" },
-    { id: 3, text: "🏥 เคสตัดลวดหัตถการ แผนกศัลยกรรมทั่วไป", time: "5 นาทีที่แล้ว" },
-    { id: 4, text: "🚁 ลำเลียงผู้บาดเจ็บทางอากาศจากเขายอดสูง", time: "12 นาทีที่แล้ว" },
-  ]);
-
-  const operationsPool = [
-    "🚑 รถพยาบาลฉุกเฉินออกตรวจพื้นที่ ในเมือง",
-    "❤️ ทำการ CPR ผู้ป่วยวิกฤตหน้าสภา สำเร็จ",
-    "🏥 เคสตัดลวดหัตถการ แผนกศัลยกรรมทั่วไป",
-    "🚁 ลำเลียงผู้บาดเจ็บทางอากาศจากเขายอดสูง",
-    "💊 เบิกจ่ายเวชภัณฑ์ยาควบคุม แผนกเภสัชกรรม",
-    "🚑 รับแจ้งเหตุฉุกเฉินในเขต นอกเมือง",
-    "🏥 รับเคสอุบัติเหตุปะทะบริเวณจุดสุ่มเสี่ยง",
-    "❤️ ปั๊มหัวใจฟื้นคืนสัญญาณชีพ (CPR) ในพื้นที่กู้ชีพ",
-    "🚁 ตรวจความปลอดภัยเขตเหมืองบนทางอากาศ"
-  ];
-
-  useEffect(() => {
-    const feedTimer = setInterval(() => {
-      const randomText = operationsPool[Math.floor(Math.random() * operationsPool.length)];
-      setFeedItems((prev) => {
-        const nextId = prev.length > 0 ? Math.max(...prev.map(i => i.id)) + 1 : 1;
-        return [
-          { id: nextId, text: randomText, time: "เมื่อสักครู่" },
-          ...prev.slice(0, 3).map((item, idx) => ({
-            ...item,
-            time: idx === 0 ? "1 นาทีที่แล้ว" : idx === 1 ? "4 นาทีที่แล้ว" : "15 นาทีที่แล้ว"
-          }))
-        ];
-      });
-    }, 8000);
-    return () => clearInterval(feedTimer);
-  }, []);
 
   // Fee Calculator States
   const [selectedTreatment, setSelectedTreatment] = useState("cpr");
   const [selectedZone, setSelectedZone] = useState("inner");
   const [patientCount, setPatientCount] = useState(1);
 
-  const treatmentsMap = {
-    cpr: { label: "ปฐมพยาบาลเบื้องต้น (CPR)", price: 100 },
-    stitch: { label: "เย็บแผลหัตถการเคสทั่วไป", price: 200 },
-    medicine: { label: "จ่ายยาระงับอาการประสาท/ยาควบคุม", price: 150 },
-    checkup: { label: "ตรวจวินิจฉัยโรคและประเมินอาการ", price: 50 },
-  };
+  // Auto-select first parsed treatment when treatments change
+  useEffect(() => {
+    if (treatments.length > 0 && !treatments.some((t: any) => t?.id === selectedTreatment)) {
+      setSelectedTreatment(treatments[0].id);
+    }
+  }, [treatments, selectedTreatment]);
 
   const zonesMap = {
     inner: { label: "โซนในเมือง (Inner City)", multiplier: 1.0 },
@@ -205,7 +235,8 @@ export function PortalClient({
     desert: { label: "โซนเมืองบน/ทะเลทราย (Desert)", multiplier: 3.0 },
   };
 
-  const currentPrice = treatmentsMap[selectedTreatment as keyof typeof treatmentsMap]?.price || 0;
+  const activeTreatmentObj = treatments.find((t: any) => t?.id === selectedTreatment) || treatments[0];
+  const currentPrice = activeTreatmentObj?.price || 0;
   const currentMultiplier = zonesMap[selectedZone as keyof typeof zonesMap]?.multiplier || 1.0;
   const subtotal = currentPrice * currentMultiplier * Math.max(1, patientCount);
   const fundDeduction = Math.floor(subtotal * 0.10); // 10% Fund contribution estimation
@@ -217,72 +248,20 @@ export function PortalClient({
     const text = `=== LOS SANTOS MEDICAL SERVICE ===
 ใบรับรองประมาณการค่ารักษาพยาบาล
 ---------------------------------
-ประเภทหัตถการ: ${treatmentsMap[selectedTreatment as keyof typeof treatmentsMap]?.label || ""}
-อัตราค่าบริการคนไข้: ${currentPrice} IC / คน
+ประเภทหัตถการ: ${activeTreatmentObj?.label || ""}
+อัตราค่าบริการคนไข้: ${currentPrice.toLocaleString()} IC / คน
 โซนพื้นที่เกิดเหตุ: ${zonesMap[selectedZone as keyof typeof zonesMap]?.label || ""} (ตัวคูณ x${currentMultiplier.toFixed(1)})
 จำนวนผู้รับบริการ: ${patientCount} ท่าน
 ---------------------------------
-ยอดรวมค่าบริการดิบ: ${currentPrice * currentMultiplier * patientCount} IC
-หักส่วนลดกองทุนเมือง (10%): - ${fundDeduction} IC
-ยอดเงินเรียกเก็บสุทธิ: ${totalEstimation} IC
+ยอดรวมค่าบริการดิบ: ${(currentPrice * currentMultiplier * patientCount).toLocaleString()} IC
+หักส่วนลดกองทุนเมือง (10%): - ${fundDeduction.toLocaleString()} IC
+ยอดเงินเรียกเก็บสุทธิ: ${totalEstimation.toLocaleString()} IC
 ---------------------------------
 * อนุมัติข้อมูลโดยศูนย์กู้ชีพกลาง (LS Medical Service) *`;
     navigator.clipboard.writeText(text).then(() => {
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     });
-  };
-
-  // Vitals Scanner States
-  const [scannerName, setScannerName] = useState("");
-  const [isScanning, setIsScanning] = useState(false);
-  const [scannerStatusText, setScannerStatusText] = useState("กรุณากรอกชื่อพลเมืองเพื่อเริ่มสแกน...");
-  const [scanResult, setScanResult] = useState<{
-    heartRate: number;
-    bloodPressure: string;
-    temperature: string;
-    oxygen: number;
-    diagnosis: string;
-  } | null>(null);
-
-  const startVitalsScan = () => {
-    if (!scannerName.trim()) return;
-    setIsScanning(true);
-    setScanResult(null);
-    setScannerStatusText("🔍 กำลังเชื่อมต่อโพรบวัดสัญญาณชีพและยิงคลื่นความถี่...");
-    
-    setTimeout(() => {
-      setScannerStatusText("⚡ กำลังตรวจสอบความเสถียรของชีพจร (Heart Rhythm)...");
-      setTimeout(() => {
-        setScannerStatusText("🧠 กำลังสแกนระดับสติสัมปชัญญะและเซลล์สมอง...");
-        setTimeout(() => {
-          const heartRate = Math.floor(Math.random() * 55) + 60; // 60 - 115 bpm
-          const bpSystolic = Math.floor(Math.random() * 30) + 110; // 110 - 140
-          const bpDiastolic = Math.floor(Math.random() * 15) + 70; // 70 - 85
-          const temp = (Math.random() * 1.8 + 36.1).toFixed(1); // 36.1 - 37.9
-          const oxygen = Math.floor(Math.random() * 4) + 96; // 96 - 99%
-
-          const diagnoses = [
-            "สัญญาณชีพเสถียรดี แนะนำให้หลีกเลี่ยงพื้นที่ปะทะหน้าสภาเพื่อความปลอดภัยของร่างกาย",
-            "พบสารคาเฟอีนตกค้างระดับสูง แนะนำให้งดน้ำชา/กาแฟ และดื่มน้ำประชารัฐอย่างน้อย 3 แก้ว",
-            "ตรวจพบภาวะอ่อนเพลียปานกลาง แนะนำให้ทานยาพาราเซตามอล 2 เม็ด และพักผ่อนในบ้านพักพลเมือง",
-            "หัวใจเต้นผิดจังหวะเล็กน้อยเนื่องจากเหม่อลอย แนะนำให้รีบวิ่งจ๊อกกิ้งรอบโรงพยาบาลกลาง 2 รอบ",
-            "ตรวจพบชีพจรมั่นคงดีเยี่ยม! สภาพร่างกายฟิตพร้อมปฏิบัติหน้าที่ในเมืองได้ร้อยเปอร์เซ็นต์"
-          ];
-          const randomDiagnosis = diagnoses[Math.floor(Math.random() * diagnoses.length)];
-
-          setScanResult({
-            heartRate,
-            bloodPressure: `${bpSystolic}/${bpDiastolic} mmHg`,
-            temperature: `${temp} °C`,
-            oxygen,
-            diagnosis: randomDiagnosis
-          });
-          setIsScanning(false);
-          setScannerStatusText("✅ วิเคราะห์ข้อมูลเสร็จสิ้น!");
-        }, 1000);
-      }, 1000);
-    }, 1000);
   };
 
   return (
@@ -361,34 +340,34 @@ export function PortalClient({
               
               <div className="portal-stats-row">
                 <div className="portal-stats-label">
-                  <span style={{ fontSize: "1.25rem" }}>🟢</span>
+                  <span style={{ fontSize: "1.25rem" }}>{(activeCount ?? 0) > 0 ? "🟢" : "🟡"}</span>
                   <span>สถานะการกู้ชีพเมือง</span>
                 </div>
-                <span className="portal-stats-value" style={{ color: "var(--accent)" }}>ACTIVE</span>
+                <span className="portal-stats-value" style={{ color: (activeCount ?? 0) > 0 ? "var(--accent)" : "var(--warning, #f59e0b)" }}>{(activeCount ?? 0) > 0 ? "ACTIVE" : "STANDBY"}</span>
               </div>
 
               <div className="portal-stats-row">
                 <div className="portal-stats-label">
                   <span style={{ fontSize: "1.25rem" }}>🚑</span>
-                  <span>เคสอุบัติเหตุสัปดาห์นี้</span>
+                  <span>เคสเข้าเวรสัปดาห์นี้</span>
                 </div>
-                <span className="portal-stats-value">{casesCount} เคส</span>
+                <span className="portal-stats-value">{stats.weeklyShifts} เคส</span>
               </div>
 
               <div className="portal-stats-row">
                 <div className="portal-stats-label">
-                  <span style={{ fontSize: "1.25rem" }}>🛏️</span>
-                  <span>ความจุเตียงผ่าตัด/พักรักษา</span>
+                  <span style={{ fontSize: "1.25rem" }}>👨‍⚕️</span>
+                  <span>แพทย์ประจำหน่วยงาน</span>
                 </div>
-                <span className="portal-stats-value">32 / 40 เตียง</span>
+                <span className="portal-stats-value">{stats.totalDoctors} ท่าน</span>
               </div>
 
               <div className="portal-stats-row">
                 <div className="portal-stats-label">
-                  <span style={{ fontSize: "1.25rem" }}>⏱️</span>
-                  <span>เวลาตอบสนองเหตุฉุกเฉิน</span>
+                  <span style={{ fontSize: "1.25rem" }}>🩺</span>
+                  <span>แพทย์ปฏิบัติหน้าที่ขณะนี้</span>
                 </div>
-                <span className="portal-stats-value">&lt; 3 นาที</span>
+                <span className="portal-stats-value" style={{ color: "var(--accent)" }}>{activeCount ?? 0} ท่าน</span>
               </div>
             </div>
           </div>
@@ -433,7 +412,7 @@ export function PortalClient({
                   const formattedDuration = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 
                   return (
-                    <div className="roster-card" key={idx}>
+<div className="roster-card" key={idx}>
                       <div className="roster-avatar-wrapper">
                         {doc.avatarUrl ? (
                           <img src={doc.avatarUrl} alt={doc.name} className="roster-avatar" />
@@ -505,87 +484,122 @@ export function PortalClient({
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "32px", alignItems: "start" }}>
             
-            {/* 1. Interactive Vitals Scanner Widget */}
+            {/* 1. Rules & Regulations Explorer Widget */}
             <div className="vitals-scanner-card portal-fade-up">
-              <h3 style={{ color: "#fff", fontSize: "1.1rem", fontWeight: "800", margin: 0 }}>📟 เครื่องสแกนสัญญาณชีพพลเมือง (Vitals Scanner)</h3>
+              <h3 style={{ color: "#fff", fontSize: "1.1rem", fontWeight: "800", margin: 0 }}>📜 บอร์ดกฎระเบียบและอัตราค่ารักษา (Rules Explorer)</h3>
               <p style={{ color: "var(--text-muted)", fontSize: "0.75rem", margin: 0 }}>
-                จำลองเพื่อประเมินวิเคราะห์สถานะหัวใจ ความเข้มข้นออกซิเจนในเลือด และอุณหภูมิร่างกายเบื้องต้นของประชาชน
+                สืบค้นกฎข้อบังคับ แนวปฏิบัติ และพิกัดค่าบริการของหน่วยงานแพทย์นครลอสซานโตส
               </p>
 
-              {/* High-Tech Scanner Screen */}
-              <div className="scanner-screen">
-                <div className="scanner-screen-grid"></div>
-                
-                {/* Scanner pulse wave SVG */}
-                <svg className="scanner-screen-wave" viewBox="0 0 400 100" preserveAspectRatio="none">
-                  <path 
-                    className={`scanner-wave-path ${isScanning ? 'scanning' : ''}`} 
-                    d={
-                      isScanning 
-                        ? "M0,50 L20,50 L30,20 L40,80 L50,45 L60,55 L70,50 L100,50 L120,50 L130,10 L140,90 L150,40 L160,60 L170,50 L200,50 L220,50 L230,20 L240,80 L250,45 L260,55 L270,50 L300,50 L320,50 L330,10 L340,90 L350,40 L360,60 L370,50 L400,50"
-                        : "M0,50 Q10,48 20,50 T40,50 T60,50 T80,50 T100,50 T120,50 T140,50 T160,50 T180,50 T200,50 T220,50 T240,50 T260,50 T280,50 T300,50 T320,50 T340,50 T360,50 T380,50 T400,50"
-                    } 
-                  />
-                </svg>
-
-                {/* Radar sweeping scan line */}
-                <div className={`scanner-radar-line ${isScanning ? 'scanning' : ''}`}></div>
-
-                {/* Screen Center Text Overlay */}
-                <div className="scanner-screen-text">
-                  {scannerStatusText}
-                </div>
-              </div>
-
-              {/* Controls */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {/* Search Bar */}
+              <div style={{ position: "relative" }}>
                 <input 
                   type="text" 
-                  placeholder="ป้อนชื่อผู้ต้องการตรวจสัญญาณชีพ..."
-                  value={scannerName}
-                  onChange={(e) => setScannerName(e.target.value)}
+                  placeholder="ค้นหากฎระเบียบ (เช่น พกอาวุธ, ทำร้าย, ค่าปรับ)..."
+                  value={explorerSearch}
+                  onChange={(e) => setExplorerSearch(e.target.value)}
                   className="scanner-input"
-                  disabled={isScanning}
+                  style={{ textAlign: "left", paddingLeft: "36px" }}
                 />
-                
-                <button 
-                  onClick={startVitalsScan}
-                  className="login-btn"
-                  style={{ width: "100%", margin: 0, fontWeight: "bold" }}
-                  disabled={isScanning || !scannerName.trim()}
-                >
-                  {isScanning ? "⚡ กำลังสแกนร่างกาย..." : "💖 เริ่มทำการสแกนชีพจร"}
-                </button>
+                <Search size={16} style={{ position: "absolute", left: "12px", top: "12px", color: "var(--text-muted)" }} />
               </div>
 
-              {/* Diagnosis Report */}
-              {scanResult && (
-                <div className="scanner-report">
-                  <div className="scanner-report-row">
-                    <span>NAME/ID:</span>
-                    <span className="scanner-report-value" style={{ color: "var(--accent-light)" }}>{scannerName.toUpperCase()}</span>
-                  </div>
-                  <div className="scanner-report-row">
-                    <span>HEART RATE:</span>
-                    <span className="scanner-report-value" style={{ color: "#10b981" }}>❤️ {scanResult.heartRate} BPM</span>
-                  </div>
-                  <div className="scanner-report-row">
-                    <span>BLOOD PRESSURE:</span>
-                    <span className="scanner-report-value">{scanResult.bloodPressure}</span>
-                  </div>
-                  <div className="scanner-report-row">
-                    <span>SPO2 (OXYGEN):</span>
-                    <span className="scanner-report-value">🫧 {scanResult.oxygen}%</span>
-                  </div>
-                  <div className="scanner-report-row">
-                    <span>BODY TEMP:</span>
-                    <span className="scanner-report-value">{scanResult.temperature}</span>
-                  </div>
-                  <div className="scanner-report-diagnosis">
-                    <b>วินิจฉัยแพทย์:</b> {scanResult.diagnosis}
-                  </div>
+              {/* Category Tabs */}
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                {rules?.categories?.map((cat: any) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setExplorerCat(cat.id)}
+                    style={{
+                      padding: "6px 12px",
+                      fontSize: "0.75rem",
+                      background: explorerCat === cat.id ? "color-mix(in srgb, var(--accent) 20%, transparent)" : "rgba(255,255,255,0.02)",
+                      border: explorerCat === cat.id ? "1px solid var(--accent)" : "1px solid var(--border-subtle)",
+                      color: explorerCat === cat.id ? "#fff" : "var(--text-secondary)",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Rules List Container */}
+              <div className="scanner-screen" style={{ height: "220px", justifyContent: "flex-start", alignItems: "stretch", padding: "12px", overflowY: "auto" }}>
+                <div className="scanner-screen-grid" style={{ backgroundSize: "30px 30px" }}></div>
+                
+                <div style={{ position: "relative", zIndex: 10, display: "flex", flexDirection: "column", gap: "10px", width: "100%", textAlign: "left" }}>
+                  {loadingRules ? (
+                    <div style={{ color: "var(--text-muted)", fontSize: "0.8rem", textAlign: "center", padding: "40px 0" }}>
+                      กำลังโหลดข้อมูลกฎระเบียบ...
+                    </div>
+                  ) : !rules ? (
+                    <div style={{ color: "var(--text-muted)", fontSize: "0.8rem", textAlign: "center", padding: "40px 0" }}>
+                      ไม่สามารถโหลดข้อมูลกฎระเบียบได้
+                    </div>
+                  ) : (() => {
+                    const activeCatObj = rules.categories?.find((c: any) => c.id === explorerCat);
+                    if (!activeCatObj) return null;
+                    
+                    const filteredRules = activeCatObj.rules?.filter((r: any) => {
+                      if (!explorerSearch.trim()) return true;
+                      return r.content.toLowerCase().includes(explorerSearch.toLowerCase());
+                    });
+
+                    if (!filteredRules || filteredRules.length === 0) {
+                      return (
+                        <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textAlign: "center", padding: "40px 0" }}>
+                          🔍 ไม่พบกฎระเบียบที่ตรงกับการค้นหา
+                        </div>
+                      );
+                    }
+
+                    return filteredRules.map((r: any) => {
+                      const isHeader = r.content.startsWith("[HEADER]");
+                      const contentText = isHeader ? r.content.replace("[HEADER]", "").trim() : r.content;
+                      
+                      if (isHeader) {
+                        return (
+                          <div key={r.id} style={{ 
+                            color: "var(--accent-light)", 
+                            fontSize: "0.8rem", 
+                            fontWeight: "bold", 
+                            marginTop: "8px", 
+                            borderBottom: "1px solid rgba(16,185,129,0.2)",
+                            paddingBottom: "4px"
+                          }}>
+                            📌 {contentText}
+                          </div>
+                        );
+                      }
+
+                      // Highlight search text if search is active
+                      if (explorerSearch.trim()) {
+                        const index = contentText.toLowerCase().indexOf(explorerSearch.toLowerCase());
+                        if (index !== -1) {
+                          const before = contentText.substring(0, index);
+                          const match = contentText.substring(index, index + explorerSearch.length);
+                          const after = contentText.substring(index + explorerSearch.length);
+                          return (
+                            <div key={r.id} style={{ color: "#fff", fontSize: "0.75rem", lineHeight: "1.4", paddingLeft: "10px", borderLeft: "2px solid var(--accent)" }}>
+                              • {before}<mark style={{ background: "var(--accent)", color: "#000", padding: "0 2px", borderRadius: "2px" }}>{match}</mark>{after}
+                            </div>
+                          );
+                        }
+                      }
+
+                      return (
+                        <div key={r.id} style={{ color: "var(--text-secondary)", fontSize: "0.75rem", lineHeight: "1.4", paddingLeft: "10px", borderLeft: "2px solid rgba(255,255,255,0.1)" }}>
+                          • {contentText}
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
-              )}
+              </div>
             </div>
 
             {/* 2. Skeuomorphic Medical Invoice Card */}
@@ -600,10 +614,11 @@ export function PortalClient({
                     onChange={(e) => setSelectedTreatment(e.target.value)}
                     className="portal-calculator-select"
                   >
-                    <option value="cpr">ปฐมพยาบาลเบื้องต้น (CPR)</option>
-                    <option value="stitch">เย็บแผลทำแผลหัตถการ</option>
-                    <option value="medicine">จ่ายยาระงับอาการประสาท/ยาควบคุม</option>
-                    <option value="checkup">ตรวจร่างกายและประเมินโรค</option>
+                    {treatments.map((t: any) => (
+                      <option key={t.id} value={t.id}>
+                        {t.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -716,14 +731,24 @@ export function PortalClient({
                 </div>
                 
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1, overflowY: "hidden" }}>
-                  {feedItems.map(item => (
-                    <div className="portal-telemetry-item" key={item.id}>
-                      <span style={{ color: "var(--text-primary)", fontSize: "0.75rem", fontWeight: "600", fontFamily: "'JetBrains Mono', monospace" }}>{item.text}</span>
-                      <span style={{ color: "var(--accent-light)", fontSize: "0.6rem", fontFamily: "monospace", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                        ⏱0s {item.time}
-                      </span>
+                  {recentActivity.length === 0 ? (
+                    <div style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                      📡 ไม่มีกิจกรรมล่าสุดในระบบปฏิบัติการ
                     </div>
-                  ))}
+                  ) : (
+                    recentActivity.map(item => {
+                      const itemTime = new Date(item.timestamp);
+                      const formattedTime = itemTime.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+                      return (
+                        <div className="portal-telemetry-item" key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.02)", paddingBottom: "4px", textAlign: "left" }}>
+                          <span style={{ color: "var(--text-primary)", fontSize: "0.75rem", fontWeight: "600", fontFamily: "'JetBrains Mono', monospace" }}>{item.text}</span>
+                          <span style={{ color: "var(--accent-light)", fontSize: "0.6rem", fontFamily: "monospace", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            ⏱️ {formattedTime}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
@@ -844,14 +869,14 @@ export function PortalClient({
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <div className="portal-quota-box">
                 <div className="portal-quota-header">
-                  <span>เป้าหมายรับสมัครแพทย์ (รุ่นที่ 15)</span>
-                  <span style={{ color: "var(--accent-light)", fontWeight: "bold" }}>22 / 30 คน (73%)</span>
+                  <span>เป้าหมายรับสมัครแพทย์ (รุ่นที่ {recruitmentQuota.batch})</span>
+                  <span style={{ color: "var(--accent-light)", fontWeight: "bold" }}>{recruitmentQuota.current} / {recruitmentQuota.target} คน ({recruitmentQuota.target > 0 ? Math.round((recruitmentQuota.current / recruitmentQuota.target) * 100) : 0}%)</span>
                 </div>
                 <div className="portal-quota-bar-bg">
-                  <div className="portal-quota-bar-fill"></div>
+                  <div className="portal-quota-bar-fill" style={{ "--progress-width": `${recruitmentQuota.target > 0 ? Math.round((recruitmentQuota.current / recruitmentQuota.target) * 100) : 0}%` } as React.CSSProperties}></div>
                 </div>
                 <p style={{ color: "var(--text-muted)", fontSize: "0.7rem", marginTop: "12px", lineHeight: "1.4" }}>
-                  * โควตาผู้สมัครที่ผ่านการสอบข้อเขียนเบื้องต้นแล้ว การเปิดรอบบิลนี้จะสิ้นสุดภายในวันที่ 15 มิถุนายนนี้ ขอสงวนสิทธิ์การคัดเฉพาะแพทย์ที่ผ่านเกณฑ์เท่านั้น
+                  * โควตาผู้สมัครที่ผ่านการสอบข้อเขียนเบื้องต้นแล้ว การเปิดรอบนี้จะสิ้นสุดภายในวันที่ {recruitmentQuota.end_date ? new Date(recruitmentQuota.end_date).toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" }) : "ไม่ระบุ"} ขอสงวนสิทธิ์การคัดเฉพาะแพทย์ที่ผ่านเกณฑ์เท่านั้น
                 </p>
               </div>
 
@@ -1032,13 +1057,30 @@ export function PortalClient({
               {activeModal === "rules" && (
                 <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem", lineHeight: "1.6" }}>
                   <p style={{ color: "var(--text-primary)", fontWeight: "bold" }}>
-                    สำหรับบุคคลทั่วไปและผู้เล่นในเซิร์ฟเวอร์ สามารถตรวจสอบหลักเกณฑ์และข้อปฏิบัติต่างๆ ได้ดังนี้:
+                    หลักเกณฑ์และข้อปฏิบัติของหน่วยงานแพทย์ ({rules?.categories?.length || 0} หมวดหมู่)
                   </p>
-                  <ul style={{ paddingLeft: "20px", marginTop: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <li><b>การรักษา:</b> แพทย์ต้องรักษาตามคิวหัตถการ ไม่ลัดคิว ยกเว้นเคสฉุกเฉินระดับสีแดง</li>
-                    <li><b>การคิดค่าบริการ:</b> บันทึกและแจ้งเรียกเก็บค่าบริการแก่คนไข้ตามเรทนโยบายโรงพยาบาลเมืองเท่านั้น</li>
-                    <li><b>จรรยาบรรณแพทย์:</b> ห้ามแพร่งพรายความลับคนไข้ หรือกริยามารยาทที่ไม่ดีต่อประชาชนโดยเด็ดขาด</li>
-                  </ul>
+                  {rules?.categories ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "12px" }}>
+                      {rules.categories.map((cat: any) => {
+                        const visibleRules = (cat.rules || []).filter((r: any) => !r.content.startsWith("[HEADER]")).slice(0, 3);
+                        return (
+                          <div key={cat.id} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)", padding: "12px" }}>
+                            <h4 style={{ color: "#fff", fontSize: "0.85rem", fontWeight: "bold", margin: "0 0 8px 0" }}>📌 {cat.name}</h4>
+                            <ul style={{ paddingLeft: "18px", margin: 0, display: "flex", flexDirection: "column", gap: "4px" }}>
+                              {visibleRules.map((r: any) => (
+                                <li key={r.id} style={{ fontSize: "0.78rem" }}>{r.content}</li>
+                              ))}
+                              {(cat.rules || []).filter((r: any) => !r.content.startsWith("[HEADER]")).length > 3 && (
+                                <li style={{ color: "var(--text-muted)", fontStyle: "italic", fontSize: "0.75rem" }}>... อีก {(cat.rules || []).filter((r: any) => !r.content.startsWith("[HEADER]")).length - 3} ข้อ</li>
+                              )}
+                            </ul>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p style={{ color: "var(--text-muted)" }}>กำลังโหลดข้อมูลกฎระเบียบ...</p>
+                  )}
                   <div style={{ marginTop: "24px", display: "flex", justifyContent: "flex-end" }}>
                     <a 
                       href="/dashboard/rules" 
@@ -1054,32 +1096,26 @@ export function PortalClient({
               {activeModal === "fees" && (
                 <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem", lineHeight: "1.6" }}>
                   <p style={{ color: "var(--text-primary)", fontWeight: "bold" }}>
-                    อัตราค่ารักษาพยาบาลแบ่งตามโซนแผนที่หน่วยงานแพทย์:
+                    อัตราค่ารักษาพยาบาลแบ่งตามโซนแผนที่หน่วยงานแพทย์ ({treatments.length} รายการ):
                   </p>
                   <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "12px", fontSize: "0.8rem" }}>
                     <thead>
                       <tr style={{ borderBottom: "1px solid var(--border-subtle)", color: "#fff", textAlign: "left" }}>
                         <th style={{ padding: "8px" }}>รายการรักษา</th>
-                        <th style={{ padding: "8px" }}>โซนในเมือง</th>
-                        <th style={{ padding: "8px" }}>โซนนอกเมือง</th>
+                        <th style={{ padding: "8px" }}>ในเมือง (x1)</th>
+                        <th style={{ padding: "8px" }}>นอกเมือง (x2)</th>
+                        <th style={{ padding: "8px" }}>เมืองบน (x3)</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                        <td style={{ padding: "8px" }}>ปฐมพยาบาลเบื้องต้น (CPR)</td>
-                        <td style={{ padding: "8px" }}>100 IC</td>
-                        <td style={{ padding: "8px" }}>200 IC</td>
-                      </tr>
-                      <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                        <td style={{ padding: "8px" }}>เย็บแผลหัตถการ</td>
-                        <td style={{ padding: "8px" }}>200 IC</td>
-                        <td style={{ padding: "8px" }}>300 IC</td>
-                      </tr>
-                      <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                        <td style={{ padding: "8px" }}>จ่ายยาระงับอาการประสาท</td>
-                        <td style={{ padding: "8px" }}>150 IC</td>
-                        <td style={{ padding: "8px" }}>150 IC</td>
-                      </tr>
+                      {treatments.map((t: any) => (
+                        <tr key={t.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                          <td style={{ padding: "8px" }}>{t.label}</td>
+                          <td style={{ padding: "8px" }}>{(t.price * 1).toLocaleString()} IC</td>
+                          <td style={{ padding: "8px" }}>{(t.price * 2).toLocaleString()} IC</td>
+                          <td style={{ padding: "8px" }}>{(t.price * 3).toLocaleString()} IC</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                   <div style={{ marginTop: "24px", display: "flex", justifyContent: "flex-end" }}>
@@ -1141,18 +1177,18 @@ export function PortalClient({
                         >
                           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
                             <strong style={{ color: "#fca5a5", fontSize: "0.8rem" }}>
-                              ❌ {item.person_name || item.gang_name || "ไม่ระบุชื่อ"}
+                              ❌ {item.name || item.gang || "ไม่ระบุชื่อ"}
                             </strong>
                             <span style={{ color: "var(--text-muted)" }}>
-                              {item.gang_name ? `แก๊ง: ${item.gang_name}` : "แบล็กลิสต์รายบุคคล"}
+                              {item.gang ? `แก๊ง: ${item.gang}` : "แบล็กลิสต์รายบุคคล"}
                             </span>
                           </div>
                           <p style={{ margin: "2px 0", color: "var(--text-secondary)" }}>
-                            <b>สาเหตุ:</b> {item.reason}
+                            <b>ข้อหา:</b> {item.penalty || "ไม่ระบุ"}
                           </p>
                           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px", color: "var(--text-muted)", fontSize: "0.7rem" }}>
-                            <span>ผู้ประกาศ: {item.doctor_name}</span>
-                            <span>ค่าปรับค้าง: <span style={{ color: "var(--warning)" }}>{item.penalty_fine} IC</span></span>
+                            <span>ผู้ประกาศ: {item.created_by?.split("@")[0] || "ระบบ"}</span>
+                            <span>ค่าปรับ: <span style={{ color: "var(--warning, #f59e0b)" }}>{Number(item.fine * (item.multiplier || 1)).toLocaleString()} IC</span></span>
                           </div>
                         </div>
                       ))}

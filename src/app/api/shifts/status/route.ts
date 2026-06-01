@@ -10,17 +10,23 @@ export async function GET() {
     // 1. Fetch all active shifts (public data)
     const { data: activeShifts } = await supabase
       .from("shifts")
-      .select("user_email, clock_in, user_name")
+      .select("id, user_email, clock_in, user_name")
       .eq("status", "active")
       .order("clock_in", { ascending: true });
 
-    // 2. Fetch registered doctors for details
-    const { data: settingsData } = await supabase
+    // 2. Fetch registered doctors and recruitment quota
+    const { data: settingsRows } = await supabase
       .from("system_settings")
-      .select("value")
-      .eq("key", "registered_doctors")
-      .maybeSingle();
-    const registeredDoctors = settingsData?.value || [];
+      .select("key, value")
+      .in("key", ["registered_doctors", "recruitment_quota"]);
+
+    const registeredDoctors = settingsRows?.find(r => r.key === "registered_doctors")?.value || [];
+    const recruitmentQuota = settingsRows?.find(r => r.key === "recruitment_quota")?.value || {
+      target: 30,
+      current: 22,
+      batch: 15,
+      end_date: "2026-06-15T23:59:59+07:00"
+    };
 
     // Map to public output
     const activeDoctors = (activeShifts || []).map((shift: any) => {
@@ -33,7 +39,79 @@ export async function GET() {
       };
     });
 
-    // 3. If authenticated, fetch their personal active/pending shifts
+    // 3. Fetch completed shifts for recent CAD logs
+    const { data: recentCompleted } = await supabase
+      .from("shifts")
+      .select("id, user_email, user_name, clock_in, clock_out")
+      .eq("status", "completed")
+      .order("clock_out", { ascending: false })
+      .limit(5);
+
+    // 4. Fetch recent blacklist logs
+    const { data: recentBlacklists } = await supabase
+      .from("blacklist_records")
+      .select("id, name, phone, gang, penalty, fine, multiplier, created_at, created_by")
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    // 5. Calculate start of current week (Monday at 00:00:00 BKK) to query weekly total shifts count
+    const nowBkk = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+    const day = nowBkk.getDay(); // 0 Sunday, 1 Monday, ...
+    const diff = nowBkk.getDate() - day + (day === 0 ? -6 : 1);
+    const mondayBkk = new Date(nowBkk.setDate(diff));
+    mondayBkk.setHours(0, 0, 0, 0);
+    const startOfWeekISO = mondayBkk.toISOString();
+
+    const { count: weeklyShiftsCount } = await supabase
+      .from("shifts")
+      .select("id", { count: "exact", head: true })
+      .gte("clock_in", startOfWeekISO);
+
+    // 6. Compile real-time CAD activity feed logs
+    const activityList: any[] = [];
+
+    (activeShifts || []).forEach((shift: any) => {
+      const doctor = registeredDoctors.find((d: any) => d.email === shift.user_email);
+      const name = doctor?.name || shift.user_name || "แพทย์ประจำการ";
+      activityList.push({
+        id: `in_${shift.id || shift.clock_in}`,
+        text: `🚑 แพทย์ ${name} ขึ้นเวรกู้ชีพฉุกเฉิน (Clock-in)`,
+        timestamp: shift.clock_in,
+        type: "in"
+      });
+    });
+
+    (recentCompleted || []).forEach((shift: any) => {
+      const doctor = registeredDoctors.find((d: any) => d.email === shift.user_email);
+      const name = doctor?.name || shift.user_name || "แพทย์ประจำการ";
+      activityList.push({
+        id: `out_${shift.id || shift.clock_out}`,
+        text: `🔴 แพทย์ ${name} ลงเวรปฏิบัติหน้าที่ (Clock-out)`,
+        timestamp: shift.clock_out,
+        type: "out"
+      });
+    });
+
+    (recentBlacklists || []).forEach((bl: any) => {
+      const targetName = bl.name || bl.gang || "บุคคลนิรนาม";
+      activityList.push({
+        id: `bl_${bl.id || bl.created_at}`,
+        text: `🚫 ติดแบล็กลิสต์: ${targetName} ข้อหา ${bl.penalty}`,
+        timestamp: bl.created_at,
+        type: "blacklist"
+      });
+    });
+
+    // Sort by timestamp descending
+    activityList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const recentActivity = activityList.slice(0, 6);
+
+    const stats = {
+      totalDoctors: registeredDoctors.length,
+      weeklyShifts: weeklyShiftsCount || 0
+    };
+
+    // 7. If authenticated, fetch their personal active/pending shifts
     if (userEmail) {
       const { data: activeShift } = await supabase
         .from("shifts")
@@ -54,17 +132,23 @@ export async function GET() {
         activeShift: activeShift || null,
         pendingProofShift: pendingShift || null,
         activeCount: activeDoctors.length,
-        activeDoctors
+        activeDoctors,
+        recentActivity,
+        stats,
+        recruitmentQuota
       });
     }
 
-    // 4. If not authenticated, return only public counts and roster
+    // 8. If not authenticated, return public counts, roster, CAD operations and stats
     return NextResponse.json({
       isOnDuty: false,
       activeShift: null,
       pendingProofShift: null,
       activeCount: activeDoctors.length,
-      activeDoctors
+      activeDoctors,
+      recentActivity,
+      stats,
+      recruitmentQuota
     });
   } catch (error) {
     console.error("[Shift Status GET] Error:", error);
@@ -73,7 +157,10 @@ export async function GET() {
       activeShift: null,
       pendingProofShift: null,
       activeCount: 0,
-      activeDoctors: []
+      activeDoctors: [],
+      recentActivity: [],
+      stats: { totalDoctors: 0, weeklyShifts: 0 },
+      recruitmentQuota: { target: 30, current: 22, batch: 15, end_date: "2026-06-15T23:59:59+07:00" }
     });
   }
 }
