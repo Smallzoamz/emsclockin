@@ -304,8 +304,4 @@
 ## [2026-06-01 11:55] | File: src/components/PortalClient.tsx | Line: 1-1080 | Keyword: Human UI Audit Redesign | Status: ✅ Complete | Change: Overhauled the visual design of PortalClient.tsx to eliminate AI slop patterns (glassmorphism blurs, side-stripe cards, fuzzy paired drop shadows, wide text shadows, and wide-tracked caps kickers) in favor of a clean, high-fidelity dark slate medical operational grid (#030712 / #090f1d) inspired by modern human-designed developer platforms. Replaced all emojis in titles with clean outline Lucide SVG icons.
 
 ## [2026-06-01 11:58] | File: src/components/PortalClient.tsx | Line: 90-360 | Keyword: Restore News Slide Banner | Status: ✅ Complete | Change: Restored the Announcements and News sliding banner section to PortalClient.tsx, implementing a clean, solid card layout (#090f1d) with fine 1px borders, manual indicator controls, chevrons navigation, and an auto-rotate interval hook (6s) to ensure a complete, premium visual experience without AI design tells.
-
-
-
-
-
+## [2026-06-01 12:04] | File: src/components/PortalClient.tsx | Line: 39-813 | Keyword: Dynamic Image Slideshow & Visual News Cards | Status: ✅ Complete | Change: Overhauled the landing page image slideshow and news cards: (1) Replaced the static welcomer text in the image banner slider with a dynamic slides data structure. The tag, title, and description text overlays now rotate in sync with the active screenshot image, using smooth fade and translate transitions. (2) Enhanced the News & Announcements cards by adding visual screenshot headers (150px height) matching each section (doctor_duty.png, hospital_area.png, and blacklist.png), and applied overflow: hidden on the card containers to ensure clean rounded corners.
