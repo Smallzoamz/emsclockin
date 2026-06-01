@@ -9,7 +9,9 @@ import {
   Shield, 
   FileText,
   AlertTriangle,
-  UserCheck
+  UserCheck,
+  ArrowLeft,
+  ArrowRight
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -97,6 +99,53 @@ export function PortalClient({
       (item.created_by && item.created_by.toLowerCase().includes(term))
     );
   });
+
+  // Slide carousel state for Announcements
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  const slides = React.useMemo(() => {
+    const latest = blacklistData[0];
+    const blacklistSlide = latest ? {
+      badge: "🚫 LATEST BLACKLIST / บัญชีดำล่าสุด",
+      title: `ตรวจพบการกระทำผิด: ${latest.name}`,
+      description: `ข้อหา: ${latest.penalty || "ไม่ระบุ"} | ค่าปรับค้างจ่าย: ${Number(latest.fine * (latest.multiplier || 1)).toLocaleString()} IC | ประกาศโดยแพทย์: ${latest.created_by?.split("@")[0] || "ระบบ"}`,
+      actionText: "ตรวจสอบรายชื่อแบล็กลิสต์",
+      actionUrl: "#blacklist-section"
+    } : {
+      badge: "🚫 BLACKLIST STATUS",
+      title: "ไม่พบประวัติผู้ติดแบล็กลิสต์ขณะนี้",
+      description: "สภาพแวดล้อมความปลอดภัยดีเยี่ยม พลเมืองให้ความร่วมมือดีและไม่มีการทำร้ายร่างกายเจ้าหน้าที่แพทย์ขณะนี้",
+      actionText: "เปิดเอกสารกฎระเบียบ",
+      actionUrl: "/dashboard/rules"
+    };
+
+    return [
+      blacklistSlide,
+      {
+        badge: "📢 HOSPITAL ANNOUNCEMENT / ประกาศจากโรงพยาบาล",
+        title: "คู่มือกฎระเบียบและข้อปฏิบัติของหน่วยงานแพทย์",
+        description: "โปรดอ่านกฎระเบียบและข้อตกลงในการปฏิบัติหน้าที่และการทำสตอรี่อย่างเคร่งครัดเพื่อรักษามาตรฐานการสวมบทบาทกู้ชีพ",
+        actionText: "อ่านกฎของโรงพยาบาล",
+        actionUrl: "/dashboard/rules"
+      },
+      {
+        badge: "🚑 ON-DUTY OPERATIONS / รายงานยอดขึ้นเวร",
+        title: `มีแพทย์ปฏิบัติงานขึ้นกะในเวลานี้ ${activeCount ?? 0} ท่าน`,
+        description: "ระบบลงเวลาเข้าเวรอัตโนมัติ พลเมืองสามารถติดตามรายชื่อและตรวจสอบเวลาออนเวรของคุณหมอได้ที่ด้านล่าง",
+        actionText: "ดูรายชื่อแพทย์ปฏิบัติการ",
+        actionUrl: "#blacklist-section"
+      }
+    ];
+  }, [blacklistData, activeCount]);
+
+  // Slide Auto-play effect (6s interval)
+  useEffect(() => {
+    if (slides.length === 0) return;
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % slides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
 
   return (
     <div className="portal-container" style={{
@@ -248,6 +297,123 @@ export function PortalClient({
             >
               <FileText size={14} /> เปิดอ่านกฎโรงพยาบาล
             </a>
+          </div>
+        </section>
+
+        {/* News & Announcements Sliding Banner */}
+        <section style={{
+          background: "#090f1d",
+          border: "1px solid rgba(255, 255, 255, 0.06)",
+          borderRadius: "8px",
+          padding: "24px 32px",
+          marginBottom: "32px",
+          position: "relative",
+          overflow: "hidden"
+        }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", minHeight: "130px", justifyContent: "center" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
+              <span style={{
+                fontSize: "0.65rem",
+                color: "#00f0ff",
+                fontWeight: "700",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                background: "rgba(0, 240, 255, 0.04)",
+                border: "1px solid rgba(0, 240, 255, 0.15)",
+                padding: "3px 8px",
+                borderRadius: "3px"
+              }}>
+                {slides[activeSlide]?.badge}
+              </span>
+              
+              {/* Navigation Arrows */}
+              <div style={{ display: "flex", gap: "6px" }}>
+                <button 
+                  onClick={() => setActiveSlide((prev) => (prev - 1 + slides.length) % slides.length)}
+                  style={{
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: "4px",
+                    width: "28px",
+                    height: "28px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    color: "var(--text-secondary)",
+                    transition: "border-color 0.15s, color 0.15s"
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#00f0ff"; e.currentTarget.style.color = "#00f0ff"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+                >
+                  <ArrowLeft size={14} />
+                </button>
+                <button 
+                  onClick={() => setActiveSlide((prev) => (prev + 1) % slides.length)}
+                  style={{
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: "4px",
+                    width: "28px",
+                    height: "28px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    color: "var(--text-secondary)",
+                    transition: "border-color 0.15s, color 0.15s"
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#00f0ff"; e.currentTarget.style.color = "#00f0ff"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+                >
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: "1.15rem", fontWeight: "600", color: "#ffffff", margin: "6px 0" }}>
+                {slides[activeSlide]?.title}
+              </h3>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: 0, lineHeight: "1.5" }}>
+                {slides[activeSlide]?.description}
+              </p>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px", borderTop: "1px solid rgba(255,255,255,0.03)", paddingTop: "14px" }}>
+              {/* Manual Indicators */}
+              <div style={{ display: "flex", gap: "6px" }}>
+                {slides.map((_, idx) => (
+                  <span 
+                    key={idx}
+                    onClick={() => setActiveSlide(idx)}
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      background: idx === activeSlide ? "#00f0ff" : "rgba(255,255,255,0.12)",
+                      borderRadius: "50%",
+                      cursor: "pointer",
+                      transition: "background 0.15s"
+                    }}
+                  />
+                ))}
+              </div>
+
+              <a 
+                href={slides[activeSlide]?.actionUrl}
+                style={{
+                  fontSize: "0.72rem",
+                  color: "#00f0ff",
+                  fontWeight: "600",
+                  textDecoration: "none",
+                  transition: "opacity 0.15s"
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.textDecoration = "underline"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.textDecoration = "none"; }}
+              >
+                {slides[activeSlide]?.actionText} &rarr;
+              </a>
+            </div>
           </div>
         </section>
 
