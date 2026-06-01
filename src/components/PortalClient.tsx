@@ -125,146 +125,268 @@ export function PortalClient({
 
   return (
     <div className="portal-container">
-      <div className="portal-wrapper">
-        
-        {/* System Header & Branding */}
-        <header className="portal-header">
+      {/* 1. Branded Navigation Bar */}
+      <nav className="portal-nav">
+        <div className="portal-nav-wrapper">
           <div className="portal-logo-group">
             <div className="sidebar-logo" style={{ padding: 0, margin: 0 }}>
               <div className="logo-icon" style={{ background: logoUrl ? "transparent" : undefined, boxShadow: logoUrl ? "none" : undefined }}>
                 {logoUrl ? (
-                  <img src={logoUrl} alt="City Logo" style={{ width: "40px", height: "40px", objectFit: "contain" }} />
+                  <img src={logoUrl} alt="City Logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
                 ) : (
                   "🏥"
                 )}
               </div>
             </div>
             <div className="portal-title-text">
-              <h1>EMS CENTRAL PORTAL</h1>
-              <span>Los Santos Medical Department</span>
+              <h1>LOS SANTOS MEDICAL</h1>
+              <span>Emergency Services Department</span>
             </div>
           </div>
 
-          <div className="led-pulse-group">
+          <div className="portal-nav-links">
+            <a href="#hero" className="portal-nav-link">หน้าแรก</a>
+            <a href="#departments" className="portal-nav-link">แผนกกู้ชีพ</a>
+            <a href="#citizen-services" className="portal-nav-link">บริการประชาชน</a>
+            <a href="#announcements" className="portal-nav-link">ประกาศข่าวสาร</a>
+            <a href="#staff-gateway" className="portal-nav-link">ช่องทางเจ้าหน้าที่</a>
+          </div>
+
+          <div className="portal-led-pulse-group">
             <span className="portal-led-dot"></span>
             <span style={{ fontSize: "0.75rem", color: "var(--accent-light)", fontWeight: "bold" }}>
               {activeCount !== null ? `มีแพทย์ปฏิบัติงาน ${activeCount} ท่าน` : "คลังข้อมูลแพทย์กลาง"}
             </span>
           </div>
-        </header>
+        </div>
+      </nav>
 
-        {/* Main Grid Split */}
-        <main className="portal-grid">
-          
-          {/* Left Column: Carousel Board */}
-          <section className="portal-slider">
-            <div className="slide-content">
-              <span style={{ 
-                fontSize: "0.7rem", 
-                background: "color-mix(in srgb, var(--accent) 15%, transparent)", 
-                border: "1px solid var(--border-subtle)", 
-                color: "var(--accent-light)", 
-                padding: "4px 10px", 
-                borderRadius: "4px",
-                fontWeight: "bold" 
-              }}>
-                {slides[activeSlide].badge}
-              </span>
-              <h2>{slides[activeSlide].title}</h2>
-              <p>{slides[activeSlide].description}</p>
-            </div>
-
-            <div className="portal-slider-controls">
-              <div className="portal-slider-dots">
-                {slides.map((_, idx) => (
-                  <span 
-                    key={idx} 
-                    className={`portal-slider-dot ${idx === activeSlide ? "active" : ""}`}
-                    onClick={() => setActiveSlide(idx)}
-                  />
-                ))}
-              </div>
-
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button 
-                  className="portal-slider-arrow-btn"
-                  onClick={() => setActiveSlide((prev) => (prev - 1 + slides.length) % slides.length)}
-                >
-                  <ArrowLeft size={16} />
-                </button>
-                <button 
-                  className="portal-slider-arrow-btn"
-                  onClick={() => setActiveSlide((prev) => (prev + 1) % slides.length)}
-                >
-                  <ArrowRight size={16} />
-                </button>
-              </div>
-            </div>
-
-            <div style={{ marginTop: "20px", borderTop: "1px solid var(--border-subtle)", paddingTop: "20px" }}>
-              {slides[activeSlide].actionUrl.startsWith("http") ? (
-                <a 
-                  href={slides[activeSlide].actionUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="login-btn"
-                  style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", width: "auto", margin: 0 }}
-                >
-                  {slides[activeSlide].actionText} <ExternalLink size={14} />
+      {/* 2. Hero Section */}
+      <section id="hero" className="portal-hero">
+        <div className="portal-hero-bg"></div>
+        <div className="portal-hero-overlay"></div>
+        <div className="portal-hero-wrapper">
+          <div className="portal-hero-grid">
+            <div className="portal-hero-text">
+              <h2>ศูนย์การแพทย์ฉุกเฉินนครลอสซานโตส</h2>
+              <p>
+                ยินดีต้อนรับสู่ระบบข้อมูลกลางสำหรับประชาชนและบุคลากรทางการแพทย์ 
+                ตรวจสอบกฎระเบียบการปฏิบัติตนของแพทย์ อัตราค่าบริการรักษาพยาบาลรายบุคคล/กลุ่มแก๊ง 
+                และตรวจสอบรายชื่อผู้ติดทำเนียบบัญชีดำอย่างเป็นทางการได้ทันที
+              </p>
+              <div className="portal-hero-actions">
+                <a href="#staff-gateway" className="login-btn" style={{ textDecoration: "none", width: "auto", margin: 0, fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <Lock size={16} /> เข้าสู่ระบบเจ้าหน้าที่
                 </a>
-              ) : (
-                <button 
-                  className="login-btn"
-                  style={{ width: "auto", margin: 0 }}
-                  onClick={() => {
-                    const dest = slides[activeSlide].actionUrl.substring(1);
-                    setActiveModal(dest as any);
-                  }}
-                >
-                  {slides[activeSlide].actionText}
+                <button onClick={() => setActiveModal("rules")} className="login-btn" style={{ width: "auto", margin: 0, background: "transparent", border: "1px solid var(--border-subtle)", color: "#fff" }}>
+                  📜 คู่มือกฎระเบียบแพทย์
                 </button>
-              )}
+              </div>
             </div>
-          </section>
 
-          {/* Right Column: Portal Utilities & Login */}
-          <section style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            
+            {/* Live Stats Panel */}
+            <div className="portal-stats-panel">
+              <span className="portal-stats-title">🏥 สถานะการปฏิบัติงานสถานพยาบาล (Live Status)</span>
+              
+              <div className="portal-stats-row">
+                <div className="portal-stats-label">
+                  <span style={{ fontSize: "1.25rem" }}>🟢</span>
+                  <span>สถานะระบบกู้ภัยเมือง</span>
+                </div>
+                <span className="portal-stats-value" style={{ color: "var(--accent)" }}>ACTIVE</span>
+              </div>
+
+              <div className="portal-stats-row">
+                <div className="portal-stats-label">
+                  <span style={{ fontSize: "1.25rem" }}>🚑</span>
+                  <span>แพทย์ขึ้นเวรสูงสุดวันนี้</span>
+                </div>
+                <span className="portal-stats-value">{activeCount !== null ? activeCount + 3 : 8} ท่าน</span>
+              </div>
+
+              <div className="portal-stats-row">
+                <div className="portal-stats-label">
+                  <span style={{ fontSize: "1.25rem" }}>🛏️</span>
+                  <span>เตียงผู้ป่วยว่างที่รองรับ</span>
+                </div>
+                <span className="portal-stats-value">32 / 40 เตียง</span>
+              </div>
+
+              <div className="portal-stats-row">
+                <div className="portal-stats-label">
+                  <span style={{ fontSize: "1.25rem" }}>⏱️</span>
+                  <span>เวลาตอบสนองเหตุฉุกเฉิน</span>
+                </div>
+                <span className="portal-stats-value">&lt; 3 นาที</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Medical Services & Departments Section */}
+      <section id="departments" className="portal-section alt-bg">
+        <div className="portal-section-wrapper">
+          <div className="portal-section-header">
+            <h2>แผนกบริการทางการแพทย์</h2>
+            <p>ความปลอดภัยและความเป็นมืออาชีพในการช่วยเหลือพลเมืองนครลอสซานโตส</p>
+          </div>
+
+          <div className="portal-dept-grid">
+            <div className="portal-dept-card">
+              <div className="portal-dept-icon">🚑</div>
+              <h3>แผนกอุบัติเหตุและฉุกเฉิน (Trauma &amp; Emergency)</h3>
+              <p>บริการกู้ชีพฉุกเฉินเคลื่อนที่เร็วในพื้นที่เมืองและต่างจังหวัด ช่วยเหลือเคสหัวใจหยุดเต้น (CPR) เคสปะทะไฟท์ และอุบัติเหตุร้ายแรงตลอด 24 ชั่วโมง</p>
+            </div>
+
+            <div className="portal-dept-card">
+              <div className="portal-dept-icon">🏥</div>
+              <h3>แผนกศัลยกรรมและหัตถการ (General Surgery &amp; Care)</h3>
+              <p>ทีมศัลยแพทย์ที่มีความเชี่ยวชาญสูงในการผ่าตัด เย็บแผลทำแผลในห้องปฏิบัติการปลอดเชื้อ และการตรวจประเมินสุขภาพคนไข้หลังประสบเหตุ</p>
+            </div>
+
+            <div className="portal-dept-card">
+              <div className="portal-dept-icon">🚁</div>
+              <h3>หน่วยส่งกลับกู้ชีพทางอากาศ (Air Ambulance Unit)</h3>
+              <p>เฮลิคอปเตอร์กู้ภัยกู้ชีพฉุกเฉินพร้อมขนย้ายผู้ป่วยวิกฤตจากจุดสุ่มเสี่ยง พื้นที่สูงชัน บนยอดเขา หรือพื้นที่ห่างไกลที่รถเข้าไม่ถึงอย่างปลอดภัย</p>
+            </div>
+
+            <div className="portal-dept-card">
+              <div className="portal-dept-icon">💊</div>
+              <h3>แผนกเภสัชกรรมกลาง (Pharmacy &amp; Diagnostics)</h3>
+              <p>ระบบตรวจวินิจฉัยโรคและจ่ายยาเวชภัณฑ์ที่มีคุณภาพสูง จ่ายยาควบคุมพิเศษ ยาระงับอาการประสาท และน้ำยาทำความสะอาดแผลแก่คนไข้และคุณหมอ</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. Citizen Utilities Section */}
+      <section id="citizen-services" className="portal-section">
+        <div className="portal-section-wrapper">
+          <div className="portal-section-header">
+            <h2>บริการประชาชนและประชาสัมพันธ์</h2>
+            <p>เข้าถึงข้อมูลข่าวสาร อัตราค่าบริการ และกฎระเบียบของหน่วยงานแพทย์ฉุกเฉินได้ทันที</p>
+          </div>
+
+          <div className="portal-hero-grid" style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "24px" }}>
+            {/* Announcements sliding carousel inside a wide block */}
+            <div id="announcements" className="portal-slider">
+              <div className="slide-content">
+                <span style={{ 
+                  fontSize: "0.7rem", 
+                  background: "color-mix(in srgb, var(--accent) 15%, transparent)", 
+                  border: "1px solid var(--border-subtle)", 
+                  color: "var(--accent-light)", 
+                  padding: "4px 10px", 
+                  borderRadius: "4px",
+                  fontWeight: "bold" 
+                }}>
+                  {slides[activeSlide].badge}
+                </span>
+                <h3>{slides[activeSlide].title}</h3>
+                <p>{slides[activeSlide].description}</p>
+              </div>
+
+              <div className="portal-slider-controls">
+                <div className="portal-slider-dots">
+                  {slides.map((_, idx) => (
+                    <span 
+                      key={idx} 
+                      className={`portal-slider-dot ${idx === activeSlide ? "active" : ""}`}
+                      onClick={() => setActiveSlide(idx)}
+                    />
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button 
+                    className="portal-slider-arrow-btn"
+                    onClick={() => setActiveSlide((prev) => (prev - 1 + slides.length) % slides.length)}
+                  >
+                    <ArrowLeft size={16} />
+                  </button>
+                  <button 
+                    className="portal-slider-arrow-btn"
+                    onClick={() => setActiveSlide((prev) => (prev + 1) % slides.length)}
+                  >
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginTop: "20px", borderTop: "1px solid var(--border-subtle)", paddingTop: "20px" }}>
+                {slides[activeSlide].actionUrl.startsWith("http") ? (
+                  <a 
+                    href={slides[activeSlide].actionUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="login-btn"
+                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", width: "auto", margin: 0 }}
+                  >
+                    {slides[activeSlide].actionText} <ExternalLink size={14} />
+                  </a>
+                ) : (
+                  <button 
+                    className="login-btn"
+                    style={{ width: "auto", margin: 0 }}
+                    onClick={() => {
+                      const dest = slides[activeSlide].actionUrl.substring(1);
+                      setActiveModal(dest as any);
+                    }}
+                  >
+                    {slides[activeSlide].actionText}
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Quick Action Navigation Grid */}
-            <div className="widget-menu-grid">
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div className="widget-menu-item" onClick={() => setActiveModal("rules")}>
                 <div style={{ fontSize: "1.5rem" }}>📜</div>
-                <h3>กฎระเบียบแพทย์สาธารณะ</h3>
-                <p>เปิดอ่านคู่มือระเบียบการปฏิบัติตนและวินัยแพทย์กลางในเวปไซต์</p>
+                <div>
+                  <h3 style={{ fontSize: "0.95rem", marginBottom: "4px" }}>กฎระเบียบแพทย์สาธารณะ</h3>
+                  <p style={{ fontSize: "0.75rem" }}>เปิดอ่านคู่มือระเบียบการปฏิบัติตนและวินัยแพทย์กลางในเวปไซต์</p>
+                </div>
               </div>
 
               <div className="widget-menu-item" onClick={() => setActiveModal("fees")}>
                 <div style={{ fontSize: "1.5rem" }}>💊</div>
-                <h3>อัตราค่ารักษาพยาบาล</h3>
-                <p>ตรวจสอบอัตราค่าธรรมเนียมหัตถการตามโซนพื้นที่นโยบาย</p>
+                <div>
+                  <h3 style={{ fontSize: "0.95rem", marginBottom: "4px" }}>อัตราค่ารักษาพยาบาล</h3>
+                  <p style={{ fontSize: "0.75rem" }}>ตรวจสอบอัตราค่าธรรมเนียมหัตถการตามโซนพื้นที่นโยบาย</p>
+                </div>
               </div>
 
               <div className="widget-menu-item" onClick={() => setActiveModal("blacklist")}>
                 <div style={{ fontSize: "1.5rem" }}>🚫</div>
-                <h3>ตรวจสอบบัญชีดำ (Blacklist)</h3>
-                <p>ค้นหาประวัติบุคคลหรือกลุ่มคนที่ติดแบล็กลิสต์หน่วยงานแพทย์</p>
+                <div>
+                  <h3 style={{ fontSize: "0.95rem", marginBottom: "4px" }}>ตรวจสอบบัญชีดำ (Blacklist)</h3>
+                  <p style={{ fontSize: "0.75rem" }}>ค้นหาประวัติบุคคลหรือกลุ่มคนที่ติดแบล็กลิสต์หน่วยงานแพทย์</p>
+                </div>
               </div>
-
-              <a href="https://discord.gg/ems-hospital" target="_blank" rel="noopener noreferrer" className="widget-menu-item" style={{ textDecoration: "none" }}>
-                <div style={{ fontSize: "1.5rem" }}>💬</div>
-                <h3>เข้าสู่ Discord หน่วยงาน</h3>
-                <p>เข้าร่วมคอมมูนิตี้สำหรับข่าวสาร ประกาศด่วน และติดต่อแอดมิน</p>
-              </a>
             </div>
+          </div>
+        </div>
+      </section>
 
-            {/* Staff Secure Gateway */}
-            <div className="login-card" style={{ padding: "24px", margin: 0, width: "100%" }}>
-              <div className="login-icon" style={{ width: "48px", height: "48px", marginBottom: "12px", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.15)" }}>
+      {/* 5. Staff Secure Access Section */}
+      <section id="staff-gateway" className="portal-section alt-bg">
+        <div className="portal-section-wrapper">
+          <div className="portal-section-header">
+            <h2>Staff Operations Portal</h2>
+            <p>ระบบควบคุมการปฏิบัติงานภายในเฉพาะเจ้าหน้าที่โรงพยาบาลกลางเท่านั้น</p>
+          </div>
+
+          <div style={{ maxWidth: "550px", margin: "0 auto" }}>
+            <div className="login-card" style={{ padding: "32px", margin: 0, width: "100%" }}>
+              <div className="login-icon" style={{ width: "48px", height: "48px", marginBottom: "16px", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.15)" }}>
                 <Lock size={20} style={{ color: "var(--accent)" }} />
               </div>
-              <h3 style={{ color: "#fff", fontSize: "1rem", fontWeight: "bold", marginBottom: "4px" }}>Staff Operations Portal</h3>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.75rem", marginBottom: "20px", lineHeight: "1.4" }}>
-                ระบบล็อกอินความปลอดภัยสูงผ่าน Discord สำหรับแพทย์ที่ได้รับแต่งตั้งในกลุ่มดิสคอร์ดทางการของโรงพยาบาลเท่านั้น
+              <h3 style={{ color: "#fff", fontSize: "1.1rem", fontWeight: "bold", marginBottom: "8px" }}>เข้าสู่ระบบสำหรับแพทย์</h3>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.75rem", marginBottom: "24px", lineHeight: "1.5" }}>
+                กรุณาล็อกอินผ่าน Discord ที่ได้รับการยืนยันยศและสิทธิ์แพทย์ในดิสคอร์ดหลักของโรงพยาบาลแล้ว 
+                ระบบจะบันทึกชั่วโมงเวร คำนวณเบี้ยเลี้ยง และบันทึกประวัติการส่งเคสเข้า Discord Log โดยอัตโนมัติ
               </p>
 
               {error && (
@@ -295,7 +417,7 @@ export function PortalClient({
                 onClick={() => onDiscordLogin()} 
                 className="login-btn discord" 
                 id="discord-login-btn"
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px 24px" }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286z" />
@@ -316,7 +438,7 @@ export function PortalClient({
                     display: "flex",
                     justifyContent: "center",
                     fontSize: "0.75rem",
-                    padding: "8px"
+                    padding: "10px"
                   }}
                 >
                   🔒 Admin Portal Secure Access
@@ -374,10 +496,23 @@ export function PortalClient({
                 </form>
               </details>
             </div>
-          </section>
-        </main>
+          </div>
+        </div>
+      </section>
 
-      </div>
+      {/* 6. Footer */}
+      <footer className="portal-footer">
+        <div className="portal-footer-wrapper">
+          <p>© 2026 Los Santos Emergency Medical Department. All rights reserved.</p>
+          <div className="portal-footer-links">
+            <a href="https://discord.gg/ems-hospital" target="_blank" rel="noopener noreferrer" className="portal-footer-link">
+              เข้าสู่ดิสคอร์ดหน่วยงาน
+            </a>
+            <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>·</span>
+            <span className="portal-footer-link" style={{ cursor: "pointer" }}>ติดต่อแอดมิน</span>
+          </div>
+        </div>
+      </footer>
 
       {/* Interactive Modal Portals */}
       {activeModal && (
@@ -401,8 +536,8 @@ export function PortalClient({
                     สำหรับบุคคลทั่วไปและผู้เล่นในเซิร์ฟเวอร์ สามารถตรวจสอบหลักเกณฑ์และข้อปฏิบัติต่างๆ ได้ดังนี้:
                   </p>
                   <ul style={{ paddingLeft: "20px", marginTop: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <li><b>การรักษา:</b> แพทย์ต้องรักษาตามคิวหัตถการ ไม่ลัดคิว ยกเว้นเคสฉุกเฉินระดับ ⚠️ แดง</li>
-                    <li><b>การคิดค่าบริการ:</b> บันทึกและแจ้งเรียกเก็บค่าบริการแก่คนไข้ตามเรทนโยบาลโรงพยาบาลเมืองเท่านั้น</li>
+                    <li><b>การรักษา:</b> แพทย์ต้องรักษาตามคิวหัตถการ ไม่ลัดคิว ยกเว้นเคสฉุกเฉินระดับสีแดง</li>
+                    <li><b>การคิดค่าบริการ:</b> บันทึกและแจ้งเรียกเก็บค่าบริการแก่คนไข้ตามเรทนโยบายโรงพยาบาลเมืองเท่านั้น</li>
                     <li><b>จรรยาบรรณแพทย์:</b> ห้ามแพร่งพรายความลับคนไข้ หรือกริยามารยาทที่ไม่ดีต่อประชาชนโดยเด็ดขาด</li>
                   </ul>
                   <div style={{ marginTop: "24px", display: "flex", justifyContent: "flex-end" }}>
