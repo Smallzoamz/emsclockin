@@ -3256,17 +3256,17 @@ body::before {
 }
 
 /* LED Pulse Indicator */
-.led-pulse-group {
+.portal-led-pulse-group {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
   padding: 6px 14px;
   border-radius: 20px;
 }
 
-.led-dot {
+.portal-led-dot {
   width: 8px;
   height: 8px;
   background: var(--accent);
@@ -3316,19 +3316,19 @@ body::before {
   line-height: 1.6;
 }
 
-.slider-controls {
+.portal-slider-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 20px;
 }
 
-.slider-dots {
+.portal-slider-dots {
   display: flex;
   gap: 8px;
 }
 
-.slider-dot {
+.portal-slider-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -3337,13 +3337,13 @@ body::before {
   transition: all 0.3s;
 }
 
-.slider-dot.active {
+.portal-slider-dot.active {
   background: var(--accent);
   width: 20px;
   border-radius: 4px;
 }
 
-.slider-arrow-btn {
+.portal-slider-arrow-btn {
   background: transparent;
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
@@ -3357,7 +3357,7 @@ body::before {
   transition: all 0.2s;
 }
 
-.slider-arrow-btn:hover {
+.portal-slider-arrow-btn:hover {
   border-color: var(--border-glow);
   color: #fff;
 }
@@ -3367,6 +3367,12 @@ body::before {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .widget-menu-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .widget-menu-item {
