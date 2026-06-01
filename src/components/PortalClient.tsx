@@ -40,12 +40,11 @@ export function PortalClient({
   const [rules, setRules] = useState<any>(null);
   const [loadingRules, setLoadingRules] = useState(true);
 
-  // Rules Explorer UI tab & search states
-  const [explorerCat, setExplorerCat] = useState("hospital_area");
-  const [explorerSearch, setExplorerSearch] = useState("");
+  // Fees Search state
+  const [feesSearch, setFeesSearch] = useState("");
 
   // Modals States
-  const [activeModal, setActiveModal] = useState<"rules" | "fees" | "blacklist" | null>(null);
+  const [activeModal, setActiveModal] = useState<"blacklist" | null>(null);
 
   // Blacklist Search States
   const [blacklistSearch, setBlacklistSearch] = useState("");
@@ -119,7 +118,7 @@ export function PortalClient({
       title: "ไม่มีรายชื่อผู้ติดแบล็กลิสต์ขณะนี้",
       description: "สภาพแวดล้อมความปลอดภัยในพื้นที่รักษาพยาบาลดีเยี่ยม ไม่มีพลเมืองทำร้ายร่างกายเจ้าหน้าที่หรือก่อการกวนเมือง",
       actionText: "ตรวจสอบกฎระเบียบ",
-      actionUrl: "#rules"
+      actionUrl: "/dashboard/rules"
     };
 
     return [
@@ -328,9 +327,9 @@ export function PortalClient({
                 <a href="#staff-gateway" className="login-btn" style={{ textDecoration: "none", width: "auto", margin: 0, fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "6px" }}>
                   <Lock size={16} /> ระบบบันทึกเวรเจ้าหน้าที่
                 </a>
-                <button onClick={() => setActiveModal("rules")} className="login-btn" style={{ width: "auto", margin: 0, background: "transparent", border: "1px solid var(--border-subtle)", color: "#fff" }}>
+                <a href="/dashboard/rules" className="login-btn" style={{ textDecoration: "none", width: "auto", margin: 0, background: "transparent", border: "1px solid var(--border-subtle)", color: "#fff", display: "inline-flex", alignItems: "center", gap: "6px" }}>
                   📜 เปิดเอกสารกฎระเบียบแพทย์
-                </button>
+                </a>
               </div>
             </div>
 
@@ -484,119 +483,75 @@ export function PortalClient({
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "32px", alignItems: "start" }}>
             
-            {/* 1. Rules & Regulations Explorer Widget */}
-            <div className="vitals-scanner-card portal-fade-up">
-              <h3 style={{ color: "#fff", fontSize: "1.1rem", fontWeight: "800", margin: 0 }}>📜 บอร์ดกฎระเบียบและอัตราค่ารักษา (Rules Explorer)</h3>
+            {/* 1. Inline Medical Fees Table Widget */}
+            <div className="vitals-scanner-card portal-fade-up" id="medical-fees-section">
+              <h3 style={{ color: "#fff", fontSize: "1.1rem", fontWeight: "800", margin: 0 }}>💊 อัตราค่าบริการรักษาพยาบาล (Medical Fees)</h3>
               <p style={{ color: "var(--text-muted)", fontSize: "0.75rem", margin: 0 }}>
-                สืบค้นกฎข้อบังคับ แนวปฏิบัติ และพิกัดค่าบริการของหน่วยงานแพทย์นครลอสซานโตส
+                พิกัดราคาการรักษาพยาบาลกลางจำแนกตามเขตพื้นที่ตัวคูณของโซนเกิดเหตุ
               </p>
 
               {/* Search Bar */}
               <div style={{ position: "relative" }}>
                 <input 
                   type="text" 
-                  placeholder="ค้นหากฎระเบียบ (เช่น พกอาวุธ, ทำร้าย, ค่าปรับ)..."
-                  value={explorerSearch}
-                  onChange={(e) => setExplorerSearch(e.target.value)}
+                  placeholder="ค้นหาหัตถการ/ค่าบริการรักษา..."
+                  value={feesSearch}
+                  onChange={(e) => setFeesSearch(e.target.value)}
                   className="scanner-input"
                   style={{ textAlign: "left", paddingLeft: "36px" }}
                 />
                 <Search size={16} style={{ position: "absolute", left: "12px", top: "12px", color: "var(--text-muted)" }} />
               </div>
 
-              {/* Category Tabs */}
-              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                {rules?.categories?.map((cat: any) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setExplorerCat(cat.id)}
-                    style={{
-                      padding: "6px 12px",
-                      fontSize: "0.75rem",
-                      background: explorerCat === cat.id ? "color-mix(in srgb, var(--accent) 20%, transparent)" : "rgba(255,255,255,0.02)",
-                      border: explorerCat === cat.id ? "1px solid var(--accent)" : "1px solid var(--border-subtle)",
-                      color: explorerCat === cat.id ? "#fff" : "var(--text-secondary)",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      fontWeight: "bold",
-                      transition: "all 0.2s"
-                    }}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
-
-              {/* Rules List Container */}
+              {/* Fees Table Container */}
               <div className="scanner-screen" style={{ height: "220px", justifyContent: "flex-start", alignItems: "stretch", padding: "12px", overflowY: "auto" }}>
                 <div className="scanner-screen-grid" style={{ backgroundSize: "30px 30px" }}></div>
                 
-                <div style={{ position: "relative", zIndex: 10, display: "flex", flexDirection: "column", gap: "10px", width: "100%", textAlign: "left" }}>
+                <div style={{ position: "relative", zIndex: 10, width: "100%" }}>
                   {loadingRules ? (
                     <div style={{ color: "var(--text-muted)", fontSize: "0.8rem", textAlign: "center", padding: "40px 0" }}>
-                      กำลังโหลดข้อมูลกฎระเบียบ...
+                      กำลังโหลดข้อมูลค่ารักษา...
                     </div>
-                  ) : !rules ? (
+                  ) : treatments.length === 0 ? (
                     <div style={{ color: "var(--text-muted)", fontSize: "0.8rem", textAlign: "center", padding: "40px 0" }}>
-                      ไม่สามารถโหลดข้อมูลกฎระเบียบได้
+                      ไม่พบข้อมูลอัตราค่ารักษา
                     </div>
                   ) : (() => {
-                    const activeCatObj = rules.categories?.find((c: any) => c.id === explorerCat);
-                    if (!activeCatObj) return null;
-                    
-                    const filteredRules = activeCatObj.rules?.filter((r: any) => {
-                      if (!explorerSearch.trim()) return true;
-                      return r.content.toLowerCase().includes(explorerSearch.toLowerCase());
+                    const filteredTreatments = treatments.filter((t: any) => {
+                      if (!feesSearch.trim()) return true;
+                      return t.label.toLowerCase().includes(feesSearch.toLowerCase());
                     });
 
-                    if (!filteredRules || filteredRules.length === 0) {
+                    if (filteredTreatments.length === 0) {
                       return (
                         <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", textAlign: "center", padding: "40px 0" }}>
-                          🔍 ไม่พบกฎระเบียบที่ตรงกับการค้นหา
+                          🔍 ไม่พบรายการรักษาที่ตรงกับการค้นหา
                         </div>
                       );
                     }
 
-                    return filteredRules.map((r: any) => {
-                      const isHeader = r.content.startsWith("[HEADER]");
-                      const contentText = isHeader ? r.content.replace("[HEADER]", "").trim() : r.content;
-                      
-                      if (isHeader) {
-                        return (
-                          <div key={r.id} style={{ 
-                            color: "var(--accent-light)", 
-                            fontSize: "0.8rem", 
-                            fontWeight: "bold", 
-                            marginTop: "8px", 
-                            borderBottom: "1px solid rgba(16,185,129,0.2)",
-                            paddingBottom: "4px"
-                          }}>
-                            📌 {contentText}
-                          </div>
-                        );
-                      }
-
-                      // Highlight search text if search is active
-                      if (explorerSearch.trim()) {
-                        const index = contentText.toLowerCase().indexOf(explorerSearch.toLowerCase());
-                        if (index !== -1) {
-                          const before = contentText.substring(0, index);
-                          const match = contentText.substring(index, index + explorerSearch.length);
-                          const after = contentText.substring(index + explorerSearch.length);
-                          return (
-                            <div key={r.id} style={{ color: "#fff", fontSize: "0.75rem", lineHeight: "1.4", paddingLeft: "10px", borderLeft: "2px solid var(--accent)" }}>
-                              • {before}<mark style={{ background: "var(--accent)", color: "#000", padding: "0 2px", borderRadius: "2px" }}>{match}</mark>{after}
-                            </div>
-                          );
-                        }
-                      }
-
-                      return (
-                        <div key={r.id} style={{ color: "var(--text-secondary)", fontSize: "0.75rem", lineHeight: "1.4", paddingLeft: "10px", borderLeft: "2px solid rgba(255,255,255,0.1)" }}>
-                          • {contentText}
-                        </div>
-                      );
-                    });
+                    return (
+                      <table className="fee-dashed-table" style={{ fontSize: "0.72rem", textAlign: "left" }}>
+                        <thead>
+                          <tr style={{ color: "var(--accent-light)", fontWeight: "bold" }}>
+                            <th style={{ padding: "6px 4px" }}>รายการรักษา</th>
+                            <th style={{ padding: "6px 4px", textAlign: "right" }}>ในเมือง (x1)</th>
+                            <th style={{ padding: "6px 4px", textAlign: "right" }}>นอกเมือง (x2)</th>
+                            <th style={{ padding: "6px 4px", textAlign: "right" }}>เมืองบน (x3)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredTreatments.map((t: any) => (
+                            <tr key={t.id} style={{ transition: "background 0.2s" }}>
+                              <td style={{ padding: "8px 4px", color: "var(--text-primary)" }}>{t.label}</td>
+                              <td style={{ padding: "8px 4px", textAlign: "right", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>{(t.price * 1).toLocaleString()}</td>
+                              <td style={{ padding: "8px 4px", textAlign: "right", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>{(t.price * 2).toLocaleString()}</td>
+                              <td style={{ padding: "8px 4px", textAlign: "right", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>{(t.price * 3).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    );
                   })()}
                 </div>
               </div>
@@ -754,17 +709,17 @@ export function PortalClient({
 
               {/* Citizen shortcuts grid menu */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div className="widget-menu-item" style={{ padding: "16px 20px" }} onClick={() => setActiveModal("rules")}>
+                <a href="/dashboard/rules" className="widget-menu-item" style={{ padding: "16px 20px", textDecoration: "none", display: "block" }}>
                   <div style={{ fontSize: "1.25rem" }}>📜</div>
                   <h3 style={{ fontSize: "0.8rem", fontWeight: "700" }}>กฎระเบียบแพทย์</h3>
                   <p style={{ fontSize: "0.65rem", color: "var(--text-muted)", margin: 0 }}>ข้อห้ามและข้อปฏิบัติสำหรับแพทย์</p>
-                </div>
+                </a>
 
-                <div className="widget-menu-item" style={{ padding: "16px 20px" }} onClick={() => setActiveModal("fees")}>
+                <a href="#medical-fees-section" className="widget-menu-item" style={{ padding: "16px 20px", textDecoration: "none", display: "block" }}>
                   <div style={{ fontSize: "1.25rem" }}>💊</div>
                   <h3 style={{ fontSize: "0.8rem", fontWeight: "700" }}>อัตราค่าบริการ</h3>
                   <p style={{ fontSize: "0.65rem", color: "var(--text-muted)", margin: 0 }}>พิกัดราคาและการคิดเงินรักษา</p>
-                </div>
+                </a>
 
                 <div className="widget-menu-item" style={{ padding: "16px 20px" }} onClick={() => setActiveModal("blacklist")}>
                   <div style={{ fontSize: "1.25rem" }}>🚫</div>
@@ -840,27 +795,26 @@ export function PortalClient({
               </div>
 
               <div style={{ marginTop: "20px", borderTop: "1px solid var(--border-subtle)", paddingTop: "20px" }}>
-                {slides[activeSlide].actionUrl.startsWith("http") ? (
-                  <a 
-                    href={slides[activeSlide].actionUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="login-btn"
-                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", width: "auto", margin: 0 }}
-                  >
-                    {slides[activeSlide].actionText} <ExternalLink size={14} />
-                  </a>
-                ) : (
+                {slides[activeSlide].actionUrl === "#blacklist" ? (
                   <button 
                     className="login-btn"
                     style={{ width: "auto", margin: 0 }}
                     onClick={() => {
-                      const dest = slides[activeSlide].actionUrl.substring(1);
-                      setActiveModal(dest as any);
+                      setActiveModal("blacklist");
                     }}
                   >
                     {slides[activeSlide].actionText}
                   </button>
+                ) : (
+                  <a 
+                    href={slides[activeSlide].actionUrl} 
+                    target={slides[activeSlide].actionUrl.startsWith("http") ? "_blank" : undefined}
+                    rel={slides[activeSlide].actionUrl.startsWith("http") ? "noopener noreferrer" : undefined}
+                    className="login-btn"
+                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", width: "auto", margin: 0 }}
+                  >
+                    {slides[activeSlide].actionText} {slides[activeSlide].actionUrl.startsWith("http") && <ExternalLink size={14} />}
+                  </a>
                 )}
               </div>
             </div>
@@ -1039,14 +993,12 @@ export function PortalClient({
       </footer>
 
       {/* Interactive Modal Portals */}
-      {activeModal && (
+      {activeModal === "blacklist" && (
         <div className="portal-modal-backdrop" onClick={() => setActiveModal(null)}>
           <div className="portal-modal-container" onClick={(e) => e.stopPropagation()}>
             <div className="portal-modal-header">
               <h3 style={{ color: "#fff", margin: 0 }}>
-                {activeModal === "rules" && "📜 กฎระเบียบและแนวทางการปฏิบัติงานแพทย์"}
-                {activeModal === "fees" && "💊 อัตราค่าบริการทางการแพทย์กลาง (Medical Fees)"}
-                {activeModal === "blacklist" && "🚫 ค้นหาทำเนียบบัญชีดำ (EMS Blacklist)"}
+                🚫 ค้นหาทำเนียบบัญชีดำ (EMS Blacklist)
               </h3>
               <button className="portal-modal-close-btn" onClick={() => setActiveModal(null)}>
                 <X size={20} />
@@ -1054,148 +1006,70 @@ export function PortalClient({
             </div>
 
             <div className="portal-modal-body">
-              {activeModal === "rules" && (
-                <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem", lineHeight: "1.6" }}>
-                  <p style={{ color: "var(--text-primary)", fontWeight: "bold" }}>
-                    หลักเกณฑ์และข้อปฏิบัติของหน่วยงานแพทย์ ({rules?.categories?.length || 0} หมวดหมู่)
-                  </p>
-                  {rules?.categories ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "12px" }}>
-                      {rules.categories.map((cat: any) => {
-                        const visibleRules = (cat.rules || []).filter((r: any) => !r.content.startsWith("[HEADER]")).slice(0, 3);
-                        return (
-                          <div key={cat.id} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)", padding: "12px" }}>
-                            <h4 style={{ color: "#fff", fontSize: "0.85rem", fontWeight: "bold", margin: "0 0 8px 0" }}>📌 {cat.name}</h4>
-                            <ul style={{ paddingLeft: "18px", margin: 0, display: "flex", flexDirection: "column", gap: "4px" }}>
-                              {visibleRules.map((r: any) => (
-                                <li key={r.id} style={{ fontSize: "0.78rem" }}>{r.content}</li>
-                              ))}
-                              {(cat.rules || []).filter((r: any) => !r.content.startsWith("[HEADER]")).length > 3 && (
-                                <li style={{ color: "var(--text-muted)", fontStyle: "italic", fontSize: "0.75rem" }}>... อีก {(cat.rules || []).filter((r: any) => !r.content.startsWith("[HEADER]")).length - 3} ข้อ</li>
-                              )}
-                            </ul>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p style={{ color: "var(--text-muted)" }}>กำลังโหลดข้อมูลกฎระเบียบ...</p>
-                  )}
-                  <div style={{ marginTop: "24px", display: "flex", justifyContent: "flex-end" }}>
-                    <a 
-                      href="/dashboard/rules" 
-                      className="login-btn" 
-                      style={{ width: "auto", margin: 0, textDecoration: "none", fontSize: "0.8rem" }}
-                    >
-                      เปิดอ่านกฎระเบียบฉบับเต็มของหน่วยงาน <ChevronRight size={16} />
-                    </a>
+              <div>
+                <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+                  <div style={{ flex: 1, position: "relative" }}>
+                    <input 
+                      type="text" 
+                      placeholder="พิมพ์ค้นหาชื่อ, ชื่อแก๊ง หรือสาเหตุ..."
+                      value={blacklistSearch}
+                      onChange={(e) => setBlacklistSearch(e.target.value)}
+                      style={{ 
+                        width: "100%",
+                        padding: "10px 12px 10px 36px", 
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid var(--border-subtle)",
+                        background: "var(--bg-primary)",
+                        color: "#fff",
+                        outline: "none",
+                        fontSize: "0.8rem"
+                      }}
+                    />
+                    <Search size={16} style={{ position: "absolute", left: "12px", top: "12px", color: "var(--text-muted)" }} />
                   </div>
                 </div>
-              )}
 
-              {activeModal === "fees" && (
-                <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem", lineHeight: "1.6" }}>
-                  <p style={{ color: "var(--text-primary)", fontWeight: "bold" }}>
-                    อัตราค่ารักษาพยาบาลแบ่งตามโซนแผนที่หน่วยงานแพทย์ ({treatments.length} รายการ):
-                  </p>
-                  <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "12px", fontSize: "0.8rem" }}>
-                    <thead>
-                      <tr style={{ borderBottom: "1px solid var(--border-subtle)", color: "#fff", textAlign: "left" }}>
-                        <th style={{ padding: "8px" }}>รายการรักษา</th>
-                        <th style={{ padding: "8px" }}>ในเมือง (x1)</th>
-                        <th style={{ padding: "8px" }}>นอกเมือง (x2)</th>
-                        <th style={{ padding: "8px" }}>เมืองบน (x3)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {treatments.map((t: any) => (
-                        <tr key={t.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                          <td style={{ padding: "8px" }}>{t.label}</td>
-                          <td style={{ padding: "8px" }}>{(t.price * 1).toLocaleString()} IC</td>
-                          <td style={{ padding: "8px" }}>{(t.price * 2).toLocaleString()} IC</td>
-                          <td style={{ padding: "8px" }}>{(t.price * 3).toLocaleString()} IC</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div style={{ marginTop: "24px", display: "flex", justifyContent: "flex-end" }}>
-                    <a 
-                      href="/dashboard/rules" 
-                      className="login-btn" 
-                      style={{ width: "auto", margin: 0, textDecoration: "none", fontSize: "0.8rem" }}
-                    >
-                      ดูแผนที่พิกัดค่ารักษา <ChevronRight size={16} />
-                    </a>
+                {blacklistLoading ? (
+                  <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", fontSize: "0.8rem" }}>
+                    กำลังดึงข้อมูล...
                   </div>
-                </div>
-              )}
-
-              {activeModal === "blacklist" && (
-                <div>
-                  <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-                    <div style={{ flex: 1, position: "relative" }}>
-                      <input 
-                        type="text" 
-                        placeholder="พิมพ์ค้นหาชื่อ, ชื่อแก๊ง หรือสาเหตุ..."
-                        value={blacklistSearch}
-                        onChange={(e) => setBlacklistSearch(e.target.value)}
+                ) : filteredBlacklist.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", fontSize: "0.8rem" }}>
+                    ไม่พบประวัติการติดแบล็กลิสต์
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {filteredBlacklist.map((item) => (
+                      <div 
+                        key={item.id} 
                         style={{ 
-                          width: "100%",
-                          padding: "10px 12px 10px 36px", 
-                          borderRadius: "var(--radius-sm)",
-                          border: "1px solid var(--border-subtle)",
-                          background: "var(--bg-primary)",
-                          color: "#fff",
-                          outline: "none",
-                          fontSize: "0.8rem"
+                          background: "rgba(239, 68, 68, 0.03)", 
+                          border: "1px solid rgba(239, 68, 68, 0.15)", 
+                          borderRadius: "var(--radius-sm)", 
+                          padding: "12px",
+                          fontSize: "0.75rem"
                         }}
-                      />
-                      <Search size={16} style={{ position: "absolute", left: "12px", top: "12px", color: "var(--text-muted)" }} />
-                    </div>
-                  </div>
-
-                  {blacklistLoading ? (
-                    <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", fontSize: "0.8rem" }}>
-                      กำลังดึงข้อมูล...
-                    </div>
-                  ) : filteredBlacklist.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", fontSize: "0.8rem" }}>
-                      ไม่พบประวัติการติดแบล็กลิสต์
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      {filteredBlacklist.map((item) => (
-                        <div 
-                          key={item.id} 
-                          style={{ 
-                            background: "rgba(239, 68, 68, 0.03)", 
-                            border: "1px solid rgba(239, 68, 68, 0.15)", 
-                            borderRadius: "var(--radius-sm)", 
-                            padding: "12px",
-                            fontSize: "0.75rem"
-                          }}
-                        >
-                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                            <strong style={{ color: "#fca5a5", fontSize: "0.8rem" }}>
-                              ❌ {item.name || item.gang || "ไม่ระบุชื่อ"}
-                            </strong>
-                            <span style={{ color: "var(--text-muted)" }}>
-                              {item.gang ? `แก๊ง: ${item.gang}` : "แบล็กลิสต์รายบุคคล"}
-                            </span>
-                          </div>
-                          <p style={{ margin: "2px 0", color: "var(--text-secondary)" }}>
-                            <b>ข้อหา:</b> {item.penalty || "ไม่ระบุ"}
-                          </p>
-                          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px", color: "var(--text-muted)", fontSize: "0.7rem" }}>
-                            <span>ผู้ประกาศ: {item.created_by?.split("@")[0] || "ระบบ"}</span>
-                            <span>ค่าปรับ: <span style={{ color: "var(--warning, #f59e0b)" }}>{Number(item.fine * (item.multiplier || 1)).toLocaleString()} IC</span></span>
-                          </div>
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                          <strong style={{ color: "#fca5a5", fontSize: "0.8rem" }}>
+                            ❌ {item.name || item.gang || "ไม่ระบุชื่อ"}
+                          </strong>
+                          <span style={{ color: "var(--text-muted)" }}>
+                            {item.gang ? `แก๊ง: ${item.gang}` : "แบล็กลิสต์รายบุคคล"}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                        <p style={{ margin: "2px 0", color: "var(--text-secondary)" }}>
+                          <b>ข้อหา:</b> {item.penalty || "ไม่ระบุ"}
+                        </p>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px", color: "var(--text-muted)", fontSize: "0.7rem" }}>
+                          <span>ผู้ประกาศ: {item.created_by?.split("@")[0] || "ระบบ"}</span>
+                          <span>ค่าปรับ: <span style={{ color: "var(--warning, #f59e0b)" }}>{Number(item.fine * (item.multiplier || 1)).toLocaleString()} IC</span></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
