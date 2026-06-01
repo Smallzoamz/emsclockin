@@ -15,7 +15,6 @@ import {
   ShieldIcon,
   CrownIcon,
   CoinsIcon,
-  SpeakerIcon,
   SettingsIcon,
   FileTextIcon
 } from "./Icons";
@@ -242,14 +241,6 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
               >
                 <CoinsIcon size={18} />
                 ตารางโบนัส
-              </Link>
-
-              <Link
-                href="/dashboard/admin/announcements"
-                className={`nav-link ${pathname === "/dashboard/admin/announcements" ? "active" : ""}`}
-              >
-                <SpeakerIcon size={18} />
-                ตั้งค่าข้อความประกาศ
               </Link>
 
               {!user.discordId && (

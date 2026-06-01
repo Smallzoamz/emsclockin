@@ -11,7 +11,6 @@ import {
   MoneyIcon,
   CrownIcon,
   CoinsIcon,
-  SpeakerIcon,
   SettingsIcon,
   FileTextIcon
 } from "./Icons";
@@ -58,13 +57,7 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; di
         <FileTextIcon size={20} />
         กฏแพทย์
       </Link>
-      {user?.role === "admin" && (
-        <Link href="/dashboard/admin/announcements" className={pathname === "/dashboard/admin/announcements" ? "active" : ""}>
-          <SpeakerIcon size={20} />
-          คุมประกาศ
-        </Link>
-      )}
-      
+
       {(user?.role !== "admin" || !!user?.discordId) && (
         <>
           <Link href="/dashboard/history" className={pathname === "/dashboard/history" ? "active" : ""}>
