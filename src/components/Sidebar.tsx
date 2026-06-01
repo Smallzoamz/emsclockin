@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { useEffect, useState } from "react";
 import {
   StethoscopeIcon,
   ClockIcon,
@@ -33,6 +34,46 @@ interface SidebarProps {
 
 export function Sidebar({ user, logoUrl }: SidebarProps) {
   const pathname = usePathname();
+  const [weeklyHours, setWeeklyHours] = useState(0);
+  const [bonusThreshold, setBonusThreshold] = useState(20);
+  const [userRankName, setUserRankName] = useState("แพทย์ประจำการ");
+
+  useEffect(() => {
+    // Fetch weekly summary and settings to render profile details
+    async function loadData() {
+      try {
+        const [weeklyRes, settingsRes] = await Promise.all([
+          fetch("/api/shifts/weekly-summary"),
+          fetch("/api/admin/settings")
+        ]);
+        const weeklyData = await weeklyRes.json();
+        const settingsData = await settingsRes.json();
+
+        if (settingsData.settings) {
+          const threshold = Number(settingsData.settings.bonus_threshold) || 20;
+          setBonusThreshold(threshold);
+
+          if (user.email && settingsData.settings.user_ranks && settingsData.settings.doctor_ranks) {
+            const userRankId = settingsData.settings.user_ranks[user.email];
+            const rankObj = settingsData.settings.doctor_ranks.find((r: any) => r.id === userRankId);
+            if (rankObj) {
+              setUserRankName(rankObj.name);
+            }
+          }
+        }
+
+        if (weeklyData.summary && weeklyData.summary.length > 0) {
+          const current = weeklyData.summary[weeklyData.summary.length - 1];
+          setWeeklyHours(current.totalHours || 0);
+        }
+      } catch (err) {
+        console.error("[Sidebar Data Fetch] Error:", err);
+      }
+    }
+    loadData();
+  }, [user.email]);
+
+  const percentage = Math.min(100, Math.floor((weeklyHours / bonusThreshold) * 100));
 
   return (
     <aside className="sidebar">
@@ -65,13 +106,13 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
           )}
         </div>
         <div>
-          <h1>EMS Clock-in</h1>
-          <span>FiveM Hospital System</span>
+          <h1 style={{ fontSize: "0.95rem", letterSpacing: "-0.5px" }}>MEDICAL SERVICE</h1>
+          <span style={{ letterSpacing: "1px" }}>FIVEM HOSPITAL SYSTEM</span>
         </div>
       </div>
 
       <nav style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {/* 1. สำหรับแพทย์ (Medical Staff Section) */}
+        {/* MAIN MENU SECTION */}
         <div>
           <div style={{
             fontSize: "0.68rem",
@@ -85,7 +126,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
             gap: "8px",
             opacity: 0.85
           }}>
-            <StethoscopeIcon size={16} style={{ color: "var(--accent)" }} /> สำหรับแพทย์
+            <StethoscopeIcon size={16} style={{ color: "var(--accent)" }} /> MAIN MENU
           </div>
 
           <div style={{
@@ -128,7 +169,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
               className={`nav-link ${pathname === "/dashboard/rules" ? "active" : ""}`}
             >
               <FileTextIcon size={18} />
-              กฏระเบียบแพทย์
+              กฎระเบียบแพทย์
             </Link>
 
             <Link
@@ -160,7 +201,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
           </div>
         </div>
 
-        {/* 2. สำหรับผู้ดูแล (Admin Section) */}
+        {/* SYSTEM SECTION */}
         {user.role === "admin" && (
           <div>
             <div style={{
@@ -175,7 +216,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
               gap: "8px",
               opacity: 0.85
             }}>
-              <ShieldIcon size={16} style={{ color: "var(--accent)" }} /> สำหรับผู้ดูแล
+              <ShieldIcon size={16} style={{ color: "var(--accent)" }} /> SYSTEM
             </div>
 
             <div style={{
@@ -192,7 +233,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
                 className={`nav-link ${pathname === "/dashboard/admin" ? "active" : ""}`}
               >
                 <CrownIcon size={18} />
-                แดชบอร์ดแอดมิน
+                แดชบอร์ดผู้ดูแล
               </Link>
 
               <Link
@@ -239,11 +280,23 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
             <div className="user-name" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {user.name}
             </div>
-            <div className="user-email" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {user.email}
-            </div>
+            <span className="rank-badge">{userRankName}</span>
           </div>
         </div>
+
+        {/* Weekly hours meter */}
+        <div className="sidebar-hours-progress-container">
+          <div className="sidebar-hours-header">
+            <span>สะสมสัปดาห์นี้</span>
+            <span style={{ fontWeight: 600, fontFamily: "var(--font-mono)" }}>
+              {weeklyHours.toFixed(1)} / {bonusThreshold} ชม.
+            </span>
+          </div>
+          <div className="sidebar-progress-track">
+            <div className="sidebar-progress-bar" style={{ width: `${percentage}%` }} />
+          </div>
+        </div>
+
         <button
           onClick={() => signOut({ callbackUrl: "/" })}
           className="btn btn-ghost"
