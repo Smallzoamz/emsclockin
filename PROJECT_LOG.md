@@ -299,4 +299,10 @@
 
 ## [2026-06-01 11:28] | File: src/components/PortalClient.tsx | Line: 1 | Keyword: Public Rules and Inline Fees | Status: ✅ Complete | Change: Overhauled the landing page portal. Linked the rules buttons and widgets directly to the public `/dashboard/rules` route instead of opening the rules modal or displaying rules previews. Replaced the rules explorer with a high-fidelity inline medical fees search table to display treatment rates by zone multiplier on the webpage. Removed the obsolete rules and fees modals, and updated slider and quick shortcut links to navigate/scroll inline.
 
+## [2026-06-01 11:50] | File: src/components/PortalClient.tsx | Line: 1-1080 | Keyword: EMS Portal Clean Overhaul | Status: ✅ Complete | Change: Overhauled the EMS Portal landing page to remove all real-world clinical references, including emergency guidelines (CPR/first aid guidelines), clinical departments, recruitment quota indicators, and medical fee tables to focus on a non-serious roleplay gaming environment. Kept visual styling aligned with a premium, electric-blue themed dark glassmorphic layout displaying live on-duty roster lists, blacklist search logs, and secure staff login portals. Also removed emergency guidelines from mockup prototype HTML file.
+
+## [2026-06-01 11:55] | File: src/components/PortalClient.tsx | Line: 1-1080 | Keyword: Human UI Audit Redesign | Status: ✅ Complete | Change: Overhauled the visual design of PortalClient.tsx to eliminate AI slop patterns (glassmorphism blurs, side-stripe cards, fuzzy paired drop shadows, wide text shadows, and wide-tracked caps kickers) in favor of a clean, high-fidelity dark slate medical operational grid (#030712 / #090f1d) inspired by modern human-designed developer platforms. Replaced all emojis in titles with clean outline Lucide SVG icons.
+
+
+
 
