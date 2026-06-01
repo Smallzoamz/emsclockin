@@ -55,53 +55,87 @@ export async function GET() {
       .eq("is_published", true)
       .order("week_start", { ascending: false });
 
-    const ranking = Object.values(userMap)
-      .map(user => {
-        let carriedOverBonus = 0;
-        
-        if (pastHistory) {
-          for (const history of pastHistory) {
-            const entry = (history.snapshot_data as Array<{ email?: string; discordUsername?: string; name?: string; totalHours?: number; appliedRate?: number }> || []).find((e) => 
-               (user.email && e.email === user.email) ||
-               (user.discordUsername && e.discordUsername === user.discordUsername) ||
-               (user.name && e.name === user.name)
-            );
-            
-            if (entry) {
-              const totalPastHours = entry.totalHours || 0;
-              if (totalPastHours < bonusThreshold) {
-                // They were not paid this past week. Add the base bonus from that week.
-                const pastAppliedRate = entry.appliedRate || history.bonus_rate || 0;
-                carriedOverBonus += (totalPastHours * pastAppliedRate);
-                // Continue looping to older weeks to accumulate further
-              } else {
-                // They were paid in this week, which means prior carry-overs were also paid. Stop here.
-                break;
-              }
+    const registeredDoctorsList = (registeredDoctors || []) as Array<{
+      email?: string;
+      name?: string;
+      discordUsername?: string;
+      discordId?: string;
+    }>;
+
+    const registeredEmails = new Set(registeredDoctorsList.map(d => d.email).filter(Boolean));
+    const registeredUsernames = new Set(registeredDoctorsList.map(d => d.discordUsername).filter(Boolean));
+
+    const extraDoctors: Array<{
+      email: string;
+      name: string;
+      discordUsername: string;
+      discordId: string | null;
+    }> = [];
+
+    Object.values(userMap).forEach((u) => {
+      const email = u.email;
+      const username = u.discordUsername;
+      if ((email && !registeredEmails.has(email)) || (username && !registeredUsernames.has(username))) {
+        extraDoctors.push({
+          email: email,
+          name: u.name,
+          discordUsername: username,
+          discordId: null
+        });
+      }
+    });
+
+    const allDocs = [...registeredDoctorsList, ...extraDoctors];
+
+    const ranking = allDocs.map((doc, idx) => {
+      const email = doc.email || "";
+      const discordUsername = doc.discordUsername || "";
+      const name = doc.name || "Unknown";
+
+      let totalMinutes = 0;
+      if (email && userMap[email]) {
+        totalMinutes = userMap[email].totalMinutes;
+      } else if (discordUsername && userMap[discordUsername]) {
+        totalMinutes = userMap[discordUsername].totalMinutes;
+      }
+
+      let carriedOverBonus = 0;
+      if (pastHistory) {
+        for (const history of pastHistory) {
+          const entry = (history.snapshot_data as Array<{ email?: string; discordUsername?: string; name?: string; totalHours?: number; appliedRate?: number }> || []).find((e) => 
+             (email && e.email === email) ||
+             (discordUsername && e.discordUsername === discordUsername) ||
+             (name && e.name === name)
+          );
+          
+          if (entry) {
+            const totalPastHours = entry.totalHours || 0;
+            if (totalPastHours < bonusThreshold) {
+              const pastAppliedRate = entry.appliedRate || history.bonus_rate || 0;
+              carriedOverBonus += (totalPastHours * pastAppliedRate);
+            } else {
+              break;
             }
           }
         }
+      }
 
-        const docRecord = (registeredDoctors as Array<{ email?: string; name?: string; discordUsername?: string; discordId?: string }> || []).find((d) => 
-          (user.email && d.email === user.email) ||
-          (user.discordUsername && d.discordUsername === user.discordUsername)
-        );
-        const resolvedName = docRecord?.name || user.name;
-        const discordId = docRecord?.discordId || null;
+      const discordId = doc.discordId || null;
+      const currentWeekHours = parseFloat((totalMinutes / 60).toFixed(1));
 
-        const currentWeekHours = parseFloat((user.totalMinutes / 60).toFixed(1));
+      return {
+        email: email,
+        name: name,
+        discordUsername: discordUsername,
+        discordId: discordId,
+        currentWeekHours: currentWeekHours,
+        totalHours: currentWeekHours,
+        carriedOverBonus: carriedOverBonus,
+        entryOrder: idx
+      };
+    })
+    .sort((a, b) => b.totalHours - a.totalHours);
 
-        return {
-          email: user.email,
-          name: resolvedName,
-          discordUsername: user.discordUsername,
-          discordId: discordId,
-          currentWeekHours: currentWeekHours,
-          totalHours: currentWeekHours, // Hours do not carry over!
-          carriedOverBonus: carriedOverBonus
-        };
-      })
-      .sort((a, b) => b.totalHours - a.totalHours);
 
     return NextResponse.json({ ranking });
   } catch (error) {

@@ -29,6 +29,7 @@ interface RankingEntry {
   customName?: string;
   carriedOverBonus?: number;
   bonus_rate?: number;
+  entryOrder?: number;
 }
 
 interface DoctorRank {
@@ -75,7 +76,6 @@ export default function BonusCalculatorPage() {
   
   // Manage Ranks Modal
   const [showRankModal, setShowRankModal] = useState(false);
-  const [rankForm, setRankForm] = useState<DoctorRank>({ id: "", name: "", rate: 50000 });
   const [bonusThreshold, setBonusThreshold] = useState<number>(20);
   const [fiftyPercentMode, setFiftyPercentMode] = useState<boolean>(false);
 
@@ -84,6 +84,28 @@ export default function BonusCalculatorPage() {
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
   const liveDateStr = `${format(weekStart, "d MMM", { locale: th })} - ${format(weekEnd, "d MMM yyyy", { locale: th })}`;
+
+  const sortedRanking = React.useMemo(() => {
+    if (!ranking) return [];
+    return [...ranking].sort((a, b) => {
+      const rankA = a.email ? (userRanks[a.email] || "") : "";
+      const rankB = b.email ? (userRanks[b.email] || "") : "";
+      
+      const idxA = rankA ? doctorRanks.findIndex(r => r.id === rankA) : -1;
+      const idxB = rankB ? doctorRanks.findIndex(r => r.id === rankB) : -1;
+      
+      const orderRankA = idxA === -1 ? Infinity : idxA;
+      const orderRankB = idxB === -1 ? Infinity : idxB;
+      
+      if (orderRankA !== orderRankB) {
+        return orderRankA - orderRankB;
+      }
+      
+      const entryA = a.entryOrder ?? 0;
+      const entryB = b.entryOrder ?? 0;
+      return entryA - entryB;
+    });
+  }, [ranking, userRanks, doctorRanks]);
 
   useEffect(() => {
     document.title = "ตารางโบนัส | EMS Clock-in";
@@ -122,7 +144,7 @@ export default function BonusCalculatorPage() {
   }, []);
 
   const handleSaveSnapshot = async () => {
-    if (ranking.length === 0) {
+    if (sortedRanking.length === 0) {
         alert("ไม่มีข้อมูลให้บันทึก");
         return;
     }
@@ -131,7 +153,7 @@ export default function BonusCalculatorPage() {
 
     try {
       // Prepare snapshot data with embedded ranks and custom names
-      const snapshotDataWithRanks = ranking.map(user => {
+      const snapshotDataWithRanks = sortedRanking.map(user => {
         const rankId = user.email ? userRanks[user.email] : undefined;
         const rank = doctorRanks.find(r => r.id === rankId);
         const rate = rank ? rank.rate : 0;
@@ -180,8 +202,8 @@ export default function BonusCalculatorPage() {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
       }
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : String(err));
     } finally {
       setIsSaving(false);
     }
@@ -207,8 +229,8 @@ export default function BonusCalculatorPage() {
 
       setHistoryList(historyList.map(h => h.id === selectedHistoryId ? { ...h, is_published: true } : h));
       alert("ประกาศเรียบร้อยแล้ว!");
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : String(err));
     } finally {
       setIsPublishing(false);
     }
@@ -236,6 +258,7 @@ export default function BonusCalculatorPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPayouts(selectedHistoryId);
   }, [selectedHistoryId, fetchPayouts]);
 
@@ -294,8 +317,8 @@ export default function BonusCalculatorPage() {
         ...prev,
         [entry.email as string]: data.payout,
       }));
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : String(err));
     } finally {
       setPayingEmail(null);
     }
@@ -326,7 +349,7 @@ export default function BonusCalculatorPage() {
   }
 
   const isLive = selectedHistoryId === "live";
-  const activeData = isLive ? ranking : (historyList.find(h => h.id === selectedHistoryId)?.snapshot_data || []);
+  const activeData = isLive ? sortedRanking : (historyList.find(h => h.id === selectedHistoryId)?.snapshot_data || []);
   const activeFund = isLive ? hospitalFund : (historyList.find(h => h.id === selectedHistoryId)?.hospital_fund || 0);
   
   const activeDateStr = isLive ? liveDateStr : (() => {
