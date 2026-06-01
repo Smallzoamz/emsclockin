@@ -287,3 +287,4 @@
 
 ## [2026-06-01 09:36] | File: src/app/globals.css | Line: 3256 | Keyword: Refine Portal Styles | Status: ✅ Complete | Change: Refactored portal styles to use portal- namespace prefix for generic slider/pulse/dot elements, replaced hardcoded colors with relative color-mix theme styles, and added mobile layout breakpoint for widget menu grid.
 
+## [2026-06-01 09:38] | File: src/components/PortalClient.tsx | Line: 1-540 | Keyword: Create PortalClient Component | Status: ✅ Complete | Change: Created the PortalClient client-side component which functions as the interactive landing page. Features a dynamic auto-play information slider/carousel (6s interval), real-time on-duty doctor counter with 30s polling, a grid of quick navigation actions, a secure staff credentials/Discord gateway, and interactive modals for rules, fees, and blacklist records. Included live search filtering for blacklist records queried from Supabase.
