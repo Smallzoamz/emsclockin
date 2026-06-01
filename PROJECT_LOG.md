@@ -285,3 +285,5 @@
 
 ## [2026-06-01 09:34] | File: src/app/globals.css | Line: 3199 | Keyword: Add Portal Styles | Status: ✅ Complete | Change: Appended styling code for the landing page portal (split grid, dynamic slider/carousel, LED status pulses, and custom modal overlays) to globals.css.
 
+## [2026-06-01 09:36] | File: src/app/globals.css | Line: 3256 | Keyword: Refine Portal Styles | Status: ✅ Complete | Change: Refactored portal styles to use portal- namespace prefix for generic slider/pulse/dot elements, replaced hardcoded colors with relative color-mix theme styles, and added mobile layout breakpoint for widget menu grid.
+
