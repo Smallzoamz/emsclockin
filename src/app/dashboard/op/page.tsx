@@ -252,33 +252,50 @@ export default function OpQueuePage() {
     if (category === "inactive") return;
 
     const skippedAt = category === "skipped" ? Date.now() : undefined;
-    const prevDoc = doctors.find(d => d.email === email);
+    let nextCaseCounts = { ...opCaseCounts };
+    let localDocs = [...doctors];
 
-    // Update locally
-    const updatedDocs = doctors.map(d => {
+    // ── New logic: credit the PREVIOUS "receiving" doctor when a NEW doctor starts receiving ──
+    // A completed case = doctor was "receiving" and was NOT re-cased, then the next doctor starts receiving.
+    if (category === "receiving") {
+      const prevReceiver = localDocs.find(d => d.queueCategory === "receiving" && d.email !== email);
+      if (prevReceiver) {
+        // Previous receiver completed their case successfully → +1 case, return to active
+        const curr = nextCaseCounts[prevReceiver.email] || { cases: 0, recases: 0 };
+        nextCaseCounts[prevReceiver.email] = { ...curr, cases: curr.cases + 1 };
+        localDocs = localDocs.map(d => d.email === prevReceiver.email ? { ...d, queueCategory: "active" as const } : d);
+      }
+    }
+
+    // ── Re-case: doctor was receiving but case is being re-assigned → +1 recase ──
+    if (category === "recase") {
+      const prevDoc = localDocs.find(d => d.email === email);
+      if (prevDoc && prevDoc.queueCategory !== "recase") {
+        const curr = nextCaseCounts[email] || { cases: 0, recases: 0 };
+        nextCaseCounts[email] = { ...curr, recases: curr.recases + 1 };
+      }
+    }
+
+    // Update the target doctor's category
+    localDocs = localDocs.map(d => {
       if (d.email === email) {
         return { ...d, queueCategory: category, skippedAt };
       }
       return d;
     });
-    setDoctors(updatedDocs);
+    setDoctors(localDocs);
+    setOpCaseCounts(nextCaseCounts);
 
-    // Prepare updated queue state
-    const stateValue = category === "skipped" ? `skipped:${skippedAt}` : category;
-    const nextQueueState = { ...opQueueState, [email]: stateValue };
-    setOpQueueState(nextQueueState);
-
-    // Auto-increment case count when moving TO receiving or recase (not FROM)
-    let nextCaseCounts = { ...opCaseCounts };
-    if (category === "receiving" && prevDoc?.queueCategory !== "receiving") {
-      const curr = nextCaseCounts[email] || { cases: 0, recases: 0 };
-      nextCaseCounts[email] = { ...curr, cases: curr.cases + 1 };
-      setOpCaseCounts(nextCaseCounts);
-    } else if (category === "recase" && prevDoc?.queueCategory !== "recase") {
-      const curr = nextCaseCounts[email] || { cases: 0, recases: 0 };
-      nextCaseCounts[email] = { ...curr, recases: curr.recases + 1 };
-      setOpCaseCounts(nextCaseCounts);
+    // Build queue state from the updated local doctors list
+    const nextQueueState: Record<string, string> = {};
+    for (const d of localDocs) {
+      if (d.queueCategory === "skipped") {
+        nextQueueState[d.email] = `skipped:${d.skippedAt || Date.now()}`;
+      } else {
+        nextQueueState[d.email] = d.queueCategory;
+      }
     }
+    setOpQueueState(nextQueueState);
 
     await saveCaseCountsToServer(nextCaseCounts, nextQueueState);
   };
