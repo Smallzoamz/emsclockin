@@ -407,11 +407,11 @@ export default function AdminDashboardPage() {
               <div key={index} className="admin-card card">
                 <div className="admin-card-header">
                   <div className="admin-avatar">
-                    {entry.discordUsername ? entry.discordUsername.charAt(0).toUpperCase() : entry.name.charAt(0)}
+                    {entry.name ? entry.name.charAt(0).toUpperCase() : (entry.discordUsername ? entry.discordUsername.charAt(0).toUpperCase() : "D")}
                   </div>
                   <div className="admin-info">
                     <div className="admin-name">
-                      {entry.discordUsername ? `@${entry.discordUsername}` : entry.name}
+                      {entry.name}
                     </div>
                     <div className="admin-subname">
                       {(() => {
@@ -420,8 +420,14 @@ export default function AdminDashboardPage() {
                         return rankObj ? rankObj.name : "นร.แพทย์";
                       })()}
                     </div>
+                    {entry.discordUsername && (
+                      <div className="admin-email" style={{ color: "#818cf8", fontWeight: "600", fontSize: "0.8rem", marginTop: "1px" }}>
+                        @{entry.discordUsername}
+                      </div>
+                    )}
                     <div className="admin-email">{entry.email}</div>
                   </div>
+
                   
                   <div className="admin-status-wrapper">
                     {entry.status === "active" ? (

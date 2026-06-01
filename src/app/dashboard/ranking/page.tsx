@@ -87,14 +87,14 @@ export default function RankingPage() {
                     {rankIcon} อันดับ {rank}
                   </div>
                   <div className="podium-avatar">
-                    {entry.discordUsername ? entry.discordUsername.charAt(0).toUpperCase() : entry.name.charAt(0)}
+                    {entry.name ? entry.name.charAt(0).toUpperCase() : (entry.discordUsername ? entry.discordUsername.charAt(0).toUpperCase() : "D")}
                   </div>
                   <div className="podium-info">
                     <div className="podium-name">
-                      {entry.discordUsername ? `@${entry.discordUsername}` : entry.name}
+                      {entry.name}
                     </div>
-                    {entry.discordUsername && entry.name && (
-                      <div className="podium-subname">{entry.name}</div>
+                    {entry.discordUsername && (
+                      <div className="podium-subname">@{entry.discordUsername}</div>
                     )}
                     <div className="podium-hours" style={{ color: accentColor }}>
                       {formatHoursToHHMMSS(entry.totalHours)}
@@ -113,12 +113,13 @@ export default function RankingPage() {
                   <div className="rank-number">#{index + 4}</div>
                   <div className="ranking-user-info">
                     <div className="ranking-name">
-                      {entry.discordUsername ? `@${entry.discordUsername}` : entry.name}
+                      {entry.name}
                     </div>
-                    {entry.discordUsername && entry.name && (
-                      <div className="ranking-subname">{entry.name}</div>
+                    {entry.discordUsername && (
+                      <div className="ranking-subname">@{entry.discordUsername}</div>
                     )}
                   </div>
+
                   <div className="ranking-hours">
                     {formatHoursToHHMMSS(entry.totalHours)}
                   </div>
