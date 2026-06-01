@@ -68,10 +68,10 @@ export async function POST(req: Request) {
     }
 
     // Restrict theme customization keys to Master Admin (credentials-based admins, i.e., no discordId)
-    const isThemeKey = ["theme_accent_color", "theme_logo_url", "theme_bg_opacity", "theme_bg_style"].includes(key);
+    const isThemeKey = ["theme_accent_color", "theme_logo_url", "theme_bg_opacity", "theme_bg_style", "landing_page_data"].includes(key);
     if (isThemeKey && user.discordId) {
       return NextResponse.json(
-        { error: "เฉพาะบัญชีผู้ดูแลระบบหลัก (Master Admin) เท่านั้นที่สามารถปรับแต่งธีมระบบได้ค่ะ" },
+        { error: "เฉพาะบัญชีผู้ดูแลระบบหลัก (Master Admin) เท่านั้นที่สามารถปรับแต่งธีมระบบหรือข้อมูลหน้าแรกได้ค่ะ" },
         { status: 403 }
       );
     }

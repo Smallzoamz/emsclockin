@@ -37,13 +37,15 @@ interface PortalClientProps {
   error?: string;
   onAdminLogin: (formData: FormData) => Promise<void>;
   onDiscordLogin: () => Promise<void>;
+  landingPageData?: any;
 }
 
 export function PortalClient({ 
   logoUrl, 
   error, 
   onAdminLogin, 
-  onDiscordLogin 
+  onDiscordLogin,
+  landingPageData
 }: PortalClientProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -66,83 +68,22 @@ export function PortalClient({
   // Image Slideshow Banner State
   const [activeImageSlide, setActiveImageSlide] = useState(0);
 
-  const slides = [
-    {
-      image: "/images/ems_hero_bg.png",
-      tag: "LOS SANTOS MEDICAL SERVICE",
-      title: "เราพร้อมดูแล และช่วยเหลือประชาชนในทุกสถานการณ์",
-      description: "เพราะชีวิต...คือหน้าที่ของเรา"
-    },
-    {
-      image: "/images/rules/hospital_area.png",
-      tag: "PILLBOX HILL MEDICAL CENTER",
-      title: "ศูนย์ปฏิบัติการรักษาพยาบาลหลักประจำเมือง",
-      description: "พร้อมให้บริการตรวจรักษาและกู้ภัยฉุกเฉินตลอด 24 ชั่วโมง"
-    },
-    {
-      image: "/images/rules/doctor_duty.png",
-      tag: "EMS TRAINING CENTER",
-      title: "หลักสูตรฝึกกู้ชีพและวินัยพื้นฐานแพทย์กู้ภัย",
-      description: "อบรมขั้นตอนช่วยเหลือเบื้องต้นและการสวมบทบาททางการแพทย์"
+  const [slides] = useState<any[]>(() => {
+    if (landingPageData?.slides && landingPageData.slides.length > 0) {
+      return landingPageData.slides;
     }
-  ];
+    return [
+      {
+        image: "/images/ems_hero_bg.png",
+        tag: "LOS SANTOS MEDICAL SERVICE",
+        title: "เราพร้อมดูแล และช่วยเหลือประชาชนในทุกสถานการณ์",
+        description: "ยินดีต้อนรับสู่ศูนย์บริการการแพทย์นครลอสซานโตส"
+      }
+    ];
+  });
 
-  const newsItems = [
-    {
-      tag: "ประกาศสำคัญ",
-      tagColor: "#3b82f6",
-      title: "ประกาศปรับปรุงระบบการเข้าเวร",
-      date: "23 พ.ค. 2026",
-      views: 125,
-      image: "/images/rules/doctor_duty.png",
-      desc: "แจ้งปรับปรุงระบบการเข้า-ออกเวร แพทย์ทุกท่านกรุณาอ่านรายละเอียดในระบบ"
-    },
-    {
-      tag: "อัปเดต",
-      tagColor: "#10b981",
-      title: "อัปเดตแพทย์ 1.2.0",
-      date: "22 พ.ค. 2026",
-      views: 210,
-      image: "/images/rules/hospital_area.png",
-      desc: "เพิ่มระบบการรักษาและอุปกรณ์ทางการแพทย์ใหม่สำหรับแพทย์ออนเวร"
-    },
-    {
-      tag: "กิจกรรม",
-      tagColor: "#eab308",
-      title: "กิจกรรมอบรม CPR ประจำเดือน",
-      date: "21 พ.ค. 2026",
-      views: 98,
-      image: "/images/rules/case_story.png",
-      desc: "ขอเชิญแพทย์และผู้สนใจเข้าร่วมอบรมการทำ CPR ปฐมพยาบาลเบื้องต้น"
-    }
-  ];
-
-  const forumTopics = [
-    {
-      title: "สอบถามเรื่องการเบิกอุปกรณ์ทางการแพทย์",
-      author: "NurseMint",
-      replies: 15,
-      time: "2 ชม. ที่แล้ว"
-    },
-    {
-      title: "แนวทางการรักษาคนไข้ในเคสวิกฤต",
-      author: "DoctorX",
-      replies: 23,
-      time: "5 ชม. ที่แล้ว"
-    },
-    {
-      title: "รวมภาพกิจกรรมฝึกซ้อมหน่วยแพทย์",
-      author: "EMT-TONY",
-      replies: 8,
-      time: "1 วัน ที่แล้ว"
-    },
-    {
-      title: "ปัญหาเรียนระบบเข้าเวรไม่แสดงเวลา",
-      author: "ParamedicK",
-      replies: 12,
-      time: "1 วัน ที่แล้ว"
-    }
-  ];
+  const [newsItems] = useState<any[]>(landingPageData?.news || []);
+  const [forumTopics] = useState<any[]>(landingPageData?.forum || []);
 
   // Fetch Blacklist data
   async function fetchBlacklist() {
@@ -295,31 +236,11 @@ export function PortalClient({
   });
 
   // Blacklist card resolution
-  const defaultBlacklist = blacklistData[0] || {
-    name: "John Doe",
-    phone: "A8C123",
-    gang: "Blacklist",
-    penalty: "ยิงทำร้ายเจ้าหน้าที่ / ขัดขวางการปฏิบัติงาน",
-    created_at: new Date("2024-05-11T12:00:00Z").toISOString(),
-    created_by: "DoctorX",
-    fine: 10000,
-    multiplier: 1
-  };
-
   const activeBlacklistRecord = blacklistSearchResult === "no_match" 
     ? null 
-    : blacklistSearchResult || defaultBlacklist;
+    : blacklistSearchResult || blacklistData[0] || null;
 
-  // Fallback shifts to display if empty
-  const mockShifts = [
-    { name: "DoctorX", rank: "แพทย์", clockIn: new Date(now.getTime() - 3600000 * 2).toISOString(), clockOut: null, status: "active" },
-    { name: "NurseMint", rank: "พยาบาล", clockIn: new Date(now.getTime() - 1800000).toISOString(), clockOut: null, status: "active" },
-    { name: "EMT-TONY", rank: "EMT", clockIn: new Date(now.getTime() - 4500000).toISOString(), clockOut: null, status: "active" },
-    { name: "ParamedicK", rank: "แพทย์", clockIn: new Date(now.getTime() - 3600000 * 5).toISOString(), clockOut: new Date(now.getTime() - 3600000 * 3).toISOString(), status: "completed" },
-    { name: "NurseHeart", rank: "พยาบาล", clockIn: new Date(now.getTime() - 3600000 * 6).toISOString(), clockOut: new Date(now.getTime() - 3600000 * 4).toISOString(), status: "completed" }
-  ];
-
-  const displayShifts = recentShifts.length > 0 ? recentShifts : mockShifts;
+  const displayShifts = recentShifts;
 
   const renderLoginModal = () => {
     if (!isLoginModalOpen) return null;
@@ -759,11 +680,11 @@ export function PortalClient({
                   
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "rgba(255,255,255,0.5)", marginBottom: "4px" }}>
-                      <span>เจ้าหน้าที่ประจำการ: 15 คน</span>
-                      <span>75%</span>
+                      <span>เจ้าหน้าที่ประจำการ: {activeCount !== null ? activeCount : 0} คน</span>
+                      <span>{Math.min(100, Math.round(((activeCount !== null ? activeCount : 0) / 20) * 100))}%</span>
                     </div>
                     <div className="portal-progress-container">
-                      <div className="portal-progress-bar-fill" style={{ width: "75%" }}></div>
+                      <div className="portal-progress-bar-fill" style={{ width: `${Math.min(100, Math.round(((activeCount !== null ? activeCount : 0) / 20) * 100))}%` }}></div>
                     </div>
                   </div>
 
@@ -794,23 +715,29 @@ export function PortalClient({
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  {newsItems.map((item, idx) => (
-                    <div key={idx} style={{ display: "flex", gap: "10px", borderBottom: idx < newsItems.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", paddingBottom: idx < newsItems.length - 1 ? "12px" : 0 }}>
-                      <img src={item.image} alt={item.title} style={{ width: "64px", height: "64px", borderRadius: "4px", objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,0.05)" }} />
-                      <div style={{ minWidth: 0 }}>
-                        <span style={{ fontSize: "0.58rem", color: item.tagColor, fontWeight: "800", background: `${item.tagColor}15`, border: `1px solid ${item.tagColor}30`, padding: "1px 5px", borderRadius: "3px", display: "inline-block", marginBottom: "4px" }}>
-                          {item.tag}
-                        </span>
-                        <h4 style={{ fontSize: "0.75rem", fontWeight: "700", color: "#ffffff", margin: "0 0 2px 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {item.title}
-                        </h4>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.62rem", color: "rgba(255,255,255,0.35)" }}>
-                          <span>{item.date}</span>
-                          <span style={{ display: "flex", alignItems: "center", gap: "2px" }}><Eye size={10} /> {item.views}</span>
+                  {newsItems.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "32px 16px", color: "rgba(255,255,255,0.3)", fontSize: "0.75rem" }}>
+                      ไม่มีข่าวสารหรือประกาศประชาสัมพันธ์ในขณะนี้
+                    </div>
+                  ) : (
+                    newsItems.map((item, idx) => (
+                      <div key={idx} style={{ display: "flex", gap: "10px", borderBottom: idx < newsItems.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", paddingBottom: idx < newsItems.length - 1 ? "12px" : 0 }}>
+                        <img src={item.image} alt={item.title} style={{ width: "64px", height: "64px", borderRadius: "4px", objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,0.05)" }} />
+                        <div style={{ minWidth: 0 }}>
+                          <span style={{ fontSize: "0.58rem", color: item.tagColor, fontWeight: "800", background: `${item.tagColor}15`, border: `1px solid ${item.tagColor}30`, padding: "1px 5px", borderRadius: "3px", display: "inline-block", marginBottom: "4px" }}>
+                            {item.tag}
+                          </span>
+                          <h4 style={{ fontSize: "0.75rem", fontWeight: "700", color: "#ffffff", margin: "0 0 2px 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {item.title}
+                          </h4>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.62rem", color: "rgba(255,255,255,0.35)" }}>
+                            <span>{item.date}</span>
+                            <span style={{ display: "flex", alignItems: "center", gap: "2px" }}><Eye size={10} /> {item.views}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -825,20 +752,26 @@ export function PortalClient({
                 </div>
 
                 <div className="portal-forum-list">
-                  {forumTopics.map((topic, idx) => (
-                    <div key={idx} className="portal-forum-item">
-                      <div style={{ minWidth: 0, paddingRight: "8px" }}>
-                        <h4 className="portal-forum-title">{topic.title}</h4>
-                        <span className="portal-forum-author">โดย {topic.author}</span>
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "end", gap: "4px" }}>
-                        <span className="portal-forum-reply">
-                          <MessageSquare size={10} /> {topic.replies}
-                        </span>
-                        <span style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.3)" }}>{topic.time}</span>
-                      </div>
+                  {forumTopics.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "32px 16px", color: "rgba(255,255,255,0.3)", fontSize: "0.75rem" }}>
+                      ไม่มีหัวข้อสนทนาล่าสุดในขณะนี้
                     </div>
-                  ))}
+                  ) : (
+                    forumTopics.map((topic, idx) => (
+                      <div key={idx} className="portal-forum-item">
+                        <div style={{ minWidth: 0, paddingRight: "8px" }}>
+                          <h4 className="portal-forum-title">{topic.title}</h4>
+                          <span className="portal-forum-author">โดย {topic.author}</span>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "end", gap: "4px" }}>
+                          <span className="portal-forum-reply">
+                            <MessageSquare size={10} /> {topic.replies}
+                          </span>
+                          <span style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.3)" }}>{topic.time}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -973,38 +906,46 @@ export function PortalClient({
                       </tr>
                     </thead>
                     <tbody>
-                      {displayShifts.map((shift, idx) => (
-                        <tr key={shift.id || idx}>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                                {shift.avatarUrl ? (
-                                  <img src={shift.avatarUrl} alt={shift.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                ) : (
-                                  <span style={{ fontSize: "0.68rem" }}>🩺</span>
-                                )}
-                              </div>
-                              <span style={{ fontWeight: "600", color: "#ffffff" }}>{shift.name}</span>
-                            </div>
-                          </td>
-                          <td style={{ color: "rgba(255,255,255,0.5)" }}>{shift.rank}</td>
-                          <td>{formatTimeHHMM(shift.clockIn)}</td>
-                          <td>{shift.clockOut ? formatTimeHHMM(shift.clockOut) : "-"}</td>
-                          <td>{shift.clockOut ? getCompletedDuration(shift.clockIn, shift.clockOut) : "-"}</td>
-                          <td>
-                            {shift.status === "active" ? (
-                              <span className="portal-status-badge active">
-                                <span className="portal-status-pulse"></span>
-                                กำลังปฏิบัติงาน
-                              </span>
-                            ) : (
-                              <span className="portal-status-badge completed">
-                                ออกเวรแล้ว
-                              </span>
-                            )}
+                      {displayShifts.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: "center", padding: "24px", color: "rgba(255,255,255,0.3)", fontSize: "0.72rem" }}>
+                            ไม่พบข้อมูลการปฏิบัติหน้าที่ในปัจจุบัน
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        displayShifts.map((shift, idx) => (
+                          <tr key={shift.id || idx}>
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                                  {shift.avatarUrl ? (
+                                    <img src={shift.avatarUrl} alt={shift.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  ) : (
+                                    <span style={{ fontSize: "0.68rem" }}>🩺</span>
+                                  )}
+                                </div>
+                                <span style={{ fontWeight: "600", color: "#ffffff" }}>{shift.name}</span>
+                              </div>
+                            </td>
+                            <td style={{ color: "rgba(255,255,255,0.5)" }}>{shift.rank}</td>
+                            <td>{formatTimeHHMM(shift.clockIn)}</td>
+                            <td>{shift.clockOut ? formatTimeHHMM(shift.clockOut) : "-"}</td>
+                            <td>{shift.clockOut ? getCompletedDuration(shift.clockIn, shift.clockOut) : "-"}</td>
+                            <td>
+                              {shift.status === "active" ? (
+                                <span className="portal-status-badge active">
+                                  <span className="portal-status-pulse"></span>
+                                  กำลังปฏิบัติงาน
+                                </span>
+                              ) : (
+                                <span className="portal-status-badge completed">
+                                  ออกเวรแล้ว
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>

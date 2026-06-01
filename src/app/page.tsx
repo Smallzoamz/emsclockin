@@ -17,17 +17,25 @@ export default async function LoginPage({
   const error = typeof resolvedSearchParams?.error === "string" ? resolvedSearchParams.error : undefined;
 
   let logoUrl = "/images/logo.png";
+  let landingPageData = null;
+  
   try {
-    const { data: logoSetting } = await supabase
-      .from("system_settings")
-      .select("value")
-      .eq("key", "theme_logo_url")
-      .single();
-    if (logoSetting?.value) {
-      logoUrl = logoSetting.value;
+    // Fetch theme logo and landing page data concurrently
+    const [logoRes, landingRes] = await Promise.all([
+      supabase.from("system_settings").select("value").eq("key", "theme_logo_url").single(),
+      supabase.from("system_settings").select("value").eq("key", "landing_page_data").single()
+    ]);
+
+    if (logoRes.data?.value) {
+      logoUrl = logoRes.data.value;
+    }
+    if (landingRes.data?.value) {
+      landingPageData = typeof landingRes.data.value === "string"
+        ? JSON.parse(landingRes.data.value)
+        : landingRes.data.value;
     }
   } catch (err) {
-    console.error("[LoginPage Logo Fetch] Error:", err);
+    console.error("[LoginPage Settings Fetch] Error:", err);
   }
 
   async function handleAdminLogin(formData: FormData) {
@@ -50,6 +58,7 @@ export default async function LoginPage({
       error={error} 
       onAdminLogin={handleAdminLogin} 
       onDiscordLogin={handleDiscordLogin} 
+      landingPageData={landingPageData}
     />
   );
 }

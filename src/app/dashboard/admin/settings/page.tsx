@@ -68,6 +68,210 @@ export default function AdminSettingsPage() {
   const [isSavingServerSync, setIsSavingServerSync] = useState(false);
   const [serverSyncStatus, setServerSyncStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
 
+  // Landing Page Management State
+  const [landingSlides, setLandingSlides] = useState<Array<{ image: string; tag: string; title: string; description: string }>>([]);
+  const [landingNews, setLandingNews] = useState<Array<{ tag: string; tagColor: string; title: string; date: string; views: number; image: string; desc: string }>>([]);
+  const [landingForum, setLandingForum] = useState<Array<{ title: string; author: string; replies: number; time: string }>>([]);
+  const [isSavingLanding, setIsSavingLanding] = useState(false);
+  const [landingStatus, setLandingStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
+  const [activeLandingTab, setActiveLandingTab] = useState<"slides" | "news" | "forum">("slides");
+  
+  // Slide Upload state (to track which slide image is uploading)
+  const [isUploadingSlideIndex, setIsUploadingSlideIndex] = useState<number | null>(null);
+  // News Upload state (to track which news image is uploading)
+  const [isUploadingNewsIndex, setIsUploadingNewsIndex] = useState<number | null>(null);
+
+  const moveSlide = (index: number, direction: "up" | "down") => {
+    const updated = [...landingSlides];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= updated.length) return;
+    
+    // Swap
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    
+    setLandingSlides(updated);
+  };
+
+  const addSlide = () => {
+    setLandingSlides([
+      ...landingSlides,
+      {
+        image: "/images/ems_hero_bg.png",
+        tag: "NEW SLIDE",
+        title: "ประกาศใหม่จากโรงพยาบาล",
+        description: "รายละเอียดการประกาศกู้ชีพฉุกเฉินประจำวัน"
+      }
+    ]);
+  };
+
+  const addNews = () => {
+    setLandingNews([
+      ...landingNews,
+      {
+        tag: "ประกาศ",
+        tagColor: "#3b82f6",
+        title: "ประกาศใหม่",
+        date: new Date().toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" }),
+        views: 0,
+        image: "/images/rules/doctor_duty.png",
+        desc: "รายละเอียดคำอธิบายของข่าวสารประกาศใหม่"
+      }
+    ]);
+  };
+
+  const addForum = () => {
+    setLandingForum([
+      ...landingForum,
+      {
+        title: "กระทู้ใหม่เรื่องการแลกเปลี่ยนเวร",
+        author: "Doctor",
+        replies: 0,
+        time: "1 นาที ที่แล้ว"
+      }
+    ]);
+  };
+
+  const deleteSlide = async (index: number) => {
+    if (!await confirm({
+      title: "🗑️ ลบรูปภาพสไลด์แบนเนอร์",
+      message: `ยืนยันว่าต้องการลบสไลด์แบนเนอร์ลำดับที่ ${index + 1} หรือไม่?`,
+      confirmText: "ลบออก",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    })) return;
+
+    const updated = landingSlides.filter((_, idx) => idx !== index);
+    setLandingSlides(updated);
+  };
+
+  const deleteNews = async (index: number) => {
+    if (!await confirm({
+      title: "🗑️ ลบประกาศข่าวสาร",
+      message: `ยืนยันว่าต้องการลบประกาศข่าวสาร "${landingNews[index].title || "ไม่มีชื่อ"}" หรือไม่?`,
+      confirmText: "ลบออก",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    })) return;
+
+    const updated = landingNews.filter((_, idx) => idx !== index);
+    setLandingNews(updated);
+  };
+
+  const deleteForum = async (index: number) => {
+    if (!await confirm({
+      title: "🗑️ ลบกระทู้สนทนา",
+      message: `ยืนยันว่าต้องการลบกระทู้สนทนา "${landingForum[index].title || "ไม่มีชื่อ"}" หรือไม่?`,
+      confirmText: "ลบออก",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    })) return;
+
+    const updated = landingForum.filter((_, idx) => idx !== index);
+    setLandingForum(updated);
+  };
+
+  const handleSlideImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file || !isMasterAdmin) return;
+
+    setIsUploadingSlideIndex(index);
+    setLandingStatus(null);
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await fetch("/api/admin/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const updated = [...landingSlides];
+        updated[index].image = data.imageUrl;
+        setLandingSlides(updated);
+        setLandingStatus({ message: `อัปโหลดรูปภาพสไลด์ที่ ${index + 1} เรียบร้อยแล้วค่ะ`, type: "success" });
+      } else {
+        setLandingStatus({ message: data.error || "อัปโหลดรูปภาพไม่สำเร็จ", type: "error" });
+      }
+    } catch (err) {
+      setLandingStatus({ message: "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ", type: "error" });
+    } finally {
+      setIsUploadingSlideIndex(null);
+      setTimeout(() => setLandingStatus(null), 4000);
+    }
+  };
+
+  const handleNewsImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file || !isMasterAdmin) return;
+
+    setIsUploadingNewsIndex(index);
+    setLandingStatus(null);
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await fetch("/api/admin/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const updated = [...landingNews];
+        updated[index].image = data.imageUrl;
+        setLandingNews(updated);
+        setLandingStatus({ message: `อัปโหลดรูปภาพข่าวสารที่ ${index + 1} เรียบร้อยแล้วค่ะ`, type: "success" });
+      } else {
+        setLandingStatus({ message: data.error || "อัปโหลดรูปภาพไม่สำเร็จ", type: "error" });
+      }
+    } catch (err) {
+      setLandingStatus({ message: "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ", type: "error" });
+    } finally {
+      setIsUploadingNewsIndex(null);
+      setTimeout(() => setLandingStatus(null), 4000);
+    }
+  };
+
+  const handleSaveLanding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isMasterAdmin) return;
+    setIsSavingLanding(true);
+    setLandingStatus(null);
+
+    const payload = {
+      slides: landingSlides,
+      news: landingNews,
+      forum: landingForum
+    };
+
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "landing_page_data", value: payload }),
+      });
+
+      if (res.ok) {
+        setLandingStatus({ message: "บันทึกการจัดการเนื้อหาหน้าแรกเรียบร้อยแล้วค่ะ", type: "success" });
+        router.refresh();
+      } else {
+        const data = await res.json();
+        setLandingStatus({ message: data.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
+      }
+    } catch (err) {
+      setLandingStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    } finally {
+      setIsSavingLanding(false);
+      setTimeout(() => setLandingStatus(null), 4000);
+    }
+  };
+
   useEffect(() => {
     document.title = "ตั้งค่าระบบ | EMS Clock-in";
     // Get Session and determine Master Admin
@@ -116,6 +320,90 @@ export default function AdminSettingsPage() {
         }
         if (data.settings?.server_sync_api_key) {
           setServerSyncApiKey(data.settings.server_sync_api_key);
+        }
+        if (data.settings?.landing_page_data) {
+          const lpd = typeof data.settings.landing_page_data === 'string'
+            ? JSON.parse(data.settings.landing_page_data)
+            : data.settings.landing_page_data;
+          if (lpd.slides) setLandingSlides(lpd.slides);
+          if (lpd.news) setLandingNews(lpd.news);
+          if (lpd.forum) setLandingForum(lpd.forum);
+        } else {
+          setLandingSlides([
+            {
+              image: "/images/ems_hero_bg.png",
+              tag: "LOS SANTOS MEDICAL SERVICE",
+              title: "เราพร้อมดูแล และช่วยเหลือประชาชนในทุกสถานการณ์",
+              description: "เพราะชีวิต...คือหน้าที่ของเรา"
+            },
+            {
+              image: "/images/rules/hospital_area.png",
+              tag: "PILLBOX HILL MEDICAL CENTER",
+              title: "ศูนย์ปฏิบัติการรักษาพยาบาลหลักประจำเมือง",
+              description: "พร้อมให้บริการตรวจรักษาและกู้ภัยฉุกเฉินตลอด 24 ชั่วโมง"
+            },
+            {
+              image: "/images/rules/doctor_duty.png",
+              tag: "EMS TRAINING CENTER",
+              title: "หลักสูตรฝึกกู้ชีพและวินัยพื้นฐานแพทย์กู้ภัย",
+              description: "อบรมขั้นตอนช่วยเหลือเบื้องต้นและการสวมบทบาททางการแพทย์"
+            }
+          ]);
+          setLandingNews([
+            {
+              tag: "ประกาศสำคัญ",
+              tagColor: "#3b82f6",
+              title: "ประกาศปรับปรุงระบบการเข้าเวร",
+              date: "23 พ.ค. 2026",
+              views: 125,
+              image: "/images/rules/doctor_duty.png",
+              desc: "แจ้งปรับปรุงระบบการเข้า-ออกเวร แพทย์ทุกท่านกรุณาอ่านรายละเอียดในระบบ"
+            },
+            {
+              tag: "อัปเดต",
+              tagColor: "#10b981",
+              title: "อัปเดตแพทย์ 1.2.0",
+              date: "22 พ.ค. 2026",
+              views: 210,
+              image: "/images/rules/hospital_area.png",
+              desc: "เพิ่มระบบการรักษาและอุปกรณ์ทางการแพทย์ใหม่สำหรับแพทย์ออนเวร"
+            },
+            {
+              tag: "กิจกรรม",
+              tagColor: "#eab308",
+              title: "กิจกรรมอบรม CPR ประจำเดือน",
+              date: "21 พ.ค. 2026",
+              views: 98,
+              image: "/images/rules/case_story.png",
+              desc: "ขอเชิญแพทย์และผู้สนใจเข้าร่วมอบรมการทำ CPR ปฐมพยาบาลเบื้องต้น"
+            }
+          ]);
+          setLandingForum([
+            {
+              title: "สอบถามเรื่องการเบิกอุปกรณ์ทางการแพทย์",
+              author: "NurseMint",
+              replies: 15,
+              time: "2 ชม. ที่แล้ว"
+            },
+            {
+              title: "แนวทางการรักษาคนไข้ในเคสวิกฤต",
+              author: "DoctorX",
+              replies: 23,
+              time: "5 ชม. ที่แล้ว"
+            },
+            {
+              title: "รวมภาพกิจกรรมฝึกซ้อมหน่วยแพทย์",
+              author: "EMT-TONY",
+              replies: 8,
+              time: "1 วัน ที่แล้ว"
+            },
+            {
+              title: "ปัญหาเรียนระบบเข้าเวรไม่แสดงเวลา",
+              author: "ParamedicK",
+              replies: 12,
+              time: "1 วัน ที่แล้ว"
+            }
+          ]);
         }
       })
       .catch(err => console.error("Failed to load settings:", err));
@@ -1273,6 +1561,543 @@ export default function AdminSettingsPage() {
           </div>
 
         </div>
+      </section>
+
+      {/* Landing Page Content Management */}
+      <section className="card" style={{ padding: "24px" }}>
+        <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
+          <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+            <LayoutIcon size={20} style={{ color: "var(--accent)" }} />
+            จัดการเนื้อหาหน้าแรกของเว็บไซต์ (Landing Page Content Management)
+          </h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
+            แก้ไขข้อมูลสไลด์แบนเนอร์ ข่าวสารประกาศของหน่วยงาน และกระทู้บอร์ดสนทนาล่าสุดบนหน้าแรก
+          </p>
+        </div>
+
+        {/* Tabs selector */}
+        <div style={{ display: "flex", gap: "12px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px", marginBottom: "24px" }}>
+          {[
+            { id: "slides", label: "🖼️ สไลด์แบนเนอร์ (Slideshow)" },
+            { id: "news", label: "📰 ข่าวสาร & ประกาศ (News)" },
+            { id: "forum", label: "💬 บอร์ดสนทนาล่าสุด (Forum)" }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveLandingTab(tab.id as any)}
+              style={{
+                padding: "8px 16px",
+                background: activeLandingTab === tab.id ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "transparent",
+                border: "1px solid",
+                borderColor: activeLandingTab === tab.id ? "var(--accent)" : "transparent",
+                color: activeLandingTab === tab.id ? "var(--accent-light)" : "var(--text-secondary)",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "0.85rem",
+                fontWeight: "bold",
+                transition: "all 0.2s"
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSaveLanding} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          
+          {/* Tab 1: Slideshow Banner */}
+          {activeLandingTab === "slides" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ fontSize: "0.95rem", color: "var(--text-primary)", margin: 0 }}>
+                  รายการรูปภาพสไลด์หมุนวน ({landingSlides.length} สไลด์)
+                </h3>
+                <button
+                  type="button"
+                  onClick={addSlide}
+                  style={{
+                    padding: "6px 12px",
+                    background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                    border: "1px solid var(--border-glow)",
+                    color: "var(--accent-light)",
+                    borderRadius: "6px",
+                    fontSize: "0.8rem",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}
+                >
+                  <PlusIcon size={12} /> เพิ่มสไลด์ใหม่
+                </button>
+              </div>
+
+              {landingSlides.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px", background: "var(--bg-secondary)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.85rem", border: "1px dashed var(--border)" }}>
+                  ไม่มีข้อมูลสไลด์แบนเนอร์หน้าแรก กรุณากดปุ่มเพิ่มเพื่อเริ่มต้นสร้างค่ะ
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {landingSlides.map((slide, idx) => (
+                    <div key={idx} style={{ background: "var(--bg-secondary)", borderRadius: "10px", padding: "16px", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "16px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
+                        
+                        {/* Slide Image Uploader & Preview */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ height: "100px", background: "black", borderRadius: "6px", border: "1px solid var(--border)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <img src={slide.image || "/images/ems_hero_bg.png"} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          </div>
+                          <label style={{
+                            padding: "6px",
+                            background: "rgba(255,255,255,0.03)",
+                            border: "1px solid var(--border)",
+                            color: "var(--text-secondary)",
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            textAlign: "center",
+                            cursor: "pointer",
+                            display: "block"
+                          }}>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleSlideImageUpload(e, idx)}
+                              style={{ display: "none" }}
+                              disabled={isUploadingSlideIndex !== null}
+                            />
+                            {isUploadingSlideIndex === idx ? "กำลังอัปโหลด..." : "📸 อัปโหลดรูปภาพ"}
+                          </label>
+                          <input
+                            type="text"
+                            value={slide.image}
+                            onChange={(e) => {
+                              const updated = [...landingSlides];
+                              updated[idx].image = e.target.value;
+                              setLandingSlides(updated);
+                            }}
+                            placeholder="หรือพิมพ์พาทรูปภาพ (URL)"
+                            style={{ width: "100%", padding: "6px 10px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.75rem", outline: "none" }}
+                          />
+                        </div>
+
+                        {/* Slide Text Inputs */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "10px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>แท็กหัวข้อ (Tag)</span>
+                              <input
+                                type="text"
+                                value={slide.tag}
+                                onChange={(e) => {
+                                  const updated = [...landingSlides];
+                                  updated[idx].tag = e.target.value;
+                                  setLandingSlides(updated);
+                                }}
+                                placeholder="LOS SANTOS EMS"
+                                style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                              />
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>ชื่อเรื่องสไลด์ (Title)</span>
+                              <input
+                                type="text"
+                                value={slide.title}
+                                onChange={(e) => {
+                                  const updated = [...landingSlides];
+                                  updated[idx].title = e.target.value;
+                                  setLandingSlides(updated);
+                                }}
+                                placeholder="เราพร้อมดูแลทุกชีวิต"
+                                style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                              />
+                            </div>
+                          </div>
+                          
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>คำอธิบายเพิ่มเติมใต้ภาพสไลด์</span>
+                            <textarea
+                              value={slide.description}
+                              onChange={(e) => {
+                                const updated = [...landingSlides];
+                                updated[idx].description = e.target.value;
+                                setLandingSlides(updated);
+                              }}
+                              placeholder="รายละเอียดข้อความประชาสัมพันธ์สั้นๆ..."
+                              rows={2}
+                              style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none", resize: "none" }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions row */}
+                      <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button
+                            type="button"
+                            onClick={() => moveSlide(idx, "up")}
+                            disabled={idx === 0}
+                            style={{ padding: "6px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "6px", fontSize: "0.75rem", cursor: idx === 0 ? "not-allowed" : "pointer", opacity: idx === 0 ? 0.4 : 1 }}
+                          >
+                            ▲ เลื่อนขึ้น
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveSlide(idx, "down")}
+                            disabled={idx === landingSlides.length - 1}
+                            style={{ padding: "6px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "6px", fontSize: "0.75rem", cursor: idx === landingSlides.length - 1 ? "not-allowed" : "pointer", opacity: idx === landingSlides.length - 1 ? 0.4 : 1 }}
+                          >
+                            ▼ เลื่อนลง
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => deleteSlide(idx)}
+                          style={{ padding: "6px 12px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid var(--danger)", color: "var(--danger)", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer" }}
+                        >
+                          ลบสไลด์นี้
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 2: News & Announcements */}
+          {activeLandingTab === "news" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ fontSize: "0.95rem", color: "var(--text-primary)", margin: 0 }}>
+                  รายการการ์ดข่าวสารกู้ชีพประชาสัมพันธ์ ({landingNews.length} ข่าว)
+                </h3>
+                <button
+                  type="button"
+                  onClick={addNews}
+                  style={{
+                    padding: "6px 12px",
+                    background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                    border: "1px solid var(--border-glow)",
+                    color: "var(--accent-light)",
+                    borderRadius: "6px",
+                    fontSize: "0.8rem",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}
+                >
+                  <PlusIcon size={12} /> เพิ่มข่าวสารใหม่
+                </button>
+              </div>
+
+              {landingNews.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px", background: "var(--bg-secondary)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.85rem", border: "1px dashed var(--border)" }}>
+                  ไม่มีข้อมูลข่าวสารประกาศบนหน้าแรก กรุณากดปุ่มเพิ่มเพื่อเริ่มต้นสร้างค่ะ
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {landingNews.map((item, idx) => (
+                    <div key={idx} style={{ background: "var(--bg-secondary)", borderRadius: "10px", padding: "16px", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "16px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
+                        
+                        {/* News Image Uploader & Preview */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ height: "100px", background: "black", borderRadius: "6px", border: "1px solid var(--border)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <img src={item.image || "/images/rules/doctor_duty.png"} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          </div>
+                          <label style={{
+                            padding: "6px",
+                            background: "rgba(255,255,255,0.03)",
+                            border: "1px solid var(--border)",
+                            color: "var(--text-secondary)",
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            textAlign: "center",
+                            cursor: "pointer",
+                            display: "block"
+                          }}>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleNewsImageUpload(e, idx)}
+                              style={{ display: "none" }}
+                              disabled={isUploadingNewsIndex !== null}
+                            />
+                            {isUploadingNewsIndex === idx ? "กำลังอัปโหลด..." : "📸 อัปโหลดรูปภาพ"}
+                          </label>
+                          <input
+                            type="text"
+                            value={item.image}
+                            onChange={(e) => {
+                              const updated = [...landingNews];
+                              updated[idx].image = e.target.value;
+                              setLandingNews(updated);
+                            }}
+                            placeholder="หรือพิมพ์พาทรูปภาพ (URL)"
+                            style={{ width: "100%", padding: "6px 10px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.75rem", outline: "none" }}
+                          />
+                        </div>
+
+                        {/* News Content Inputs */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: "10px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>แท็กประเภทข่าว</span>
+                              <input
+                                type="text"
+                                value={item.tag}
+                                onChange={(e) => {
+                                  const updated = [...landingNews];
+                                  updated[idx].tag = e.target.value;
+                                  setLandingNews(updated);
+                                }}
+                                placeholder="ประกาศสำคัญ"
+                                style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                              />
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>สีพื้นหลังแท็ก</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "var(--bg-card)", padding: "4px 8px", border: "1px solid var(--border)", borderRadius: "6px", height: "36px" }}>
+                                <input
+                                  type="color"
+                                  value={item.tagColor}
+                                  onChange={(e) => {
+                                    const updated = [...landingNews];
+                                    updated[idx].tagColor = e.target.value;
+                                    setLandingNews(updated);
+                                  }}
+                                  style={{ width: "30px", height: "24px", border: "1px solid var(--border)", background: "none", cursor: "pointer", borderRadius: "4px", padding: 0 }}
+                                />
+                                <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)" }}>{item.tagColor}</span>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>หัวเรื่องข่าวประกาศ</span>
+                              <input
+                                type="text"
+                                value={item.title}
+                                onChange={(e) => {
+                                  const updated = [...landingNews];
+                                  updated[idx].title = e.target.value;
+                                  setLandingNews(updated);
+                                }}
+                                placeholder="กิจกรรมจัดอบรมบุคลากรแพทย์กู้ภัย"
+                                style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: "10px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>เนื้อความข่าวสารสั้น</span>
+                              <textarea
+                                value={item.desc}
+                                onChange={(e) => {
+                                  const updated = [...landingNews];
+                                  updated[idx].desc = e.target.value;
+                                  setLandingNews(updated);
+                                }}
+                                placeholder="คำโปรยหรือรายละเอียดเบื้องต้นของหัวข้อประกาศ..."
+                                rows={2}
+                                style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none", resize: "none" }}
+                              />
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>วันที่ลงประกาศ</span>
+                              <input
+                                type="text"
+                                value={item.date}
+                                onChange={(e) => {
+                                  const updated = [...landingNews];
+                                  updated[idx].date = e.target.value;
+                                  setLandingNews(updated);
+                                }}
+                                placeholder="23 พ.ค. 2026"
+                                style={{ padding: "8px 10px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.75rem", outline: "none" }}
+                              />
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>จำนวนผู้เข้าชม</span>
+                              <input
+                                type="number"
+                                value={item.views}
+                                onChange={(e) => {
+                                  const updated = [...landingNews];
+                                  updated[idx].views = Number(e.target.value);
+                                  setLandingNews(updated);
+                                }}
+                                placeholder="125"
+                                style={{ padding: "8px 10px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.75rem", outline: "none" }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
+                        <button
+                          type="button"
+                          onClick={() => deleteNews(idx)}
+                          style={{ padding: "6px 12px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid var(--danger)", color: "var(--danger)", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer" }}
+                        >
+                          ลบประกาศข่าวสารนี้
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 3: Forum Discussions */}
+          {activeLandingTab === "forum" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ fontSize: "0.95rem", color: "var(--text-primary)", margin: 0 }}>
+                  รายการกระทู้จำลองในบอร์ดสนทนาล่าสุด ({landingForum.length} กระทู้)
+                </h3>
+                <button
+                  type="button"
+                  onClick={addForum}
+                  style={{
+                    padding: "6px 12px",
+                    background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                    border: "1px solid var(--border-glow)",
+                    color: "var(--accent-light)",
+                    borderRadius: "6px",
+                    fontSize: "0.8rem",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}
+                >
+                  <PlusIcon size={12} /> เพิ่มกระทู้สนทนาใหม่
+                </button>
+              </div>
+
+              {landingForum.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px", background: "var(--bg-secondary)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.85rem", border: "1px dashed var(--border)" }}>
+                  ไม่มีข้อมูลกระทู้ในบอร์ดสนทนาหน้าแรก กรุณากดปุ่มเพิ่มเพื่อเริ่มต้นสร้างค่ะ
+                </div>
+              ) : (
+                <div style={{ background: "var(--bg-secondary)", borderRadius: "10px", padding: "16px", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "12px", overflowX: "auto" }}>
+                  <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border-subtle)", display: "grid", gridTemplateColumns: "1fr 180px 100px 140px 80px", gap: "16px", fontSize: "0.75rem", color: "var(--text-muted)", minWidth: "700px" }}>
+                    <span>หัวข้อของกระทู้โพสต์</span>
+                    <span>ผู้โพสต์ / เขียน</span>
+                    <span>จำนวนการตอบ</span>
+                    <span>เวลาที่โพสต์ (เช่น 2 ชม. ที่แล้ว)</span>
+                    <span style={{ textAlign: "center" }}>การจัดการ</span>
+                  </div>
+                  
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: "700px" }}>
+                    {landingForum.map((topic, idx) => (
+                      <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 180px 100px 140px 80px", gap: "16px", alignItems: "center", padding: "4px 12px" }}>
+                        <input
+                          type="text"
+                          value={topic.title}
+                          onChange={(e) => {
+                            const updated = [...landingForum];
+                            updated[idx].title = e.target.value;
+                            setLandingForum(updated);
+                          }}
+                          placeholder="รวมภาพบรรยากาศการฝึกร่วม..."
+                          style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                        />
+                        <input
+                          type="text"
+                          value={topic.author}
+                          onChange={(e) => {
+                            const updated = [...landingForum];
+                            updated[idx].author = e.target.value;
+                            setLandingForum(updated);
+                          }}
+                          placeholder="EMT-TONY"
+                          style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                        />
+                        <input
+                          type="number"
+                          value={topic.replies}
+                          onChange={(e) => {
+                            const updated = [...landingForum];
+                            updated[idx].replies = Number(e.target.value);
+                            setLandingForum(updated);
+                          }}
+                          placeholder="12"
+                          style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                        />
+                        <input
+                          type="text"
+                          value={topic.time}
+                          onChange={(e) => {
+                            const updated = [...landingForum];
+                            updated[idx].time = e.target.value;
+                            setLandingForum(updated);
+                          }}
+                          placeholder="2 ชั่วโมงที่แล้ว"
+                          style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => deleteForum(idx)}
+                          style={{ padding: "8px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid var(--danger)", color: "var(--danger)", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer", display: "flex", justifyContent: "center" }}
+                        >
+                          ลบออก
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Landing Status Message */}
+          {landingStatus && (
+            <div style={{
+              padding: "10px 14px",
+              borderRadius: "6px",
+              fontSize: "0.85rem",
+              background: landingStatus.type === "success" ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "rgba(239, 68, 68, 0.1)",
+              border: `1px solid ${landingStatus.type === "success" ? "var(--success)" : "var(--danger)"}`,
+              color: landingStatus.type === "success" ? "var(--success)" : "var(--danger)"
+            }}>
+              {landingStatus.message}
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={isSavingLanding}
+            style={{
+              alignSelf: "flex-end",
+              padding: "10px 24px",
+              background: "var(--primary)",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              opacity: isSavingLanding ? 0.7 : 1,
+              transition: "all 0.2s"
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
+              <SaveIcon size={14} />
+              {isSavingLanding ? "กำลังบันทึก..." : "บันทึกเนื้อหาหน้าแรก"}
+            </span>
+          </button>
+
+        </form>
       </section>
 
     </div>
