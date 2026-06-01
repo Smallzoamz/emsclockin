@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-01T02:30:00Z",
+  "title": "Design System: FiveM EMS Central Clock-in System",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Emerald Pulse", "canonical": "oklch(72.7% 0.198 149)", "tonalRamp": ["#022c22", "#064e3b", "#0f766e", "#0d9488", "#14b8a6", "#2dd4bf", "#5eead4", "#99f6e4"] },
+      "primary-light": { "role": "accent", "displayName": "Teal Mint Light", "canonical": "oklch(80.5% 0.165 149)", "tonalRamp": ["#022c22", "#064e3b", "#0f766e", "#0d9488", "#14b8a6", "#2dd4bf", "#5eead4", "#99f6e4"] },
+      "bg-primary": { "role": "background", "displayName": "Sterile Void Background", "canonical": "oklch(12.3% 0.022 245)", "tonalRamp": ["#02040a", "#04060e", "#060a13", "#080e1b", "#0b1222", "#0e182e", "#121e3b", "#17274b"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display Title", "purpose": "Hero welcome titles on the landing page." },
+      "body": { "displayName": "Body Text", "purpose": "General interface text, lists, and form descriptions." }
+    },
+    "shadows": [
+      { "name": "neon-glow", "value": "0 0 20px rgba(16, 185, 129, 0.4)", "purpose": "Active duty LED indicator pulse glow." }
+    ],
+    "motion": [
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Smooth hardware-accelerated transitions for menus, toggles, and modals." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Standard action button used for clocking in/out, confirmations, and submissions.",
+      "html": "<button class=\"ds-btn-primary\">CLOCK IN</button>",
+      "css": ".ds-btn-primary { background: #10b981; color: #000; padding: 10px 20px; font-family: 'Outfit', sans-serif; font-size: 0.85rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-primary:hover { background: #25d89f; transform: scale(1.02); box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }"
+    },
+    {
+      "name": "Glass Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Translucent glass card container for dashboard grids and portal widgets.",
+      "html": "<div class=\"ds-card\"><h3>Telemetry Panel</h3><p>Live active data monitoring feed.</p></div>",
+      "css": ".ds-card { background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(16, 185, 129, 0.12); border-radius: 16px; padding: 24px; backdrop-filter: blur(12px); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4); color: #f1f5f9; font-family: 'Outfit', sans-serif; } .ds-card h3 { color: #fff; margin-bottom: 8px; font-size: 1.1rem; } .ds-card p { color: #94a3b8; font-size: 0.85rem; margin: 0; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Sterile Glass Grid (ห้องแก้วปฏิบัติการสุดคลีน)",
+    "overview": "This design system establishes a high-fidelity, dark-medical-themed environment tailored for operations in a FiveM city. The visual theme is reminiscent of a high-tech medical telemetry dashboard. It relies on a deep-blue/black base canvas layered with semi-transparent glassmorphic surfaces, accented by vibrant emerald green indicators and border-glows representing health, active states, and clinical precision.",
+    "keyCharacteristics": [
+      "Clinical High Contrast: Solid, readable white text overlaid on deep slate-blue fields to optimize readability in dark gaming environments.",
+      "Dynamic Color Mixing: Subtle green neon glowing borders (color-mix relative to the admin-selected accent tone) instead of hard white or grey borders.",
+      "Snappy Response Easing: Transition and motion speed mapped to hardware-accelerated exponential ease-out curves, conveying professional speed."
+    ],
+    "rules": [
+      { "name": "The Rarity of Glow Rule", "body": "Accent glows and shadows are used sparingly—only for active buttons, pulsing status indicators, or focused modal panels. If more than 15% of the viewport glows, the interface loses its clinical focus and looks chaotic.", "section": "colors" },
+      { "name": "The Flat-at-Rest Rule", "body": "Buttons, cards, and input panels must remain flat at rest with thin borders. Elevation shadows or scaling triggers only as a response to interactive hover or focus states.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Outfit as the central font-family across all headers, titles, and body texts.",
+      "Do wrap confirmation modal popups inside React Portals mounted directly to document.body to prevent stacking context clipping.",
+      "Do animate hover transitions using GPU-friendly exponential curves (cubic-bezier(0.16, 1, 0.3, 1)).",
+      "Do check text color contrast ratios against dark backgrounds (ensure >= 4.5:1 ratio)."
+    ],
+    "donts": [
+      "Don't use any em-dashes (— or --) in UI text, labels, or logs.",
+      "Don't apply gradient text decorations or clip-paths to headers.",
+      "Don't use side-stripe borders to highlight active list items or menu tabs.",
+      "Don't apply round corners exceeding 24px on standard cards or dialog panels."
+    ]
+  }
+}

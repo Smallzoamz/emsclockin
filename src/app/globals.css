@@ -3204,6 +3204,38 @@ body::before {
   color: var(--text-primary);
   position: relative;
   font-family: var(--font-family-display, 'Outfit', sans-serif);
+  overflow-x: hidden;
+}
+
+/* Futuristic Background Scanner Grid */
+.portal-scanner-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: 
+    linear-gradient(rgba(16, 185, 129, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.015) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center;
+}
+
+.portal-scanner-line {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 12px var(--accent);
+  opacity: 0.25;
+  z-index: 0;
+  pointer-events: none;
+  animation: scanLine 8s linear infinite;
+}
+
+@keyframes scanLine {
+  0% { top: -2%; }
+  100% { top: 102%; }
 }
 
 /* Branded Navbar */
@@ -3211,8 +3243,8 @@ body::before {
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(16px);
-  background-color: color-mix(in srgb, var(--bg-primary) 70%, transparent);
+  backdrop-filter: blur(20px);
+  background-color: color-mix(in srgb, var(--bg-primary) 75%, transparent);
   border-bottom: 1px solid var(--border-subtle);
   padding: 16px 24px;
 }
@@ -3233,10 +3265,10 @@ body::before {
 }
 
 .portal-title-text h1 {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.019em;
   margin: 0;
 }
 
@@ -3251,20 +3283,39 @@ body::before {
 .portal-nav-links {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 28px;
 }
 
 .portal-nav-link {
   color: var(--text-secondary);
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
-  transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
+  position: relative;
+  padding: 4px 0;
+}
+
+.portal-nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .portal-nav-link:hover {
-  color: var(--accent);
+  color: #fff;
+}
+
+.portal-nav-link:hover::after {
+  transform: scaleX(1);
 }
 
 @media (max-width: 768px) {
@@ -3302,12 +3353,13 @@ body::before {
 /* Hero Section */
 .portal-hero {
   position: relative;
-  min-height: 75vh;
+  min-height: 80vh;
   display: flex;
   align-items: center;
-  padding: 80px 24px;
+  padding: 100px 24px;
   overflow: hidden;
   border-bottom: 1px solid var(--border-subtle);
+  z-index: 1;
 }
 
 .portal-hero-bg {
@@ -3337,33 +3389,33 @@ body::before {
 
 .portal-hero-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 48px;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 56px;
   align-items: center;
 }
 
 @media (max-width: 968px) {
   .portal-hero-grid {
     grid-template-columns: 1fr;
-    gap: 32px;
+    gap: 40px;
   }
 }
 
 .portal-hero-text h2 {
-  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.1;
   color: #fff;
-  letter-spacing: -0.02em;
-  margin-bottom: 16px;
+  letter-spacing: -0.025em;
+  margin-bottom: 20px;
   text-wrap: balance;
 }
 
 .portal-hero-text p {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   line-height: 1.6;
   color: var(--text-secondary);
-  margin-bottom: 32px;
+  margin-bottom: 36px;
   max-width: 60ch;
   text-wrap: pretty;
 }
@@ -3376,15 +3428,15 @@ body::before {
 
 /* Stats Card Panel */
 .portal-stats-panel {
-  background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 85%, transparent);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 24px;
-  backdrop-filter: blur(12px);
+  padding: 28px;
+  backdrop-filter: blur(16px);
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .portal-stats-title {
@@ -3393,14 +3445,14 @@ body::before {
   color: var(--text-muted);
   letter-spacing: 0.05em;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .portal-stats-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0;
+  padding: 14px 0;
   border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 50%, transparent);
 }
 
@@ -3412,24 +3464,26 @@ body::before {
 .portal-stats-label {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.85rem;
+  gap: 12px;
+  font-size: 0.9rem;
   color: var(--text-secondary);
 }
 
 .portal-stats-value {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 800;
   color: #fff;
   font-family: 'JetBrains Mono', monospace;
 }
 
 /* Sections */
 .portal-section {
-  padding: 80px 24px;
+  position: relative;
+  padding: 90px 24px;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+  z-index: 1;
 }
 
 .portal-section.alt-bg {
@@ -3447,72 +3501,72 @@ body::before {
 
 .portal-section-header {
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: 56px;
 }
 
 .portal-section-header h2 {
-  font-size: 1.85rem;
+  font-size: 2.1rem;
   font-weight: 800;
   color: #fff;
-  letter-spacing: -0.01em;
-  margin-bottom: 8px;
+  letter-spacing: -0.015em;
+  margin-bottom: 12px;
 }
 
 .portal-section-header p {
   color: var(--text-muted);
-  font-size: 0.9rem;
-  max-width: 50ch;
+  font-size: 0.95rem;
+  max-width: 55ch;
   margin: 0 auto;
 }
 
 /* Department Grid */
 .portal-dept-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
 }
 
 .portal-dept-card {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 28px;
+  padding: 32px;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .portal-dept-card:hover {
   border-color: var(--border-glow);
-  transform: translateY(-4px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  transform: translateY(-6px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
 }
 
 .portal-dept-icon {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 15%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   color: var(--accent);
 }
 
 .portal-dept-card h3 {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #fff;
   margin: 0;
 }
 
 .portal-dept-card p {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.55;
   margin: 0;
 }
 
@@ -3555,6 +3609,140 @@ body::before {
   color: var(--text-muted);
   line-height: 1.45;
   margin: 0;
+}
+
+/* Medical Fee Estimator Widget */
+.portal-calculator-card {
+  background: color-mix(in srgb, var(--bg-card) 95%, var(--accent) 2%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.portal-calculator-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.portal-calculator-select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-dark);
+  color: #fff;
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.portal-calculator-select:focus {
+  border-color: var(--accent);
+}
+
+.portal-calculator-receipt {
+  border: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.portal-receipt-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.portal-receipt-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--accent-light);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+/* Quota Tracker */
+.portal-quota-box {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  margin-top: 20px;
+}
+
+.portal-quota-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.portal-quota-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-dark);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.portal-quota-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  border-radius: 4px;
+  position: relative;
+  animation: quotaProgress 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  width: 0%;
+}
+
+@keyframes quotaProgress {
+  to { width: var(--progress-width, 73%); }
+}
+
+/* Live Activity Telemetry Feed */
+.portal-telemetry-feed {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  min-height: 280px;
+  max-height: 380px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.portal-telemetry-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--bg-secondary) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 30%, transparent);
+  border-radius: var(--radius-sm);
+  animation: feedSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes feedSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Carousel announcements board */
@@ -3745,5 +3933,439 @@ body::before {
 .portal-footer-link:hover {
   color: var(--accent);
 }
+
+/* ===== NEW INTERACTIVE PORTAL UPGRADE STYLES ===== */
+
+/* ECG Cardiogram Sweep Animation */
+.portal-ecg-svg {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  transform: translateY(-50%);
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.portal-ecg-path {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  stroke-dasharray: 2000;
+  stroke-dashoffset: 2000;
+  animation: ecgSweep 6s linear infinite;
+}
+
+@keyframes ecgSweep {
+  0% { stroke-dashoffset: 2000; }
+  50% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -2000; }
+}
+
+/* Vitals Scanner Widget */
+.vitals-scanner-card {
+  background: color-mix(in srgb, var(--bg-card) 95%, var(--accent) 3%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.vitals-scanner-card:hover {
+  border-color: var(--border-glow);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.vitals-scanner-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 12px var(--accent);
+  animation: scanLineTop 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes scanLineTop {
+  0%, 100% { transform: translateY(0); opacity: 0; }
+  10%, 90% { opacity: 0.6; }
+  50% { transform: translateY(320px); opacity: 0.6; }
+}
+
+.scanner-screen {
+  background: #040d09;
+  border: 2px solid #0f2d1f;
+  border-radius: var(--radius-md);
+  height: 180px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
+}
+
+.scanner-screen-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(16, 185, 129, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
+  background-size: 15px 15px;
+  pointer-events: none;
+}
+
+.scanner-screen-wave {
+  width: 100%;
+  height: 100px;
+  position: absolute;
+}
+
+.scanner-wave-path {
+  stroke: #10b981;
+  stroke-width: 2.5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.scanner-wave-path.scanning {
+  animation: waveScroll 1.5s linear infinite;
+}
+
+@keyframes waveScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.scanner-radar-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  box-shadow: 0 0 15px var(--accent);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.scanner-radar-line.scanning {
+  animation: radarSweep 2s infinite linear;
+}
+
+@keyframes radarSweep {
+  0% { left: 0%; }
+  100% { left: 100%; }
+}
+
+.scanner-screen-text {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent-light);
+  font-size: 0.8rem;
+  z-index: 10;
+  text-shadow: 0 0 8px var(--accent-glow);
+  text-align: center;
+  background: rgba(4, 13, 9, 0.85);
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.scanner-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-dark);
+  color: #fff;
+  font-size: 0.85rem;
+  outline: none;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.scanner-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.scanner-report {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px dashed rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: feedSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.scanner-report-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  padding-bottom: 6px;
+}
+
+.scanner-report-value {
+  color: #fff;
+  font-weight: bold;
+}
+
+.scanner-report-diagnosis {
+  font-size: 0.75rem;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  padding: 10px;
+  border-radius: 4px;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+/* Skeuomorphic Invoice Slip */
+.portal-invoice-slip {
+  background: radial-gradient(circle at 100% 0%, rgba(20, 20, 20, 0.85) 0%, rgba(10, 10, 10, 0.95) 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.portal-invoice-slip::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 6px;
+  background-image: linear-gradient(90deg, var(--accent) 50%, transparent 50%);
+  background-size: 12px 100%;
+}
+
+.portal-invoice-header {
+  border-bottom: 1px dashed var(--border-subtle);
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.portal-invoice-header h4 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.portal-invoice-header span {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.portal-invoice-barcode {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: 32px;
+  margin-top: 16px;
+  opacity: 0.45;
+}
+
+.portal-invoice-bar {
+  width: 2px;
+  background-color: var(--text-primary);
+  margin: 0 1px;
+}
+
+.portal-invoice-stamp {
+  position: absolute;
+  right: 16px;
+  bottom: 60px;
+  border: 2px solid rgba(239, 68, 68, 0.35);
+  color: rgba(239, 68, 68, 0.45);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  padding: 4px 8px;
+  transform: rotate(-15deg);
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  font-family: 'JetBrains Mono', monospace;
+  animation: stampFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes stampFade {
+  from { opacity: 0; transform: scale(1.3) rotate(-15deg); }
+  to { opacity: 1; transform: scale(1) rotate(-15deg); }
+}
+
+/* Roster of Active Doctors */
+.roster-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.roster-scroll-container {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 8px 4px 16px 4px;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+
+.roster-scroll-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.roster-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.roster-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 4px;
+}
+
+.roster-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: var(--border-glow);
+}
+
+.roster-card {
+  flex: 0 0 240px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.roster-card:hover {
+  border-color: var(--border-glow);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.roster-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--accent);
+}
+
+.roster-avatar-wrapper {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+}
+
+.roster-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--bg-card);
+}
+
+.roster-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.roster-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.roster-rank {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.roster-timer {
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent-light);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Dispatch Terminal Alert Blinking */
+.terminal-siren-dot {
+  width: 6px;
+  height: 6px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  animation: sirenBlink 0.8s infinite alternate;
+}
+
+@keyframes sirenBlink {
+  from { opacity: 0.3; transform: scale(0.9); box-shadow: none; }
+  to { opacity: 1; transform: scale(1.1); box-shadow: 0 0 8px #ef4444; }
+}
+
+/* Staggered entrance animations */
+.portal-fade-up {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUpIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeUpIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+
+
 
 
