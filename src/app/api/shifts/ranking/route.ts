@@ -60,6 +60,7 @@ export async function GET() {
       name?: string;
       discordUsername?: string;
       discordId?: string;
+      avatarUrl?: string;
     }>;
 
     const registeredEmails = new Set(registeredDoctorsList.map(d => d.email).filter(Boolean));
@@ -70,6 +71,7 @@ export async function GET() {
       name: string;
       discordUsername: string;
       discordId: string | null;
+      avatarUrl?: string | null;
     }> = [];
 
     Object.values(userMap).forEach((u) => {
@@ -80,7 +82,8 @@ export async function GET() {
           email: email,
           name: u.name,
           discordUsername: username,
-          discordId: null
+          discordId: null,
+          avatarUrl: null
         });
       }
     });
@@ -128,6 +131,7 @@ export async function GET() {
         name: name,
         discordUsername: discordUsername,
         discordId: discordId,
+        avatarUrl: doc.avatarUrl || null,
         currentWeekHours: currentWeekHours,
         totalHours: currentWeekHours,
         carriedOverBonus: carriedOverBonus,

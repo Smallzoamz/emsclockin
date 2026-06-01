@@ -23,6 +23,7 @@ interface RankingEntry {
   name: string;
   discordUsername: string;
   discordId?: string;
+  avatarUrl?: string;
   totalHours: number;
   rankName?: string;
   appliedRate?: number;
@@ -570,7 +571,17 @@ export default function BonusCalculatorPage() {
                       )}
                     </td>
                     <td className="cell">
-                      <span className="font-medium text-[var(--text-primary)]">{customName}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        {entry.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={entry.avatarUrl} alt="" className="roster-doctor-avatar" />
+                        ) : (
+                          <div className="roster-doctor-fallback">
+                            {(customName || "N").charAt(0)}
+                          </div>
+                        )}
+                        <span className="font-medium text-[var(--text-primary)]">{customName}</span>
+                      </div>
                     </td>
                     <td className="cell">
                       {isLive && entry.email ? (
