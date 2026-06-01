@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileNav } from "@/components/MobileNav";
+import { TopHeader } from "@/components/TopHeader";
 import { supabase } from "@/lib/supabase";
 import { headers } from "next/headers";
 import { HospitalIcon } from "@/components/Icons";
@@ -124,7 +125,12 @@ export default async function DashboardLayout({
   return (
     <div className="app-layout">
       <Sidebar user={userWithOp as any} logoUrl={logoUrl} />
-      <main className="main-content">{children}</main>
+      <div className="dashboard-layout-container">
+        <TopHeader />
+        <main className="main-content" style={{ maxWidth: "100%", margin: "0", padding: "32px" }}>
+          {children}
+        </main>
+      </div>
       <MobileNav user={userWithOp as any} />
     </div>
   );
