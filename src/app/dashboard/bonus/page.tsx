@@ -612,13 +612,13 @@ export default function BonusCalculatorPage() {
                       }}
                       title={isBelowThreshold ? (
                         fiftyPercentMode
-                          ? `ชั่วโมงไม่ถึงเกณฑ์ (${bonusThreshold} ชม.) — ได้รับ 50%`
-                          : `ชั่วโมงไม่ถึงเกณฑ์ (ขั้นต่ำ ${bonusThreshold} ชม.) — ยกไปสัปดาห์หน้า`
+                          ? `ชั่วโมงไม่ถึงเกณฑ์ (${bonusThreshold} ชม.) / ได้รับ 50%`
+                          : `ชั่วโมงไม่ถึงเกณฑ์ (ขั้นต่ำ ${bonusThreshold} ชม.) / ยกไปสัปดาห์หน้า`
                       ) : ""}
                     >
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
                         {isBelowThreshold && !fiftyPercentMode ? (
-                          <span style={{ color: "#ef4444", fontSize: "0.85rem" }}>— ยกยอด</span>
+                          <span style={{ color: "#ef4444", fontSize: "0.85rem" }}>(ยกยอด)</span>
                         ) : (
                           <>
                             <span>$ {bonusAmount.toLocaleString("en-US")}</span>
@@ -663,7 +663,7 @@ export default function BonusCalculatorPage() {
                                 padding: "6px 12px",
                                 borderRadius: "6px",
                                 fontSize: "0.8rem",
-                              }} title={`ชั่วโมงไม่ถึง ${bonusThreshold} ชม. — ยกยอดไปสัปดาห์หน้า`}>—</span>
+                              }} title={`ชั่วโมงไม่ถึง ${bonusThreshold} ชม. (ยกยอดไปสัปดาห์หน้า)`}>—</span>
                             );
                           }
                           if (!windowStatus.canPay) {

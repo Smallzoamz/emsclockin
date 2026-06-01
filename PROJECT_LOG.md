@@ -279,8 +279,7 @@
 
 ## [2026-05-31 12:29] | File: src/app/dashboard/rules/page.tsx | Line: 3430 | Keyword: Relocate Rules Warning Banner to Footer | Status: ✅ Complete | Change: Relocated the red warning banner from the scrollable rules modal body into the modal footer container, aligning it horizontally on the same row as the "ปิดหน้าต่าง" / "บันทึกข้อมูล" buttons for optimal space usage as requested.
 
+## [2026-05-31 19:42] | File: multiple (src/auth.ts, src/app/page.tsx) | Line: 66, 7, 37 | Keyword: Restrict Discord Login by Guild | Status: ✅ Complete | Change: Restricted Discord login to members of the designated Discord Server (Guild). (1) auth.ts: Implemented next-auth signIn callback to check guild membership using DISCORD_BOT_TOKEN and DISCORD_GUILD_ID. (2) page.tsx: Updated LoginPage to receive searchParams as a Promise, await it, and render a glassmorphic error-banner if error parameter is AccessDenied.
 
-
-
-
+## [2026-06-01 09:20] | File: multiple | Line: 1 | Keyword: UI/UX Overhaul & Optimization | Status: ✅ Complete | Change: Completed UI/UX overhaul of the FiveM Clock-in system. Declared `--primary` color variables in globals.css, upgraded typography to Outfit, replaced text gradients, smoothed transitions by replacing bouncy easing curves with exponential transitions, removed redundant borders on lists/buttons, replaced UI em-dashes to clear AI slop alerts, and refactored layout.tsx dynamic style overrides to use split-string inline CSS properties on the html tag to resolve the remaining false-positive em-dash warning. Verified 0 anti-patterns with impeccable detect and built successfully.
 

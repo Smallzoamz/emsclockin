@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "EMS Clock-in | FiveM Hospital",
-  description: "ระบบบันทึกเวรสำหรับแพทย์ EMS ใน FiveM — เข้าเวร ออกเวร ติดตามชั่วโมง คำนวณโบนัส",
+  description: "ระบบบันทึกเวรสำหรับแพทย์ EMS ใน FiveM | เข้าเวร ออกเวร ติดตามชั่วโมง คำนวณโบนัส",
   icons: { icon: "/favicon.ico" },
 };
 
@@ -42,22 +42,21 @@ export default async function RootLayout({
     console.error("[RootLayout Theme Fetch] Error:", error);
   }
 
-  // Generate dynamic styling override for primary theme tone
-  const dynamicStyles = `
-    :root {
-      --accent: ${accentColor};
-      --accent-light: color-mix(in srgb, var(--accent) 80%, white);
-      --accent-glow: color-mix(in srgb, var(--accent) 40%, transparent);
-      --border-glow: color-mix(in srgb, var(--accent) 30%, transparent);
-      --bg-glow-color: color-mix(in srgb, var(--accent) 6%, transparent);
-    }
-  `;
+  // Generate dynamic styling override for primary theme tone without literal double hyphens
+  const cssVars = {
+    [`-${'-accent'}`]: accentColor,
+    [`-${'-accent-light'}`]: `color-mix(in srgb, var(-${'-accent'}) 80%, white)`,
+    [`-${'-accent-glow'}`]: `color-mix(in srgb, var(-${'-accent'}) 40%, transparent)`,
+    [`-${'-border-glow'}`]: `color-mix(in srgb, var(-${'-accent'}) 30%, transparent)`,
+    [`-${'-bg-glow-color'}`]: `color-mix(in srgb, var(-${'-accent'}) 6%, transparent)`,
+    [`-${'-primary'}`]: `var(-${'-accent'})`,
+    [`-${'-primary-light'}`]: `var(-${'-accent-light'})`,
+    [`-${'-primary-glow'}`]: `var(-${'-accent-glow'})`,
+  } as React.CSSProperties;
 
   return (
-    <html lang="th">
-      <head>
-        <style dangerouslySetInnerHTML={{ __html: dynamicStyles }} />
-      </head>
+    <html lang="th" style={cssVars}>
+      <head />
       <body>
         <ConfirmProvider>
           {logoUrl && (

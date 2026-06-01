@@ -3998,8 +3998,7 @@ export default function RulesPage() {
                                 style={{ 
                                   flex: 1, 
                                   justifyContent: "flex-start", 
-                                  gap: "8px",
-                                  borderLeft: "3px solid " + colorObj.hex
+                                  gap: "8px"
                                 }}
                               >
                                 <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: colorObj.hex }} />

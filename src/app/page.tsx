@@ -4,9 +4,16 @@ import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const session = await auth();
   if (session?.user) redirect("/dashboard");
+
+  const resolvedSearchParams = await searchParams;
+  const error = typeof resolvedSearchParams?.error === "string" ? resolvedSearchParams.error : undefined;
 
   let logoUrl = "";
   try {
@@ -37,6 +44,32 @@ export default async function LoginPage() {
           ระบบบันทึกเวรสำหรับแพทย์ FiveM<br />
           เข้าเวร · ออกเวร · ติดตามชั่วโมง
         </p>
+
+        {error && (
+          <div className="error-banner" style={{
+            background: "rgba(239, 68, 68, 0.1)",
+            border: "1px solid rgba(239, 68, 68, 0.2)",
+            borderRadius: "var(--radius-md)",
+            padding: "12px 16px",
+            marginBottom: "20px",
+            fontSize: "0.85rem",
+            color: "#fca5a5",
+            textAlign: "left",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px"
+          }}>
+            <span style={{ fontSize: "1.2rem" }}>⚠️</span>
+            <div>
+              <strong style={{ display: "block", color: "#fca5a5" }}>เข้าสู่ระบบไม่สำเร็จ</strong>
+              <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "var(--text-muted)", lineHeight: "1.4" }}>
+                {error === "AccessDenied" 
+                  ? "บัญชี Discord ของคุณไม่ได้อยู่ใน Discord Server แพทย์ที่กำหนด" 
+                  : "เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์"}
+              </p>
+            </div>
+          </div>
+        )}
 
         <form
           action={async (formData: FormData) => {

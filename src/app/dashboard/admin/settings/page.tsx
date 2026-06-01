@@ -952,7 +952,7 @@ export default function AdminSettingsPage() {
                   position: "absolute",
                   top: "3px",
                   left: serverSyncEnabled ? "23px" : "3px",
-                  transition: "all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)"
+                  transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
                 }} />
               </button>
             </div>
@@ -1113,7 +1113,7 @@ export default function AdminSettingsPage() {
               </div>
               
               {/* Default Master */}
-              <div style={{ padding: "10px 12px", background: "var(--bg-card)", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: "4px solid var(--primary)" }}>
+              <div style={{ padding: "10px 12px", background: "var(--bg-card)", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid var(--border-subtle)" }}>
                 <span style={{ fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: "bold" }}>admin</span>
                 <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Master Admin (ระบบหลัก)</span>
                 <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic" }}>ลบไม่ได้</span>
@@ -1193,7 +1193,7 @@ export default function AdminSettingsPage() {
               </div>
               
               {/* Default Dev */}
-              <div style={{ padding: "10px 12px", background: "var(--bg-card)", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: "4px solid var(--success)" }}>
+              <div style={{ padding: "10px 12px", background: "var(--bg-card)", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid var(--border-subtle)" }}>
                 <span style={{ fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: "bold" }}>lneeobee@gmail.com</span>
                 <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Developer (ระบบหลัก)</span>
                 <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic" }}>ลบไม่ได้</span>

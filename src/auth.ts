@@ -64,6 +64,42 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/",
   },
   callbacks: {
+    async signIn({ user, account, profile, email, credentials }) {
+      if (account?.provider === "discord") {
+        const discordId = account.providerAccountId;
+        const botToken = process.env.DISCORD_BOT_TOKEN;
+        const guildId = process.env.DISCORD_GUILD_ID;
+
+        // Bypassing if environment variables are not configured (e.g. local dev fallback)
+        if (!botToken || !guildId) {
+          console.warn("[Auth Guild Guard] DISCORD_BOT_TOKEN or DISCORD_GUILD_ID is not configured. Bypassing check.");
+          return true;
+        }
+
+        try {
+          const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${discordId}`, {
+            headers: {
+              Authorization: `Bot ${botToken}`,
+            },
+          });
+          
+          if (!res.ok) {
+            if (res.status === 404) {
+              console.warn(`[Auth Guild Guard] User ${discordId} is not a member of guild ${guildId}. Sign-in rejected.`);
+              return false;
+            }
+            console.error(`[Auth Guild Guard] Discord API returned error status: ${res.status}`);
+            return false;
+          }
+          
+          return true;
+        } catch (err) {
+          console.error("[Auth Guild Guard] Error verifying guild membership:", err);
+          return false;
+        }
+      }
+      return true;
+    },
     async jwt({ token, account, profile, user }) {
       if (user) {
         if ("role" in user) {

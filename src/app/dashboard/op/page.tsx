@@ -384,7 +384,7 @@ export default function OpQueuePage() {
                             })}
                           </div>
                         ) : (
-                          <span style={{ fontStyle: "italic" }}>— ยังไม่ได้กำหนด —</span>
+                          <span style={{ fontStyle: "italic" }}>(ยังไม่ได้กำหนด)</span>
                         )}
                       </td>
                     </tr>
@@ -484,7 +484,7 @@ export default function OpQueuePage() {
             {isTogglingActive ? (
               "กำลังสลับเวร..."
             ) : (opActive && !isOpOwner && !isUserAdmin) ? (
-              <><LockIcon size={16} className="inline mr-1 align-text-top text-amber-500" /> ล็อค — ปิดได้เฉพาะคนเปิด</>
+              <><LockIcon size={16} className="inline mr-1 align-text-top text-amber-500" /> ล็อค (ปิดได้เฉพาะคนเปิด)</>
             ) : opActive ? (
               <><PowerIcon size={16} className="inline mr-1 align-text-top" /> ปิดเวร OP</>
             ) : (
@@ -530,7 +530,7 @@ export default function OpQueuePage() {
         }}>
           <LockIcon size={20} className="text-amber-500 flex-shrink-0" />
           <span>
-            <strong>{opOpenedBy.discordUsername || opOpenedBy.email}</strong> เป็นคนเปิดเวร OP — เฉพาะเขาเท่านั้นที่สามารถปิดเวร OP ได้ คุณยังสามารถจัดการคิวหมอได้ตามปกติค่ะ
+            <strong>{opOpenedBy.discordUsername || opOpenedBy.email}</strong> เป็นคนเปิดเวร OP (เฉพาะเขาเท่านั้นที่สามารถปิดเวร OP ได้ คุณยังสามารถจัดการคิวหมอได้ตามปกติค่ะ)
           </span>
         </div>
       )}
@@ -833,7 +833,7 @@ export default function OpQueuePage() {
                           })}
                         </div>
                       ) : (
-                        <span style={{ fontStyle: "italic" }}>— ยังไม่ได้กำหนด —</span>
+                        <span style={{ fontStyle: "italic" }}>(ยังไม่ได้กำหนด)</span>
                       )}
                     </td>
                   </tr>
