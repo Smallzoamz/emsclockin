@@ -72,7 +72,6 @@ export default function BonusCalculatorPage() {
   const [hospitalFund, setHospitalFund] = useState<number>(1000000);
   const [doctorRanks, setDoctorRanks] = useState<DoctorRank[]>([]);
   const [userRanks, setUserRanks] = useState<Record<string, string>>({});
-  const [userNames, setUserNames] = useState<Record<string, string>>({});
   
   // Manage Ranks Modal
   const [showRankModal, setShowRankModal] = useState(false);
@@ -130,7 +129,6 @@ export default function BonusCalculatorPage() {
         if (settingsData?.settings) {
            if (settingsData.settings.doctor_ranks) setDoctorRanks(settingsData.settings.doctor_ranks);
            if (settingsData.settings.user_ranks) setUserRanks(settingsData.settings.user_ranks);
-           if (settingsData.settings.user_names) setUserNames(settingsData.settings.user_names);
            if (settingsData.settings.bonus_threshold) setBonusThreshold(Number(settingsData.settings.bonus_threshold));
            if (settingsData.settings.bonus_50_percent_mode !== undefined) setFiftyPercentMode(!!settingsData.settings.bonus_50_percent_mode);
         }
@@ -157,12 +155,11 @@ export default function BonusCalculatorPage() {
         const rankId = user.email ? userRanks[user.email] : undefined;
         const rank = doctorRanks.find(r => r.id === rankId);
         const rate = rank ? rank.rate : 0;
-        const customName = user.email ? userNames[user.email] : undefined;
         return {
           ...user,
           rankName: rank?.name || "ไม่ได้กำหนดยศ",
           appliedRate: rate,
-          customName: customName
+          customName: user.name
         };
       });
 
@@ -545,9 +542,6 @@ export default function BonusCalculatorPage() {
                     rankName = rank.name;
                     appliedRate = rank.rate;
                   }
-                  if (entry.email && userNames[entry.email]) {
-                    customName = userNames[entry.email];
-                  }
                 } else {
                   rankName = entry.rankName || "ไม่ได้กำหนดยศ";
                   appliedRate = entry.appliedRate || entry.bonus_rate || 0;
@@ -576,28 +570,7 @@ export default function BonusCalculatorPage() {
                       )}
                     </td>
                     <td className="cell">
-                      {isLive && entry.email ? (
-                        <input 
-                          type="text" 
-                          value={customName}
-                          onChange={e => {
-                            if (entry.email) {
-                              setUserNames(prev => ({ ...prev, [entry.email as string]: e.target.value }));
-                            }
-                          }}
-                          onBlur={() => {
-                            // Automatically save to API when leaving the input
-                            fetch("/api/admin/settings", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ key: "user_names", value: { ...userNames } })
-                            });
-                          }}
-                          placeholder="ชื่อในเกม..."
-                        />
-                      ) : (
-                        <span className="text-muted">{customName}</span>
-                      )}
+                      <span className="font-medium text-[var(--text-primary)]">{customName}</span>
                     </td>
                     <td className="cell">
                       {isLive && entry.email ? (
