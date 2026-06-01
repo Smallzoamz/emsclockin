@@ -207,90 +207,40 @@ export function PortalClient({
         maxWidth: "1000px",
         margin: "0 auto"
       }}>
-        <div style={{
-          height: "380px",
-          width: "100%",
-          borderRadius: "8px",
-          overflow: "hidden",
-          position: "relative",
-          border: "1px solid rgba(255, 255, 255, 0.06)",
-          background: "#090e1a"
-        }}>
+        <div className="web-slide-container">
           {/* Images with transition */}
           {slides.map((slide, idx) => (
             <div 
               key={idx}
+              className="web-slide-image"
               style={{
-                position: "absolute",
-                inset: 0,
                 backgroundImage: `url(${slide.image})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                opacity: idx === activeImageSlide ? 1 : 0,
-                transition: "opacity 0.8s ease-in-out",
-                zIndex: 1
+                opacity: idx === activeImageSlide ? 1 : 0
               }}
             />
           ))}
 
           {/* Absolute Dark Overlay for Text Contrast */}
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            background: "linear-gradient(to right, rgba(3, 7, 18, 0.9) 0%, rgba(3, 7, 18, 0.4) 60%, rgba(3, 7, 18, 0.1) 100%)",
-            zIndex: 2
-          }} />
+          <div className="web-slide-overlay" />
 
           {/* Dynamic Text Overlays based on activeImageSlide */}
           {slides.map((slide, idx) => (
             <div 
               key={idx}
+              className="web-slide-text-wrapper"
               style={{
-                position: "absolute",
-                left: "40px",
-                bottom: "40px",
-                right: "40px",
-                zIndex: 3,
-                maxWidth: "600px",
                 opacity: idx === activeImageSlide ? 1 : 0,
-                transform: idx === activeImageSlide ? "translateY(0)" : "translateY(10px)",
-                transition: "opacity 0.8s ease-in-out, transform 0.8s ease-in-out",
+                transform: idx === activeImageSlide ? "translateY(0)" : "translateY(15px)",
                 pointerEvents: idx === activeImageSlide ? "auto" : "none"
               }}
             >
-              <span style={{
-                fontSize: "0.65rem",
-                color: "#00f0ff",
-                fontWeight: "700",
-                letterSpacing: "1px",
-                textTransform: "uppercase",
-                background: "rgba(0, 240, 255, 0.08)",
-                border: "1px solid rgba(0, 240, 255, 0.2)",
-                padding: "3px 8px",
-                borderRadius: "4px",
-                display: "inline-block",
-                marginBottom: "12px"
-              }}>
+              <span className="web-slide-tag">
                 {slide.tag}
               </span>
-              <h2 style={{
-                fontSize: "1.8rem",
-                fontWeight: "700",
-                color: "#ffffff",
-                lineHeight: "1.25",
-                letterSpacing: "-0.015em",
-                marginBottom: "10px",
-                textShadow: "0 2px 4px rgba(0,0,0,0.8)"
-              }}>
+              <h2 className="web-slide-title">
                 {slide.title}
               </h2>
-              <p style={{
-                fontSize: "0.85rem",
-                color: "#d1d5db",
-                lineHeight: "1.5",
-                margin: 0,
-                textShadow: "0 1px 2px rgba(0,0,0,0.8)"
-              }}>
+              <p className="web-slide-desc">
                 {slide.description}
               </p>
             </div>
@@ -299,76 +249,24 @@ export function PortalClient({
           {/* Navigation Controls (Left/Right Chevrons) */}
           <button 
             onClick={() => setActiveImageSlide((prev) => (prev - 1 + slides.length) % slides.length)}
-            style={{
-              position: "absolute",
-              left: "16px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              background: "rgba(3, 7, 18, 0.5)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "4px",
-              width: "32px",
-              height: "32px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#ffffff",
-              zIndex: 4,
-              transition: "background 0.15s"
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0, 240, 255, 0.3)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(3, 7, 18, 0.5)"; }}
+            className="web-slide-chevron left"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={18} />
           </button>
           <button 
             onClick={() => setActiveImageSlide((prev) => (prev + 1) % slides.length)}
-            style={{
-              position: "absolute",
-              right: "16px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              background: "rgba(3, 7, 18, 0.5)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "4px",
-              width: "32px",
-              height: "32px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#ffffff",
-              zIndex: 4,
-              transition: "background 0.15s"
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0, 240, 255, 0.3)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(3, 7, 18, 0.5)"; }}
+            className="web-slide-chevron right"
           >
-            <ArrowRight size={16} />
+            <ArrowRight size={18} />
           </button>
 
           {/* Indicator Dots */}
-          <div style={{
-            position: "absolute",
-            bottom: "16px",
-            right: "24px",
-            display: "flex",
-            gap: "6px",
-            zIndex: 4
-          }}>
+          <div className="web-slide-dots">
             {slides.map((_, idx) => (
               <span 
                 key={idx}
                 onClick={() => setActiveImageSlide(idx)}
-                style={{
-                  width: "6px",
-                  height: "6px",
-                  background: idx === activeImageSlide ? "#00f0ff" : "rgba(255,255,255,0.3)",
-                  borderRadius: "50%",
-                  cursor: "pointer",
-                  transition: "background 0.15s"
-                }}
+                className={`web-slide-dot ${idx === activeImageSlide ? 'active' : ''}`}
               />
             ))}
           </div>
@@ -686,46 +584,17 @@ export function PortalClient({
             </h3>
           </div>
 
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "24px"
-          }}>
+          <div className="web-news-grid">
             {/* Card 1: Hospital Notice */}
-            <div style={{
-              background: "#090f1d",
-              border: "1px solid rgba(255, 255, 255, 0.06)",
-              borderRadius: "8px",
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between"
-            }}>
+            <div className="web-news-card">
               <div>
                 {/* Visual Header Image */}
-                <div style={{
-                  height: "150px",
-                  width: "100%",
-                  backgroundImage: "url('/images/rules/doctor_duty.png')",
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  borderBottom: "1px solid rgba(255, 255, 255, 0.06)"
-                }} />
+                <div className="web-news-image-wrapper">
+                  <img src="/images/rules/doctor_duty.png" alt="Hospital Notice" className="web-news-image" />
+                </div>
                 
                 <div style={{ padding: "20px 20px 0 20px" }}>
-                  <span style={{
-                    fontSize: "0.6rem",
-                    color: "#00f0ff",
-                    fontWeight: "700",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    background: "rgba(0, 240, 255, 0.04)",
-                    border: "1px solid rgba(0, 240, 255, 0.12)",
-                    padding: "2px 6px",
-                    borderRadius: "3px",
-                    display: "inline-block",
-                    marginBottom: "12px"
-                  }}>
+                  <span className="web-news-badge">
                     📢 HOSPITAL NOTICE
                   </span>
                   <h4 style={{ fontSize: "0.95rem", fontWeight: "600", color: "#ffffff", margin: "0 0 8px 0" }}>
@@ -737,60 +606,22 @@ export function PortalClient({
                 </div>
               </div>
               <div style={{ padding: "20px" }}>
-                <a 
-                  href="/dashboard/rules" 
-                  style={{
-                    fontSize: "0.72rem",
-                    color: "#00f0ff",
-                    textDecoration: "none",
-                    fontWeight: "600",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.textDecoration = "underline"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.textDecoration = "none"; }}
-                >
+                <a href="/dashboard/rules" className="web-news-button">
                   อ่านกฎของโรงพยาบาล &rarr;
                 </a>
               </div>
             </div>
 
             {/* Card 2: Recruitment Status */}
-            <div style={{
-              background: "#090f1d",
-              border: "1px solid rgba(255, 255, 255, 0.06)",
-              borderRadius: "8px",
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between"
-            }}>
+            <div className="web-news-card">
               <div>
                 {/* Visual Header Image */}
-                <div style={{
-                  height: "150px",
-                  width: "100%",
-                  backgroundImage: "url('/images/rules/hospital_area.png')",
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  borderBottom: "1px solid rgba(255, 255, 255, 0.06)"
-                }} />
+                <div className="web-news-image-wrapper">
+                  <img src="/images/rules/hospital_area.png" alt="Recruitment" className="web-news-image" />
+                </div>
                 
                 <div style={{ padding: "20px 20px 0 20px" }}>
-                  <span style={{
-                    fontSize: "0.6rem",
-                    color: "#00f0ff",
-                    fontWeight: "700",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    background: "rgba(0, 240, 255, 0.04)",
-                    border: "1px solid rgba(0, 240, 255, 0.12)",
-                    padding: "2px 6px",
-                    borderRadius: "3px",
-                    display: "inline-block",
-                    marginBottom: "12px"
-                  }}>
+                  <span className="web-news-badge">
                     🚑 RECRUITMENT STATUS
                   </span>
                   <h4 style={{ fontSize: "0.95rem", fontWeight: "600", color: "#ffffff", margin: "0 0 8px 0" }}>
@@ -802,60 +633,22 @@ export function PortalClient({
                 </div>
               </div>
               <div style={{ padding: "20px" }}>
-                <a 
-                  href="#staff-gateway" 
-                  style={{
-                    fontSize: "0.72rem",
-                    color: "#00f0ff",
-                    textDecoration: "none",
-                    fontWeight: "600",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.textDecoration = "underline"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.textDecoration = "none"; }}
-                >
+                <a href="#staff-gateway" className="web-news-button">
                   ลงทะเบียนเวรหลังบ้าน &rarr;
                 </a>
               </div>
             </div>
 
             {/* Card 3: Latest Blacklist Alert */}
-            <div style={{
-              background: "#090f1d",
-              border: "1px solid rgba(255, 255, 255, 0.06)",
-              borderRadius: "8px",
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between"
-            }}>
+            <div className="web-news-card">
               <div>
                 {/* Visual Header Image */}
-                <div style={{
-                  height: "150px",
-                  width: "100%",
-                  backgroundImage: "url('/images/rules/blacklist.png')",
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  borderBottom: "1px solid rgba(255, 255, 255, 0.06)"
-                }} />
+                <div className="web-news-image-wrapper">
+                  <img src="/images/rules/blacklist.png" alt="Latest Blacklist" className="web-news-image" />
+                </div>
                 
                 <div style={{ padding: "20px 20px 0 20px" }}>
-                  <span style={{
-                    fontSize: "0.6rem",
-                    color: "#ef4444",
-                    fontWeight: "700",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    background: "rgba(239, 68, 68, 0.04)",
-                    border: "1px solid rgba(239, 68, 68, 0.15)",
-                    padding: "2px 6px",
-                    borderRadius: "3px",
-                    display: "inline-block",
-                    marginBottom: "12px"
-                  }}>
+                  <span className="web-news-badge danger">
                     🚫 LATEST BLACKLIST
                   </span>
                   {latestBlacklist ? (
@@ -881,20 +674,7 @@ export function PortalClient({
                 </div>
               </div>
               <div style={{ padding: "20px" }}>
-                <a 
-                  href="#blacklist-section" 
-                  style={{
-                    fontSize: "0.72rem",
-                    color: "#00f0ff",
-                    textDecoration: "none",
-                    fontWeight: "600",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.textDecoration = "underline"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.textDecoration = "none"; }}
-                >
+                <a href="#blacklist-section" className="web-news-button">
                   ค้นหาบัญชีดำทั้งหมด &rarr;
                 </a>
               </div>
@@ -910,13 +690,7 @@ export function PortalClient({
           maxWidth: "460px",
           margin: "0 auto"
         }}>
-          <div style={{
-            background: "#090f1d",
-            border: "1px solid rgba(255, 255, 255, 0.06)",
-            borderRadius: "8px",
-            padding: "28px",
-            textAlign: "center"
-          }}>
+          <div className="web-staff-card">
             <div style={{
               width: "40px",
               height: "40px",
