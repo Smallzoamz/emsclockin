@@ -331,4 +331,4 @@
 
 ## [2026-06-02 06:31] | File: multiple | Line: 1 | Keyword: Resolve Names Globally & Show Rank in Admin Cards | Status: ✅ Complete | Change: Standardized doctor name queries to always use custom names from registered_doctors or synced Discord names. Fixed sidebar, ranking page, and admin overview APIs. Updated admin card UI in Admin page to show Rank (ยศ) on the second line under username with "นร.แพทย์" as default fallback.
 
-
+## [2026-06-02 06:40] | File: multiple | Line: 1 | Keyword: Automated Background Discord Nickname Sync | Status: ✅ Complete | Change: Implemented passive background auto-sync of doctor nicknames from Discord server to the database. Added a 5-minute database-backed lock/throttle using system settings key 'last_nickname_sync_time' inside the shifts status API. Fixed double POST declaration syntax error in the sync nicknames route. All files pass ESLint and TypeScript compilation with 0 errors.

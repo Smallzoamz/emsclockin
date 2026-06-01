@@ -1,6 +1,45 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
+import { runNicknameSync } from "@/app/api/op/sync-nicknames/route";
+
+export const dynamic = "force-dynamic";
+
+let isAutoSyncing = false;
+
+interface RegisteredDoctor {
+  email?: string;
+  name?: string;
+  avatarUrl?: string | null;
+  rank?: string;
+}
+
+interface ShiftItem {
+  id: string | number;
+  user_email: string;
+  user_name?: string | null;
+  clock_in: string;
+  clock_out?: string | null;
+}
+
+interface BlacklistRecord {
+  id: string | number;
+  name?: string | null;
+  phone?: string | null;
+  gang?: string | null;
+  penalty?: string | null;
+  fine?: number | null;
+  multiplier?: number | null;
+  created_at: string;
+  created_by?: string | null;
+}
+
+interface ActivityLog {
+  id: string;
+  text: string;
+  timestamp: string;
+  type: "in" | "out" | "blacklist";
+}
 
 export async function GET() {
   const session = await auth();
@@ -14,11 +53,11 @@ export async function GET() {
       .eq("status", "active")
       .order("clock_in", { ascending: true });
 
-    // 2. Fetch registered doctors and recruitment quota
+    // 2. Fetch registered doctors, recruitment quota, nickname mode, and last sync timestamp
     const { data: settingsRows } = await supabase
       .from("system_settings")
       .select("key, value")
-      .in("key", ["registered_doctors", "recruitment_quota"]);
+      .in("key", ["registered_doctors", "recruitment_quota", "op_nickname_mode", "last_nickname_sync_time"]);
 
     const registeredDoctors = settingsRows?.find(r => r.key === "registered_doctors")?.value || [];
     const recruitmentQuota = settingsRows?.find(r => r.key === "recruitment_quota")?.value || {
@@ -27,10 +66,36 @@ export async function GET() {
       batch: 15,
       end_date: "2026-06-15T23:59:59+07:00"
     };
+    const opNicknameMode = settingsRows?.find(r => r.key === "op_nickname_mode")?.value || "manual";
+    const lastNicknameSyncTime = settingsRows?.find(r => r.key === "last_nickname_sync_time")?.value || "0";
+
+    // Passive background auto-sync check (Throttled to 5 minutes)
+    const now = Date.now();
+    const lastSyncTimeNum = Number(lastNicknameSyncTime) || 0;
+    if (opNicknameMode === "discord" && !isAutoSyncing && (now - lastSyncTimeNum > 5 * 60 * 1000)) {
+      isAutoSyncing = true;
+      (async () => {
+        try {
+          // Immediately upsert to prevent concurrent executions from other requests/containers
+          await supabase
+            .from("system_settings")
+            .upsert({ key: "last_nickname_sync_time", value: String(now), updated_at: new Date().toISOString() });
+
+          console.log("[Auto-Sync] Starting background nickname sync...");
+          const res = await runNicknameSync();
+          console.log("[Auto-Sync] Background nickname sync completed:", res.message);
+        } catch (err) {
+          console.error("[Auto-Sync] Background nickname sync failed:", err);
+        } finally {
+          isAutoSyncing = false;
+        }
+      })();
+    }
+
 
     // Map to public output
-    const activeDoctors = (activeShifts || []).map((shift: any) => {
-      const doctor = registeredDoctors.find((d: any) => d.email === shift.user_email);
+    const activeDoctors = ((activeShifts as unknown as ShiftItem[]) || []).map((shift: ShiftItem) => {
+      const doctor = (registeredDoctors as RegisteredDoctor[]).find((d: RegisteredDoctor) => d.email === shift.user_email);
       return {
         name: doctor?.name || shift.user_name || "แพทย์ประจำการ",
         avatarUrl: doctor?.avatarUrl || null,
@@ -68,10 +133,10 @@ export async function GET() {
       .gte("clock_in", startOfWeekISO);
 
     // 6. Compile real-time CAD activity feed logs
-    const activityList: any[] = [];
+    const activityList: ActivityLog[] = [];
 
-    (activeShifts || []).forEach((shift: any) => {
-      const doctor = registeredDoctors.find((d: any) => d.email === shift.user_email);
+    ((activeShifts as unknown as ShiftItem[]) || []).forEach((shift: ShiftItem) => {
+      const doctor = (registeredDoctors as RegisteredDoctor[]).find((d: RegisteredDoctor) => d.email === shift.user_email);
       const name = doctor?.name || shift.user_name || "แพทย์ประจำการ";
       activityList.push({
         id: `in_${shift.id || shift.clock_in}`,
@@ -81,18 +146,18 @@ export async function GET() {
       });
     });
 
-    (recentCompleted || []).forEach((shift: any) => {
-      const doctor = registeredDoctors.find((d: any) => d.email === shift.user_email);
+    ((recentCompleted as unknown as ShiftItem[]) || []).forEach((shift: ShiftItem) => {
+      const doctor = (registeredDoctors as RegisteredDoctor[]).find((d: RegisteredDoctor) => d.email === shift.user_email);
       const name = doctor?.name || shift.user_name || "แพทย์ประจำการ";
       activityList.push({
         id: `out_${shift.id || shift.clock_out}`,
         text: `🔴 แพทย์ ${name} ลงเวรปฏิบัติหน้าที่ (Clock-out)`,
-        timestamp: shift.clock_out,
+        timestamp: shift.clock_out || "",
         type: "out"
       });
     });
 
-    (recentBlacklists || []).forEach((bl: any) => {
+    ((recentBlacklists as unknown as BlacklistRecord[]) || []).forEach((bl: BlacklistRecord) => {
       const targetName = bl.name || bl.gang || "บุคคลนิรนาม";
       activityList.push({
         id: `bl_${bl.id || bl.created_at}`,
@@ -112,21 +177,21 @@ export async function GET() {
     };
 
     // Construct the recent shifts log (active + completed) for landing page log table
-    const completedDoctors = (recentCompleted || []).map((shift: any) => {
-      const doctor = registeredDoctors.find((d: any) => d.email === shift.user_email);
+    const completedDoctors = ((recentCompleted as unknown as ShiftItem[]) || []).map((shift: ShiftItem) => {
+      const doctor = (registeredDoctors as RegisteredDoctor[]).find((d: RegisteredDoctor) => d.email === shift.user_email);
       return {
         id: shift.id,
         name: doctor?.name || shift.user_name || "แพทย์ประจำการ",
         avatarUrl: doctor?.avatarUrl || null,
         rank: doctor?.rank || "แพทย์ประจำการ",
         clockIn: shift.clock_in,
-        clockOut: shift.clock_out,
+        clockOut: shift.clock_out || null,
         status: "completed"
       };
     });
 
-    const activeDoctorsList = (activeShifts || []).map((shift: any) => {
-      const doctor = registeredDoctors.find((d: any) => d.email === shift.user_email);
+    const activeDoctorsList = ((activeShifts as unknown as ShiftItem[]) || []).map((shift: ShiftItem) => {
+      const doctor = (registeredDoctors as RegisteredDoctor[]).find((d: RegisteredDoctor) => d.email === shift.user_email);
       return {
         id: shift.id,
         name: doctor?.name || shift.user_name || "แพทย์ประจำการ",
