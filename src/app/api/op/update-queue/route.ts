@@ -38,21 +38,34 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { opQueueState } = body; // This is the email -> status map
+    const { opQueueState, opCaseCounts } = body;
 
     if (opQueueState === undefined) {
       return NextResponse.json({ error: "Invalid data" }, { status: 400 });
     }
 
-    const { error } = await supabase
-      .from("system_settings")
-      .upsert({
+    const promises = [
+      supabase.from("system_settings").upsert({
         key: "op_queue_state",
         value: opQueueState,
         updated_at: new Date().toISOString()
-      });
+      })
+    ];
 
-    if (error) throw error;
+    if (opCaseCounts !== undefined) {
+      promises.push(
+        supabase.from("system_settings").upsert({
+          key: "op_case_counts",
+          value: opCaseCounts,
+          updated_at: new Date().toISOString()
+        })
+      );
+    }
+
+    const results = await Promise.all(promises);
+    for (const res of results) {
+      if (res.error) throw res.error;
+    }
 
     // Sync to Discord immediately and await completion (critical in Serverless environments)
     await syncOpQueueToDiscord();

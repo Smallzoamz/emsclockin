@@ -39,6 +39,7 @@ export async function GET() {
     };
     const opNicknameMode = settings["op_nickname_mode"] || "manual";
     const opQueueState = settings["op_queue_state"] || {}; // email -> "skipped" | "story"
+    const opCaseCounts = settings["op_case_counts"] || {};
     const opActive = settings["op_active"] === true;
     const opNotice = settings["op_notice"] || "⚠️ คำเตือน: รบกวนหมอเวรทุกคนเปิดวิทยุช่องหลัก และรายงานตัวทันทีเมื่อเข้าพื้นที่เวร!";
     const opOpenedAt = settings["op_opened_at"];
@@ -70,6 +71,7 @@ export async function GET() {
       opSchedule,
       opNicknameMode,
       opQueueState,
+      opCaseCounts,
       currentDay,
       opActive,
       opNotice,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { getSession } from "next-auth/react";
 import { formatThaiDate } from "@/lib/utils";
 import { ClipboardIcon, HospitalIcon, CheckIcon, LockIcon, PowerIcon, RefreshIcon, WarningIcon, SaveIcon, ClockIcon, FileTextIcon, ReturnIcon } from "@/components/Icons";
@@ -13,6 +13,7 @@ interface DoctorEntry {
   status: "active" | "completed";
   queueCategory: "active" | "receiving" | "recase" | "skipped" | "story" | "inactive";
   skippedAt?: number;
+  clockIn?: string;
 }
 
 export default function OpQueuePage() {
@@ -27,6 +28,9 @@ export default function OpQueuePage() {
   const [doctors, setDoctors] = useState<DoctorEntry[]>([]);
   const [opQueueState, setOpQueueState] = useState<Record<string, string>>({});
   const [registeredDoctors, setRegisteredDoctors] = useState<any[]>([]);
+  
+  // Case counts: { [email]: { cases: number, recases: number } }
+  const [opCaseCounts, setOpCaseCounts] = useState<Record<string, { cases: number; recases: number }>>({});
   
   // Notice & Posting state
   const [notice, setNotice] = useState("⚠️ คำเตือน: รบกวนหมอเวรทุกคนเปิดวิทยุช่องหลัก และรายงานตัวทันทีเมื่อเข้าพื้นที่เวร!");
@@ -52,6 +56,7 @@ export default function OpQueuePage() {
       setOpActive(data.opActive === true);
       setOpOpenedBy(data.opOpenedBy || null);
       setRegisteredDoctors(data.registeredDoctors || []);
+      setOpCaseCounts(data.opCaseCounts || {});
       if (data.opNotice) {
         setNotice(data.opNotice);
       }
@@ -100,17 +105,18 @@ export default function OpQueuePage() {
             avatarUrl,
             status: "active",
             queueCategory: qCategory as any,
-            skippedAt
+            skippedAt,
+            clockIn: shift.clock_in
           });
           addedEmails.add(email);
         });
       }
 
-      // 2. Inactive doctors (clocked out recently - last 12 hours)
+      // 2. Inactive doctors (clocked out recently)
       if (data.recentShifts) {
         data.recentShifts.forEach((shift: any) => {
           const email = shift.user_email;
-          if (!email || addedEmails.has(email)) return; // skip if currently active or duplicate
+          if (!email || addedEmails.has(email)) return;
           
           const registered = data.registeredDoctors?.find((d: any) => d.email === email);
           const name = registered?.name || shift.user_name || "Unknown Doctor";
@@ -141,7 +147,6 @@ export default function OpQueuePage() {
     const isUserAdmin = session?.user?.role === "admin";
     const isUserClockedIn = doctors.some(d => d.email === session?.user?.email && d.status === "active");
 
-    // Check: Only the opener (or Admin) can close OP
     if (opActive && !isUserAdmin && opOpenedBy && opOpenedBy.email !== session?.user?.email) {
       const openerName = opOpenedBy.discordUsername || opOpenedBy.email;
       alert(`🔒 เฉพาะ ${openerName} (คนเปิดเวร OP) เท่านั้นที่สามารถปิดเวร OP ได้ค่ะ`);
@@ -218,18 +223,36 @@ export default function OpQueuePage() {
     e.preventDefault();
     const email = e.dataTransfer.getData("text/plain");
     if (!email) return;
-
-    // We can only move doctors who are currently active/clocked-in
     const targetDoc = doctors.find(d => d.email === email);
     if (!targetDoc || targetDoc.status !== "active") return;
-
     moveDoctorCategory(email, targetCategory);
   };
 
+  const saveCaseCountsToServer = async (nextCaseCounts: Record<string, { cases: number; recases: number }>, nextQueueState: Record<string, string>) => {
+    setIsSavingQueue(true);
+    try {
+      const res = await fetch("/api/op/update-queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ opQueueState: nextQueueState, opCaseCounts: nextCaseCounts })
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "บันทึกข้อมูลไม่สำเร็จ");
+      }
+    } catch (err: any) {
+      alert(err.message || "เกิดข้อผิดพลาดในการบันทึกสถานะคิว");
+      fetchOpData(session);
+    } finally {
+      setIsSavingQueue(false);
+    }
+  };
+
   const moveDoctorCategory = async (email: string, category: "active" | "receiving" | "recase" | "skipped" | "story" | "inactive") => {
-    if (category === "inactive") return; // cannot move to inactive manually, only system does on clockout
+    if (category === "inactive") return;
 
     const skippedAt = category === "skipped" ? Date.now() : undefined;
+    const prevDoc = doctors.find(d => d.email === email);
 
     // Update locally
     const updatedDocs = doctors.map(d => {
@@ -240,36 +263,38 @@ export default function OpQueuePage() {
     });
     setDoctors(updatedDocs);
 
-    // Prepare updated queue state key/value - store timestamp for skipped
+    // Prepare updated queue state
     const stateValue = category === "skipped" ? `skipped:${skippedAt}` : category;
     const nextQueueState = { ...opQueueState, [email]: stateValue };
     setOpQueueState(nextQueueState);
 
-    // Save to server database
-    setIsSavingQueue(true);
-    try {
-      const res = await fetch("/api/op/update-queue", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ opQueueState: nextQueueState })
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "บันทึกข้อมูลไม่สำเร็จ");
-      }
-    } catch (err: any) {
-      alert(err.message || "เกิดข้อผิดพลาดในการบันทึกสถานะคิว");
-      fetchOpData(session); // rollback
-    } finally {
-      setIsSavingQueue(false);
+    // Auto-increment case count when moving TO receiving or recase (not FROM)
+    let nextCaseCounts = { ...opCaseCounts };
+    if (category === "receiving" && prevDoc?.queueCategory !== "receiving") {
+      const curr = nextCaseCounts[email] || { cases: 0, recases: 0 };
+      nextCaseCounts[email] = { ...curr, cases: curr.cases + 1 };
+      setOpCaseCounts(nextCaseCounts);
+    } else if (category === "recase" && prevDoc?.queueCategory !== "recase") {
+      const curr = nextCaseCounts[email] || { cases: 0, recases: 0 };
+      nextCaseCounts[email] = { ...curr, recases: curr.recases + 1 };
+      setOpCaseCounts(nextCaseCounts);
     }
+
+    await saveCaseCountsToServer(nextCaseCounts, nextQueueState);
+  };
+
+  const adjustCaseCount = async (email: string, type: "cases" | "recases", delta: number) => {
+    const curr = opCaseCounts[email] || { cases: 0, recases: 0 };
+    const newVal = Math.max(0, curr[type] + delta);
+    const nextCaseCounts = { ...opCaseCounts, [email]: { ...curr, [type]: newVal } };
+    setOpCaseCounts(nextCaseCounts);
+    await saveCaseCountsToServer(nextCaseCounts, opQueueState);
   };
 
   // Post Queue report to Discord Webhook
   const handleSendToDiscord = async () => {
     setIsPosting(true);
     
-    // Group doctor names for report
     const activeList = doctors
       .filter(d => d.queueCategory === "active" || d.queueCategory === "receiving" || d.queueCategory === "recase")
       .map(d => {
@@ -331,68 +356,13 @@ export default function OpQueuePage() {
           <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: "24px" }}>
             คุณสามารถดูตารางเวร OP ได้ แต่ไม่สามารถจัดการคิวได้ (สิทธิ์เฉพาะแอดมินหรือ OP ประจำวัน)
           </p>
-
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "2px solid var(--border)", color: "var(--text-secondary)", fontWeight: 600 }}>วัน</th>
-                  <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "2px solid var(--border)", color: "var(--text-secondary)", fontWeight: 600 }}>แพทย์ OP ประจำวัน</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orderedDays.map((day) => {
-                  const ops = opSchedule[day] || [];
-                  const isToday = day === currentDay;
-                  return (
-                    <tr key={day} style={{
-                      background: isToday ? "rgba(59, 130, 246, 0.08)" : "transparent",
-                      transition: "background 0.2s"
-                    }}>
-                      <td style={{
-                        padding: "10px 12px",
-                        borderBottom: "1px solid var(--border)",
-                        fontWeight: isToday ? "bold" : "normal",
-                        color: isToday ? "var(--primary)" : "var(--text-primary)",
-                        whiteSpace: "nowrap"
-                      }}>
-                        {isToday && "👉 "}{scheduleDayTranslations[day]}
-                      </td>
-                      <td style={{
-                        padding: "10px 12px",
-                        borderBottom: "1px solid var(--border)",
-                        color: ops.length > 0 ? "var(--text-primary)" : "var(--text-muted)"
-                      }}>
-                        {ops.length > 0 ? (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                            {ops.map((name: string) => {
-                              const registeredDoc = registeredDoctors.find((d: any) => d.discordUsername === name);
-                              const displayName = registeredDoc?.name || name;
-                              return (
-                                <span key={name} style={{
-                                  background: isToday ? "var(--primary)" : "var(--bg-secondary)",
-                                  color: isToday ? "white" : "var(--text-primary)",
-                                  padding: "3px 10px",
-                                  borderRadius: "12px",
-                                  fontSize: "0.82rem",
-                                  fontWeight: isToday ? 600 : 400,
-                                  border: isToday ? "none" : "1px solid var(--border)"
-                                }}>
-                                  {displayName}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <span style={{ fontStyle: "italic" }}>(ยังไม่ได้กำหนด)</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <ScheduleTable
+            orderedDays={orderedDays}
+            opSchedule={opSchedule}
+            currentDay={currentDay}
+            scheduleDayTranslations={scheduleDayTranslations}
+            registeredDoctors={registeredDoctors}
+          />
         </div>
       </div>
     );
@@ -406,448 +376,465 @@ export default function OpQueuePage() {
 
   // Day translations for title
   const dayTranslations: Record<string, string> = {
-    Monday: "วันจันทร์",
-    Tuesday: "วันอังคาร",
-    Wednesday: "วันพุธ",
-    Thursday: "วันพฤหัสบดี",
-    Friday: "วันศุกร์",
-    Saturday: "วันเสาร์",
-    Sunday: "วันอาทิตย์"
+    Monday: "วันจันทร์", Tuesday: "วันอังคาร", Wednesday: "วันพุธ",
+    Thursday: "วันพฤหัสบดี", Friday: "วันศุกร์", Saturday: "วันเสาร์", Sunday: "วันอาทิตย์"
   };
 
-  // Computed: ownership check for toggle button
   const isUserAdmin = session?.user?.role === "admin";
-  const isOpOwner = opOpenedBy ? opOpenedBy.email === session?.user?.email : true; // if no opener stored, allow
+  const isOpOwner = opOpenedBy ? opOpenedBy.email === session?.user?.email : true;
 
+  // Stats for the top cards
+  const stats = [
+    { label: "เข้าเวรรับเคส", count: activeCol.length, color: "var(--success)", icon: <CheckIcon size={18} /> },
+    { label: "พักเวร / เหม่อ", count: skippedCol.length, color: "#f59e0b", icon: <ClockIcon size={18} /> },
+    { label: "หมอสตอรี่", count: storyCol.length, color: "#3b82f6", icon: <FileTextIcon size={18} /> },
+    { label: "ออกเวรแล้ว", count: inactiveCol.length, color: "var(--danger)", icon: <PowerIcon size={18} /> }
+  ];
 
   return (
     <div className="page-container">
-      <header className="page-header" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+      {/* Header */}
+      <header style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
         <div>
-          <h1 style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
-            <HospitalIcon className="text-[var(--accent)]" size={28} /> ระบบจัดการคิวแพทย์ (OP Dashboard)
+          <h1 style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, fontSize: "1.35rem" }}>
+            <HospitalIcon className="text-[var(--accent)]" size={26} /> ระบบจัดการคิวแพทย์ OP
           </h1>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px" }}>
-            <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-              จัดการกลุ่มคิวเข้าเวรของหมอ ประจำ{dayTranslations[currentDay] || currentDay}
+            <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
+              ประจำ{dayTranslations[currentDay] || currentDay}
             </span>
             <span
               style={{
-                fontSize: "0.75rem",
-                fontWeight: "bold",
+                fontSize: "0.72rem",
+                fontWeight: 600,
                 color: opActive ? "white" : "var(--text-secondary)",
                 background: opActive ? "var(--success)" : "var(--bg-secondary)",
-                padding: "2px 8px",
-                borderRadius: "12px",
-                border: "1px solid " + (opActive ? "transparent" : "var(--border)"),
+                padding: "2px 10px",
+                borderRadius: "var(--radius-full)",
+                border: `1px solid ${opActive ? "transparent" : "var(--border-subtle)"}`,
                 boxShadow: opActive ? "0 0 8px var(--accent-glow)" : "none",
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "6px"
+                gap: "5px"
               }}
             >
-              {opActive ? (
-                <>
-                  <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px rgba(16,185,129,0.6)" }} className="animate-pulse" />
-                  OP กำลังปฏิบัติงาน
-                </>
-              ) : (
-                <>
-                  <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "#ef4444" }} />
-                  ปิดปฏิบัติงาน OP
-                </>
-              )}
+              <span style={{
+                display: "inline-block", width: "7px", height: "7px", borderRadius: "50%",
+                background: opActive ? "#10b981" : "#ef4444",
+                boxShadow: opActive ? "0 0 6px rgba(16,185,129,0.6)" : "none"
+              }} className={opActive ? "animate-pulse" : ""} />
+              {opActive ? "OP กำลังปฏิบัติงาน" : "ปิดปฏิบัติงาน OP"}
             </span>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-          <span style={{ background: "var(--bg-secondary)", padding: "6px 12px", borderRadius: "20px", fontSize: "0.85rem", border: "1px solid var(--border)", color: "var(--text-secondary)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-            <CheckIcon size={14} className="text-emerald-500" /> กำลังบันทึกเบื้องหลัง: {isSavingQueue ? "จัดเก็บ..." : "เรียบร้อย"}
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{
+            background: "var(--bg-secondary)", padding: "5px 12px", borderRadius: "var(--radius-full)",
+            fontSize: "0.78rem", border: "1px solid var(--border-subtle)", color: "var(--text-muted)",
+            display: "inline-flex", alignItems: "center", gap: "4px"
+          }}>
+            <CheckIcon size={12} className="text-emerald-500" /> {isSavingQueue ? "บันทึก..." : "ซิงค์แล้ว"}
           </span>
           <button
             onClick={handleToggleOpActive}
             disabled={isTogglingActive || (opActive && !isOpOwner && !isUserAdmin)}
             title={opActive && !isOpOwner && !isUserAdmin && opOpenedBy ? `🔒 เฉพาะ ${opOpenedBy.discordUsername || opOpenedBy.email} เท่านั้นที่ปิดเวร OP ได้` : undefined}
             style={{
-              padding: "10px 20px",
+              padding: "8px 18px",
               background: (opActive && !isOpOwner && !isUserAdmin) ? "var(--bg-secondary)" : opActive ? "var(--danger)" : "var(--success)",
               color: (opActive && !isOpOwner && !isUserAdmin) ? "var(--text-muted)" : "white",
-              border: (opActive && !isOpOwner && !isUserAdmin) ? "1px solid var(--border)" : "none",
-              borderRadius: "8px",
+              border: (opActive && !isOpOwner && !isUserAdmin) ? "1px solid var(--border-subtle)" : "none",
+              borderRadius: "var(--radius-sm)",
               cursor: (opActive && !isOpOwner && !isUserAdmin) ? "not-allowed" : "pointer",
-              fontWeight: "bold",
-              fontSize: "0.9rem",
-              boxShadow: (opActive && !isOpOwner && !isUserAdmin) ? "none" : opActive ? "0 4px 6px rgba(239, 68, 68, 0.25)" : "0 4px 6px color-mix(in srgb, var(--accent) 25%, transparent)",
+              fontWeight: 600, fontSize: "0.82rem",
               transition: "all 0.2s"
             }}
           >
-            {isTogglingActive ? (
-              "กำลังสลับเวร..."
-            ) : (opActive && !isOpOwner && !isUserAdmin) ? (
-              <><LockIcon size={16} className="inline mr-1 align-text-top text-amber-500" /> ล็อค (ปิดได้เฉพาะคนเปิด)</>
-            ) : opActive ? (
-              <><PowerIcon size={16} className="inline mr-1 align-text-top" /> ปิดเวร OP</>
-            ) : (
-              <><PowerIcon size={16} className="inline mr-1 align-text-top" /> เปิดเวร OP</>
-            )}
+            {isTogglingActive ? "กำลังสลับเวร..." :
+              (opActive && !isOpOwner && !isUserAdmin) ? <><LockIcon size={14} className="inline mr-1 align-text-top text-amber-500" /> ล็อค</> :
+              opActive ? <><PowerIcon size={14} className="inline mr-1 align-text-top" /> ปิดเวร OP</> :
+              <><PowerIcon size={14} className="inline mr-1 align-text-top" /> เปิดเวร OP</>
+            }
           </button>
           {opActive && (
             <button
               onClick={handleSendToDiscord}
               disabled={isPosting}
               style={{
-                padding: "10px 20px",
-                background: "var(--primary)",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontWeight: "bold",
-                fontSize: "0.9rem",
-                boxShadow: "0 4px 6px rgba(59, 130, 246, 0.25)",
-                transition: "all 0.2s"
+                padding: "8px 18px", background: "var(--primary)", color: "white",
+                border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                fontWeight: 600, fontSize: "0.82rem", transition: "all 0.2s"
               }}
             >
-              {isPosting ? "กำลังซิงค์..." : <><span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>ซิงค์ข้อความ Discord <RefreshIcon size={16} /></span></>}
+              {isPosting ? "ซิงค์..." : <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>ซิงค์ Discord <RefreshIcon size={14} /></span>}
             </button>
           )}
         </div>
       </header>
 
-      {/* Ownership banner: show when OP is active and current user is not the opener */}
+      {/* Ownership banner */}
       {opActive && opOpenedBy && !isOpOwner && !isUserAdmin && (
         <div style={{
-          background: "rgba(245, 158, 11, 0.1)",
-          border: "1px solid rgba(245, 158, 11, 0.3)",
-          borderRadius: "10px",
-          padding: "12px 16px",
-          marginBottom: "16px",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          fontSize: "0.85rem",
-          color: "#f59e0b"
+          background: "rgba(245, 158, 11, 0.08)", border: "1px solid rgba(245, 158, 11, 0.2)",
+          borderRadius: "var(--radius-md)", padding: "10px 16px", marginBottom: "16px",
+          display: "flex", alignItems: "center", gap: "10px", fontSize: "0.82rem", color: "#f59e0b"
         }}>
-          <LockIcon size={20} className="text-amber-500 flex-shrink-0" />
+          <LockIcon size={18} className="text-amber-500 flex-shrink-0" />
           <span>
             <strong>{opOpenedBy.discordUsername || opOpenedBy.email}</strong> เป็นคนเปิดเวร OP (เฉพาะเขาเท่านั้นที่สามารถปิดเวร OP ได้ คุณยังสามารถจัดการคิวหมอได้ตามปกติค่ะ)
           </span>
         </div>
       )}
 
-      {/* Editor warnings */}
-      <section className="card" style={{ marginBottom: "24px", padding: "20px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "8px" }}>
-          <h3 style={{ fontSize: "0.95rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px", margin: 0 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <WarningIcon size={16} className="text-amber-500" /> คำเตือน / ประกาศพิเศษ (จะอัปเดตไปที่ดิสคอร์ด)
-            </span>
-          </h3>
-          {opActive && (
-            <button
-              onClick={handleSaveNotice}
-              disabled={isSavingNotice}
-              style={{
-                padding: "6px 12px",
-                background: "var(--primary)",
-                color: "white",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontWeight: "bold",
-                fontSize: "0.8rem",
-                transition: "all 0.2s",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px"
-              }}
-            >
-              {isSavingNotice ? "กำลังบันทึก..." : <><SaveIcon size={14} /> บันทึกประกาศ & อัปเดต Discord</>}
-            </button>
+      {/* Stats Row */}
+      {opActive && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "20px" }}>
+          {stats.map((s, i) => (
+            <div key={i} style={{
+              background: "var(--bg-card)", border: "1px solid var(--border-subtle)",
+              borderRadius: "var(--radius-md)", padding: "14px 16px",
+              display: "flex", alignItems: "center", gap: "12px",
+              transition: "border-color 0.2s"
+            }}>
+              <div style={{
+                width: "38px", height: "38px", borderRadius: "var(--radius-sm)",
+                background: `color-mix(in srgb, ${s.color} 12%, transparent)`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: s.color, flexShrink: 0
+              }}>
+                {s.icon}
+              </div>
+              <div>
+                <div style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.1 }}>{s.count}</div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>{s.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Main Content: 2-column layout */}
+      <div style={{ display: "grid", gridTemplateColumns: opActive ? "1fr 320px" : "1fr", gap: "20px" }}>
+        {/* LEFT: Queue Columns or Summary */}
+        <div>
+          {opActive ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
+              {/* Column 1: On-duty active */}
+              <QueueColumn
+                title="เข้าเวรรับเคส"
+                titleColor="var(--success)"
+                icon={<CheckIcon size={15} className="text-emerald-500" />}
+                count={activeCol.length}
+                doctors={activeCol}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, "active")}
+                onDragStart={handleDragStart}
+                onMove={moveDoctorCategory}
+                opCaseCounts={opCaseCounts}
+                onAdjustCase={adjustCaseCount}
+              />
+              {/* Column 2: Skipped */}
+              <QueueColumn
+                title="ข้ามเคส / เหม่อ"
+                titleColor="#f59e0b"
+                icon={<ClockIcon size={15} className="text-amber-500" />}
+                count={skippedCol.length}
+                doctors={skippedCol}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, "skipped")}
+                onDragStart={handleDragStart}
+                onMove={moveDoctorCategory}
+                opCaseCounts={opCaseCounts}
+                onAdjustCase={adjustCaseCount}
+              />
+              {/* Column 3: Story */}
+              <QueueColumn
+                title="รายชื่อหมอสตอรี่"
+                titleColor="#3b82f6"
+                icon={<FileTextIcon size={15} className="text-blue-500" />}
+                count={storyCol.length}
+                doctors={storyCol}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, "story")}
+                onDragStart={handleDragStart}
+                onMove={moveDoctorCategory}
+                opCaseCounts={opCaseCounts}
+                onAdjustCase={adjustCaseCount}
+              />
+              {/* Column 4: Inactive */}
+              <QueueColumn
+                title="ออกจากระบบ (ออกเวร)"
+                titleColor="var(--danger)"
+                icon={<PowerIcon size={15} className="text-red-500" />}
+                count={inactiveCol.length}
+                doctors={inactiveCol}
+                onDragStart={handleDragStart}
+                onMove={moveDoctorCategory}
+                opCaseCounts={opCaseCounts}
+                onAdjustCase={adjustCaseCount}
+                inactive
+              />
+            </div>
+          ) : doctors.length > 0 ? (
+            <section className="card" style={{ padding: "24px" }}>
+              <h3 style={{ fontSize: "1rem", marginBottom: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <ClipboardIcon className="text-[var(--accent)]" /> สรุปรายชื่อแพทย์ในรอบเวร OP ที่ผ่านมา
+              </h3>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginBottom: "20px" }}>
+                แสดงรายชื่อแพทย์ที่เข้าเวรและออกเวรในรอบ OP ล่าสุด
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "12px" }}>
+                {doctors.map(doc => {
+                  const isCompleted = doc.status === "completed";
+                  return (
+                    <div key={doc.email} style={{
+                      background: "var(--bg-card)", padding: "12px 14px", borderRadius: "var(--radius-md)",
+                      border: `1px solid ${isCompleted ? "var(--border-subtle)" : "color-mix(in srgb, var(--accent) 30%, transparent)"}`,
+                      display: "flex", alignItems: "center", gap: "10px",
+                      filter: isCompleted ? "grayscale(100%)" : "none",
+                      opacity: isCompleted ? 0.55 : 1, transition: "all 0.3s ease"
+                    }}>
+                      {doc.avatarUrl ? (
+                        <img src={doc.avatarUrl} alt="" style={{ width: "34px", height: "34px", borderRadius: "50%", border: "1px solid var(--border-subtle)", flexShrink: 0 }} />
+                      ) : (
+                        <div style={{ width: "34px", height: "34px", borderRadius: "50%",
+                          background: isCompleted ? "var(--bg-secondary)" : "color-mix(in srgb, var(--accent) 15%, transparent)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: "0.9rem", color: isCompleted ? "var(--text-muted)" : "var(--success)",
+                          fontWeight: "bold", flexShrink: 0 }}>
+                          {doc.name.charAt(0)}
+                        </div>
+                      )}
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{doc.name}</span>
+                          <span style={{
+                            fontSize: "0.6rem", background: isCompleted ? "var(--bg-secondary)" : "var(--success)",
+                            color: isCompleted ? "var(--text-muted)" : "white", padding: "1px 6px", borderRadius: "4px",
+                            fontWeight: "bold", flexShrink: 0, border: isCompleted ? "1px solid var(--border-subtle)" : "none"
+                          }}>
+                            {isCompleted ? "ออกเวร" : "เข้าเวร"}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>@{doc.discordUsername}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
+          {/* Schedule table shown below on non-active OR mobile */}
+          {!opActive && (
+            <section className="card" style={{ marginTop: "20px", padding: "24px" }}>
+              <h3 style={{ fontSize: "1rem", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <ClipboardIcon className="text-[var(--accent)]" /> ตารางเวร OP ประจำสัปดาห์
+              </h3>
+              <ScheduleTable
+                orderedDays={orderedDays}
+                opSchedule={opSchedule}
+                currentDay={currentDay}
+                scheduleDayTranslations={scheduleDayTranslations}
+                registeredDoctors={registeredDoctors}
+              />
+            </section>
           )}
         </div>
-        <textarea
-          value={notice}
-          onChange={(e) => setNotice(e.target.value)}
-          placeholder="กรอกคำเตือนสำหรับใส่ในหัวข้อประกาศ..."
-          style={{
-            width: "100%",
-            minHeight: "60px",
-            background: "var(--bg-secondary)",
-            border: "1px solid var(--border)",
-            borderRadius: "6px",
-            color: "var(--text-primary)",
-            padding: "10px",
-            fontSize: "0.85rem",
-            outline: "none",
-            resize: "vertical",
-            marginTop: "10px"
-          }}
-        />
-      </section>
 
-      {/* Queue columns (only when OP is active) */}
-      {opActive && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px" }}>
-          
-          {/* Column 1: On-duty active */}
-          <div
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => handleDrop(e, "active")}
-            style={{ background: "var(--bg-secondary)", borderRadius: "12px", border: "1px solid var(--border)", padding: "16px", display: "flex", flexDirection: "column", minHeight: "450px" }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
-              <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--success)", display: "flex", alignItems: "center", gap: "6px" }}>
-                <CheckIcon size={16} className="text-emerald-500" /> เข้าเวรรับเคส
-              </span>
-              <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
-                {activeCol.length}
-              </span>
-            </div>
-            
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
-              {activeCol.length === 0 ? (
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.8rem", padding: "20px", textAlign: "center" }}>
-                  ไม่มีหมออยู่ในกลุ่มนี้<br/>(ลากการ์ดมาวางที่นี่)
-                </div>
-              ) : (
-                activeCol.map(doc => (
-                  <DoctorCard key={doc.email} doctor={doc} onDragStart={handleDragStart} onMove={moveDoctorCategory} />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Column 2: Skipped */}
-          <div
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => handleDrop(e, "skipped")}
-            style={{ background: "var(--bg-secondary)", borderRadius: "12px", border: "1px solid var(--border)", padding: "16px", display: "flex", flexDirection: "column", minHeight: "450px" }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
-              <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#f59e0b", display: "flex", alignItems: "center", gap: "6px" }}>
-                <ClockIcon size={16} className="text-amber-500" /> ข้ามเคส / เหม่อ
-              </span>
-              <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
-                {skippedCol.length}
-              </span>
-            </div>
-            
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
-              {skippedCol.length === 0 ? (
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.8rem", padding: "20px", textAlign: "center" }}>
-                  ไม่มีหมออยู่ในกลุ่มนี้<br/>(ลากการ์ดมาวางที่นี่)
-                </div>
-              ) : (
-                skippedCol.map(doc => (
-                  <DoctorCard key={doc.email} doctor={doc} onDragStart={handleDragStart} onMove={moveDoctorCategory} />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Column 3: Story */}
-          <div
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => handleDrop(e, "story")}
-            style={{ background: "var(--bg-secondary)", borderRadius: "12px", border: "1px solid var(--border)", padding: "16px", display: "flex", flexDirection: "column", minHeight: "450px" }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
-              <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#3b82f6", display: "flex", alignItems: "center", gap: "6px" }}>
-                <FileTextIcon size={16} className="text-blue-500" /> รายชื่อหมอสตอรี่
-              </span>
-              <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
-                {storyCol.length}
-              </span>
-            </div>
-            
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
-              {storyCol.length === 0 ? (
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.8rem", padding: "20px", textAlign: "center" }}>
-                  ไม่มีหมออยู่ในกลุ่มนี้<br/>(ลากการ์ดมาวางที่นี่)
-                </div>
-              ) : (
-                storyCol.map(doc => (
-                  <DoctorCard key={doc.email} doctor={doc} onDragStart={handleDragStart} onMove={moveDoctorCategory} />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Column 4: Inactive Clocked-out */}
-          <div
-            style={{ background: "var(--bg-secondary)", borderRadius: "12px", border: "1px solid var(--border)", padding: "16px", display: "flex", flexDirection: "column", minHeight: "450px", opacity: 0.85 }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px", marginBottom: "12px" }}>
-              <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--danger)", display: "flex", alignItems: "center", gap: "6px" }}>
-                <PowerIcon size={16} className="text-red-500" /> ออกจากระบบ (ออกเวร)
-              </span>
-              <span style={{ background: "var(--bg-card)", fontSize: "0.75rem", padding: "2px 8px", borderRadius: "10px", color: "var(--text-muted)" }}>
-                {inactiveCol.length}
-              </span>
-            </div>
-            
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
-              {inactiveCol.length === 0 ? (
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.8rem", padding: "20px", textAlign: "center" }}>
-                  ไม่มีแพทย์ออกเวรล่าสุด<br/>(ภายใน 12 ชม.)
-                </div>
-              ) : (
-                inactiveCol.map(doc => (
-                  <DoctorCard key={doc.email} doctor={doc} onDragStart={handleDragStart} onMove={moveDoctorCategory} />
-                ))
-              )}
-            </div>
-          </div>
-
-        </div>
-      )}
-
-      {/* Summary card when OP is closed */}
-      {!opActive && doctors.length > 0 && (
-        <section className="card" style={{ padding: "24px" }}>
-          <h3 style={{ fontSize: "1rem", marginBottom: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
-            <ClipboardIcon className="text-[var(--accent)]" /> สรุปรายชื่อแพทย์ในรอบเวร OP ที่ผ่านมา
-          </h3>
-          <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginBottom: "20px" }}>
-            แสดงรายชื่อแพทย์ที่เข้าเวรและออกเวรในรอบ OP ล่าสุด
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "12px" }}>
-            {doctors.map(doc => {
-              const isCompleted = doc.status === "completed";
-              return (
-                <div
-                  key={doc.email}
+        {/* RIGHT: Side Panel (only when OP active) */}
+        {opActive && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {/* Notice / Warning */}
+            <section style={{
+              background: "var(--bg-card)", border: "1px solid var(--border-subtle)",
+              borderRadius: "var(--radius-md)", padding: "16px"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                <h4 style={{ fontSize: "0.82rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px", margin: 0 }}>
+                  <WarningIcon size={14} className="text-amber-500" /> ประกาศ / คำเตือน
+                </h4>
+                <button
+                  onClick={handleSaveNotice}
+                  disabled={isSavingNotice}
                   style={{
-                    background: "var(--bg-card)",
-                    padding: "12px 14px",
-                    borderRadius: "10px",
-                    border: `1px solid ${isCompleted ? "var(--border)" : "color-mix(in srgb, var(--accent) 30%, transparent)"}`,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    filter: isCompleted ? "grayscale(100%)" : "none",
-                    opacity: isCompleted ? 0.55 : 1,
-                    transition: "all 0.3s ease",
+                    padding: "4px 10px", background: "var(--primary)", color: "white",
+                    border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                    fontWeight: 600, fontSize: "0.7rem", transition: "all 0.2s",
+                    display: "inline-flex", alignItems: "center", gap: "4px"
                   }}
                 >
-                  {doc.avatarUrl ? (
-                    <img src={doc.avatarUrl} alt="" style={{ width: "34px", height: "34px", borderRadius: "50%", border: "1px solid var(--border)", flexShrink: 0 }} />
-                  ) : (
-                    <div style={{
-                      width: "34px", height: "34px", borderRadius: "50%",
-                      background: isCompleted ? "var(--bg-secondary)" : "color-mix(in srgb, var(--accent) 15%, transparent)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: "0.9rem",
-                      color: isCompleted ? "var(--text-muted)" : "var(--success)",
-                      fontWeight: "bold",
-                      flexShrink: 0
-                    }}>
-                      {doc.name.charAt(0)}
-                    </div>
-                  )}
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{doc.name}</span>
-                      <span style={{
-                        fontSize: "0.6rem",
-                        background: isCompleted ? "var(--bg-secondary)" : "var(--success)",
-                        color: isCompleted ? "var(--text-muted)" : "white",
-                        padding: "1px 6px",
-                        borderRadius: "4px",
-                        fontWeight: "bold",
-                        flexShrink: 0,
-                        border: isCompleted ? "1px solid var(--border)" : "none",
-                      }}>
-                        {isCompleted ? "ออกเวร" : "เข้าเวร"}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-                      @{doc.discordUsername}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                  {isSavingNotice ? "..." : <><SaveIcon size={12} /> บันทึก</>}
+                </button>
+              </div>
+              <textarea
+                value={notice}
+                onChange={(e) => setNotice(e.target.value)}
+                placeholder="กรอกคำเตือน..."
+                style={{
+                  width: "100%", minHeight: "60px", background: "var(--bg-secondary)",
+                  border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)",
+                  color: "var(--text-primary)", padding: "8px 10px", fontSize: "0.78rem",
+                  outline: "none", resize: "vertical"
+                }}
+              />
+            </section>
+
+            {/* Weekly Schedule */}
+            <section style={{
+              background: "var(--bg-card)", border: "1px solid var(--border-subtle)",
+              borderRadius: "var(--radius-md)", padding: "16px", flex: 1
+            }}>
+              <h4 style={{ fontSize: "0.82rem", marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px", color: "var(--text-primary)" }}>
+                <ClipboardIcon size={14} className="text-[var(--accent)]" /> ตารางเวร OP
+              </h4>
+              <ScheduleTable
+                orderedDays={orderedDays}
+                opSchedule={opSchedule}
+                currentDay={currentDay}
+                scheduleDayTranslations={scheduleDayTranslations}
+                registeredDoctors={registeredDoctors}
+                compact
+              />
+            </section>
           </div>
-        </section>
-      )}
-
-      {/* Weekly OP Schedule Table at the bottom for OP / Admin */}
-      <section className="card" style={{ marginTop: "32px", padding: "24px" }}>
-        <h3 style={{ fontSize: "1rem", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-          <ClipboardIcon className="text-[var(--accent)]" /> ตารางเวร OP ประจำสัปดาห์
-        </h3>
-        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: "20px" }}>
-          ตารางแสดงรายชื่อแพทย์ปฏิบัติหน้าที่ OP ประจำวันในสัปดาห์นี้
-        </p>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "2px solid var(--border)", color: "var(--text-secondary)", fontWeight: 600 }}>วัน</th>
-                <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "2px solid var(--border)", color: "var(--text-secondary)", fontWeight: 600 }}>แพทย์ OP ประจำวัน</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orderedDays.map((day) => {
-                const ops = opSchedule[day] || [];
-                const isToday = day === currentDay;
-                return (
-                  <tr key={day} style={{
-                    background: isToday ? "rgba(59, 130, 246, 0.08)" : "transparent",
-                    transition: "background 0.2s"
-                  }}>
-                    <td style={{
-                      padding: "10px 12px",
-                      borderBottom: "1px solid var(--border)",
-                      fontWeight: isToday ? "bold" : "normal",
-                      color: isToday ? "var(--primary)" : "var(--text-primary)",
-                      whiteSpace: "nowrap"
-                    }}>
-                      {isToday && "👉 "}{scheduleDayTranslations[day]}
-                    </td>
-                    <td style={{
-                      padding: "10px 12px",
-                      borderBottom: "1px solid var(--border)",
-                      color: ops.length > 0 ? "var(--text-primary)" : "var(--text-muted)"
-                    }}>
-                      {ops.length > 0 ? (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                          {ops.map((name: string) => {
-                            const registeredDoc = registeredDoctors.find((d: any) => d.discordUsername === name);
-                            const displayName = registeredDoc?.name || name;
-                            return (
-                              <span key={name} style={{
-                                background: isToday ? "var(--primary)" : "var(--bg-secondary)",
-                                color: isToday ? "white" : "var(--text-primary)",
-                                padding: "3px 10px",
-                                borderRadius: "12px",
-                                fontSize: "0.82rem",
-                                fontWeight: isToday ? 600 : 400,
-                                border: isToday ? "none" : "1px solid var(--border)"
-                              }}>
-                                {displayName}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <span style={{ fontStyle: "italic" }}>(ยังไม่ได้กำหนด)</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
+        )}
+      </div>
     </div>
   );
 }
 
+// ========== Schedule Table Component ==========
+function ScheduleTable({ orderedDays, opSchedule, currentDay, scheduleDayTranslations, registeredDoctors, compact }: {
+  orderedDays: string[];
+  opSchedule: Record<string, string[]>;
+  currentDay: string;
+  scheduleDayTranslations: Record<string, string>;
+  registeredDoctors: any[];
+  compact?: boolean;
+}) {
+  const fontSize = compact ? "0.78rem" : "0.9rem";
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", padding: compact ? "6px 8px" : "10px 12px", borderBottom: "2px solid var(--border-subtle)", color: "var(--text-secondary)", fontWeight: 600 }}>วัน</th>
+            <th style={{ textAlign: "left", padding: compact ? "6px 8px" : "10px 12px", borderBottom: "2px solid var(--border-subtle)", color: "var(--text-secondary)", fontWeight: 600 }}>แพทย์ OP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orderedDays.map((day) => {
+            const ops = opSchedule[day] || [];
+            const isToday = day === currentDay;
+            return (
+              <tr key={day} style={{ background: isToday ? "rgba(59, 130, 246, 0.08)" : "transparent", transition: "background 0.2s" }}>
+                <td style={{
+                  padding: compact ? "6px 8px" : "10px 12px",
+                  borderBottom: "1px solid var(--border-subtle)",
+                  fontWeight: isToday ? "bold" : "normal",
+                  color: isToday ? "var(--primary)" : "var(--text-primary)",
+                  whiteSpace: "nowrap", fontSize: compact ? "0.75rem" : undefined
+                }}>
+                  {isToday && "👉 "}{scheduleDayTranslations[day]}
+                </td>
+                <td style={{
+                  padding: compact ? "6px 8px" : "10px 12px",
+                  borderBottom: "1px solid var(--border-subtle)",
+                  color: ops.length > 0 ? "var(--text-primary)" : "var(--text-muted)"
+                }}>
+                  {ops.length > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                      {ops.map((name: string) => {
+                        const registeredDoc = registeredDoctors.find((d: any) => d.discordUsername === name);
+                        const displayName = registeredDoc?.name || name;
+                        return (
+                          <span key={name} style={{
+                            background: isToday ? "var(--primary)" : "var(--bg-secondary)",
+                            color: isToday ? "white" : "var(--text-primary)",
+                            padding: compact ? "1px 7px" : "3px 10px",
+                            borderRadius: "var(--radius-full)",
+                            fontSize: compact ? "0.68rem" : "0.82rem",
+                            fontWeight: isToday ? 600 : 400,
+                            border: isToday ? "none" : "1px solid var(--border-subtle)"
+                          }}>
+                            {displayName}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <span style={{ fontStyle: "italic", fontSize: compact ? "0.7rem" : undefined }}>(ยังไม่กำหนด)</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ========== Queue Column Component ==========
+interface QueueColumnProps {
+  title: string;
+  titleColor: string;
+  icon: React.ReactNode;
+  count: number;
+  doctors: DoctorEntry[];
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onDragStart: (e: React.DragEvent, email: string) => void;
+  onMove: (email: string, category: "active" | "receiving" | "recase" | "skipped" | "story" | "inactive") => void;
+  opCaseCounts: Record<string, { cases: number; recases: number }>;
+  onAdjustCase: (email: string, type: "cases" | "recases", delta: number) => void;
+  inactive?: boolean;
+}
+
+function QueueColumn({ title, titleColor, icon, count, doctors, onDragOver, onDrop, onDragStart, onMove, opCaseCounts, onAdjustCase, inactive }: QueueColumnProps) {
+  return (
+    <div
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      style={{
+        background: "var(--bg-secondary)", borderRadius: "var(--radius-md)",
+        border: "1px solid var(--border-subtle)", padding: "14px",
+        display: "flex", flexDirection: "column", minHeight: "380px",
+        opacity: inactive ? 0.8 : 1
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px", marginBottom: "10px" }}>
+        <span style={{ fontSize: "0.82rem", fontWeight: 600, color: titleColor, display: "flex", alignItems: "center", gap: "5px" }}>
+          {icon} {title}
+        </span>
+        <span style={{ background: "var(--bg-card)", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "var(--radius-full)", color: "var(--text-muted)" }}>
+          {count}
+        </span>
+      </div>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+        {doctors.length === 0 ? (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", border: "1px dashed var(--border-subtle)", borderRadius: "var(--radius-sm)", color: "var(--text-muted)", fontSize: "0.75rem", padding: "16px", textAlign: "center" }}>
+            ไม่มีหมอในกลุ่มนี้<br/>(ลากการ์ดมาวางที่นี่)
+          </div>
+        ) : (
+          doctors.map(doc => (
+            <DoctorCard
+              key={doc.email}
+              doctor={doc}
+              onDragStart={onDragStart}
+              onMove={onMove}
+              caseCounts={opCaseCounts[doc.email] || { cases: 0, recases: 0 }}
+              onAdjustCase={onAdjustCase}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ========== Skipped Timer ==========
 function SkippedTimer({ startTime }: { startTime: number }) {
   const [elapsed, setElapsed] = useState(0);
 
@@ -866,257 +853,176 @@ function SkippedTimer({ startTime }: { startTime: number }) {
 
   return (
     <span style={{
-      fontSize: "0.65rem",
-      fontFamily: "monospace",
-      background: "rgba(245, 158, 11, 0.15)",
-      color: "#f59e0b",
-      padding: "1px 6px",
-      borderRadius: "4px",
-      fontWeight: "bold",
-      letterSpacing: "0.5px"
+      fontSize: "0.62rem", fontFamily: "var(--font-mono)",
+      background: "rgba(245, 158, 11, 0.12)", color: "#f59e0b",
+      padding: "1px 6px", borderRadius: "4px", fontWeight: 600, letterSpacing: "0.5px"
     }}>
       <span className="inline-flex items-center gap-1">
-        <ClockIcon size={10} className="text-amber-500" />
+        <ClockIcon size={9} className="text-amber-500" />
         {hours > 0 ? `${pad(hours)}:` : ''}{pad(minutes)}:{pad(seconds)}
       </span>
     </span>
   );
 }
 
+// ========== Shift Duration Timer ==========
+function ShiftDurationTimer({ clockIn }: { clockIn: string }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const clockInTime = new Date(clockIn).getTime();
+    setElapsed(Math.floor((Date.now() - clockInTime) / 1000));
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - clockInTime) / 1000));
+    }, 60000); // update every minute
+    return () => clearInterval(interval);
+  }, [clockIn]);
+
+  const hours = Math.floor(elapsed / 3600);
+  const minutes = Math.floor((elapsed % 3600) / 60);
+
+  let display = "";
+  if (hours > 0) {
+    display = `${hours} ชม. ${minutes} นาที`;
+  } else {
+    display = `${minutes} นาที`;
+  }
+
+  return (
+    <span style={{
+      fontSize: "0.6rem", fontFamily: "var(--font-mono)",
+      background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+      color: "var(--accent-light)", padding: "1px 6px", borderRadius: "4px",
+      fontWeight: 500, display: "inline-flex", alignItems: "center", gap: "3px"
+    }}>
+      ⏱️ {display}
+    </span>
+  );
+}
+
+// ========== Doctor Card ==========
 interface DoctorCardProps {
   doctor: DoctorEntry;
   onDragStart: (e: React.DragEvent, email: string) => void;
   onMove: (email: string, category: "active" | "receiving" | "recase" | "skipped" | "story" | "inactive") => void;
+  caseCounts: { cases: number; recases: number };
+  onAdjustCase: (email: string, type: "cases" | "recases", delta: number) => void;
 }
 
-function DoctorCard({ doctor, onDragStart, onMove }: DoctorCardProps) {
+function DoctorCard({ doctor, onDragStart, onMove, caseCounts, onAdjustCase }: DoctorCardProps) {
   const isDraggable = doctor.status === "active";
+
+  const tinyBtnStyle = (bg: string, border: string): React.CSSProperties => ({
+    width: "20px", height: "20px", borderRadius: "4px", cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: "0.7rem", fontWeight: 700, transition: "all 0.15s",
+    background: bg, border: `1px solid ${border}`, color: "var(--text-secondary)",
+    lineHeight: 1, padding: 0
+  });
+
+  const actionBtnStyle = (bg: string, border: string): React.CSSProperties => ({
+    width: "26px", height: "26px", background: bg, border: `1px solid ${border}`,
+    borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center",
+    justifyContent: "center", fontSize: "0.85rem", transition: "all 0.15s"
+  });
   
   return (
     <div
       draggable={isDraggable}
       onDragStart={(e) => onDragStart(e, doctor.email)}
       style={{
-        background: "var(--bg-card)",
-        padding: "10px 12px",
-        borderRadius: "8px",
-        border: "1px solid var(--border-subtle)",
-        cursor: isDraggable ? "grab" : "default",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "12px",
-        userSelect: "none",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-        transition: "transform 0.2s, border-color 0.2s"
+        background: "var(--bg-card)", padding: "10px 12px", borderRadius: "var(--radius-sm)",
+        border: "1px solid var(--border-subtle)", cursor: isDraggable ? "grab" : "default",
+        display: "flex", flexDirection: "column", gap: "6px",
+        userSelect: "none", transition: "border-color 0.2s"
       }}
-      onMouseOver={e => {
-        if (isDraggable) e.currentTarget.style.borderColor = "var(--primary)";
-      }}
-      onMouseOut={e => {
-        e.currentTarget.style.borderColor = "var(--border-subtle)";
-      }}
+      onMouseOver={e => { if (isDraggable) e.currentTarget.style.borderColor = "var(--primary)"; }}
+      onMouseOut={e => { e.currentTarget.style.borderColor = "var(--border-subtle)"; }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
+      {/* Row 1: Avatar + Name + Status Badges */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         {doctor.avatarUrl ? (
-          <img src={doctor.avatarUrl} alt="" style={{ width: "32px", height: "32px", borderRadius: "50%", border: "1px solid var(--border)", flexShrink: 0 }} />
+          <img src={doctor.avatarUrl} alt="" style={{ width: "30px", height: "30px", borderRadius: "50%", border: "1px solid var(--border-subtle)", flexShrink: 0 }} />
         ) : (
-          <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "var(--bg-secondary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", color: "var(--text-secondary)", flexShrink: 0 }}>
+          <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: "var(--bg-secondary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.85rem", color: "var(--text-secondary)", flexShrink: 0 }}>
             {doctor.name.charAt(0)}
           </div>
         )}
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+          <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap" }}>
             <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{doctor.name}</span>
             {doctor.queueCategory === "receiving" && (
-              <span className="animate-pulse" style={{
-                fontSize: "0.6rem",
-                background: "var(--success)",
-                color: "white",
-                padding: "1px 5px",
-                borderRadius: "3px",
-                fontWeight: "bold",
-                flexShrink: 0,
-                boxShadow: "0 0 6px var(--accent-glow)"
-              }}>
-                รับเคส
-              </span>
+              <span className="animate-pulse" style={{ fontSize: "0.58rem", background: "var(--success)", color: "white", padding: "1px 5px", borderRadius: "3px", fontWeight: 700, flexShrink: 0, boxShadow: "0 0 6px var(--accent-glow)" }}>รับเคส</span>
             )}
             {doctor.queueCategory === "recase" && (
-              <span className="animate-pulse" style={{
-                fontSize: "0.6rem",
-                background: "#f59e0b",
-                color: "white",
-                padding: "1px 5px",
-                borderRadius: "3px",
-                fontWeight: "bold",
-                flexShrink: 0,
-                boxShadow: "0 0 6px rgba(245, 158, 11, 0.4)"
-              }}>
-                Re-Case
-              </span>
+              <span className="animate-pulse" style={{ fontSize: "0.58rem", background: "#f59e0b", color: "white", padding: "1px 5px", borderRadius: "3px", fontWeight: 700, flexShrink: 0, boxShadow: "0 0 6px rgba(245, 158, 11, 0.4)" }}>Re-Case</span>
             )}
             {doctor.queueCategory === "skipped" && doctor.skippedAt && (
               <SkippedTimer startTime={doctor.skippedAt} />
             )}
           </div>
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-            @{doctor.discordUsername}
+          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "1px" }}>
+            <span>@{doctor.discordUsername}</span>
+            {doctor.clockIn && doctor.status === "active" && <ShiftDurationTimer clockIn={doctor.clockIn} />}
           </div>
         </div>
       </div>
 
-      {/* 4 Small Buttons next to the name for active doctors */}
+      {/* Row 2: Case Counts + Action Buttons */}
       {isDraggable && (
-        <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
-          {/* Button 1: รับเคส / คืนคิว — ซ่อนเมื่ออยู่ในคอลัมน์เหม่อหรือสตอรี่ */}
-          {doctor.queueCategory !== "skipped" && doctor.queueCategory !== "story" && (
-            doctor.queueCategory !== "receiving" ? (
-              <button
-                onClick={() => onMove(doctor.email, "receiving")}
-                title="รับเคส"
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  background: "color-mix(in srgb, var(--accent) 10%, transparent)",
-                  border: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "0.9rem",
-                  transition: "all 0.15s"
-                }}
-                onMouseOver={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 25%, transparent)"}
-                onMouseOut={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 10%, transparent)"}
-              >
-                <CheckIcon size={14} className="text-emerald-500" />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", marginTop: "2px" }}>
+          {/* Case counters */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            {/* Cases */}
+            <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+              <button onClick={() => onAdjustCase(doctor.email, "cases", -1)} style={tinyBtnStyle("rgba(239,68,68,0.08)", "rgba(239,68,68,0.15)")}>-</button>
+              <span style={{ fontSize: "0.65rem", fontFamily: "var(--font-mono)", color: "var(--success)", fontWeight: 600, minWidth: "28px", textAlign: "center" }}>
+                🟢 {caseCounts.cases}
+              </span>
+              <button onClick={() => onAdjustCase(doctor.email, "cases", 1)} style={tinyBtnStyle("rgba(16,185,129,0.08)", "rgba(16,185,129,0.15)")}>+</button>
+            </div>
+            {/* Re-cases */}
+            <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+              <button onClick={() => onAdjustCase(doctor.email, "recases", -1)} style={tinyBtnStyle("rgba(239,68,68,0.08)", "rgba(239,68,68,0.15)")}>-</button>
+              <span style={{ fontSize: "0.65rem", fontFamily: "var(--font-mono)", color: "#f59e0b", fontWeight: 600, minWidth: "28px", textAlign: "center" }}>
+                🟡 {caseCounts.recases}
+              </span>
+              <button onClick={() => onAdjustCase(doctor.email, "recases", 1)} style={tinyBtnStyle("rgba(245,158,11,0.08)", "rgba(245,158,11,0.15)")}>+</button>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: "3px", flexShrink: 0 }}>
+            {doctor.queueCategory !== "skipped" && doctor.queueCategory !== "story" && (
+              doctor.queueCategory !== "receiving" ? (
+                <button onClick={() => onMove(doctor.email, "receiving")} title="รับเคส" style={actionBtnStyle("color-mix(in srgb, var(--accent) 10%, transparent)", "color-mix(in srgb, var(--accent) 20%, transparent)")}>
+                  <CheckIcon size={13} className="text-emerald-500" />
+                </button>
+              ) : (
+                <button onClick={() => onMove(doctor.email, "active")} title="คืนคิวปกติ" style={actionBtnStyle("rgba(239, 68, 68, 0.1)", "rgba(239, 68, 68, 0.2)")}>
+                  <ReturnIcon size={13} className="text-red-500" />
+                </button>
+              )
+            )}
+
+            {doctor.queueCategory !== "skipped" && doctor.queueCategory !== "story" && (
+              doctor.queueCategory !== "recase" ? (
+                <button onClick={() => onMove(doctor.email, "recase")} title="Re-Case" style={actionBtnStyle("rgba(245, 158, 11, 0.1)", "rgba(245, 158, 11, 0.2)")}>
+                  <RefreshIcon size={13} className="text-amber-500" />
+                </button>
+              ) : (
+                <button onClick={() => onMove(doctor.email, "active")} title="คืนคิวปกติ" style={actionBtnStyle("rgba(239, 68, 68, 0.1)", "rgba(239, 68, 68, 0.2)")}>
+                  <ReturnIcon size={13} className="text-red-500" />
+                </button>
+              )
+            )}
+
+            {(doctor.queueCategory === "skipped" || doctor.queueCategory === "story") && (
+              <button onClick={() => onMove(doctor.email, "active")} title="คืนคิวปกติ" style={actionBtnStyle("color-mix(in srgb, var(--accent) 10%, transparent)", "color-mix(in srgb, var(--accent) 20%, transparent)")}>
+                <CheckIcon size={13} className="text-emerald-500" />
               </button>
-            ) : (
-              <button
-                onClick={() => onMove(doctor.email, "active")}
-                title="คืนคิวปกติ"
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  background: "rgba(239, 68, 68, 0.1)",
-                  border: "1px solid rgba(239, 68, 68, 0.2)",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "0.85rem",
-                  transition: "all 0.15s"
-                }}
-                onMouseOver={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)"}
-                onMouseOut={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)"}
-              >
-                <ReturnIcon size={14} className="text-red-500" />
-              </button>
-            )
-          )}
-
-          {/* Button 2: Re-Case / คืนคิว — ซ่อนเมื่ออยู่ในคอลัมน์เหม่อหรือสตอรี่ */}
-          {doctor.queueCategory !== "skipped" && doctor.queueCategory !== "story" && (
-            doctor.queueCategory !== "recase" ? (
-            <button
-              onClick={() => onMove(doctor.email, "recase")}
-              title="Re-Case"
-              style={{
-                width: "28px",
-                height: "28px",
-                background: "rgba(245, 158, 11, 0.1)",
-                border: "1px solid rgba(245, 158, 11, 0.2)",
-                borderRadius: "6px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.9rem",
-                transition: "all 0.15s"
-              }}
-              onMouseOver={e => e.currentTarget.style.background = "rgba(245, 158, 11, 0.25)"}
-              onMouseOut={e => e.currentTarget.style.background = "rgba(245, 158, 11, 0.1)"}
-            >
-              <RefreshIcon size={14} className="text-amber-500" />
-            </button>
-          ) : (
-            <button
-              onClick={() => onMove(doctor.email, "active")}
-              title="คืนคิวปกติ"
-              style={{
-                width: "28px",
-                height: "28px",
-                background: "rgba(239, 68, 68, 0.1)",
-                border: "1px solid rgba(239, 68, 68, 0.2)",
-                borderRadius: "6px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.85rem",
-                transition: "all 0.15s"
-              }}
-              onMouseOver={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)"}
-              onMouseOut={e => e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)"}
-            >
-              <ReturnIcon size={14} className="text-red-500" />
-            </button>
-            )
-          )}
-
-          {/* Button 3: คืนคิวปกติสำหรับหมอที่อยู่ในกลุ่มเหม่อ */}
-          {doctor.queueCategory === "skipped" && (
-            <button
-              onClick={() => onMove(doctor.email, "active")}
-              title="คืนคิวปกติ"
-              style={{
-                width: "28px",
-                height: "28px",
-                background: "color-mix(in srgb, var(--accent) 10%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
-                borderRadius: "6px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.9rem",
-                transition: "all 0.15s"
-              }}
-              onMouseOver={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 25%, transparent)"}
-              onMouseOut={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 10%, transparent)"}
-            >
-              <CheckIcon size={14} className="text-emerald-500" />
-            </button>
-          )}
-
-          {/* Button 4: คืนคิวปกติสำหรับหมอที่อยู่ในกลุ่มสตอรี่ */}
-          {doctor.queueCategory === "story" && (
-            <button
-              onClick={() => onMove(doctor.email, "active")}
-              title="คืนคิวปกติ"
-              style={{
-                width: "28px",
-                height: "28px",
-                background: "color-mix(in srgb, var(--accent) 10%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
-                borderRadius: "6px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.9rem",
-                transition: "all 0.15s"
-              }}
-              onMouseOver={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 25%, transparent)"}
-              onMouseOut={e => e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 10%, transparent)"}
-            >
-              <CheckIcon size={14} className="text-emerald-500" />
-            </button>
-          )}
-
+            )}
+          </div>
         </div>
       )}
     </div>

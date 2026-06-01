@@ -84,6 +84,7 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
     const opSchedule = settings.op_schedule || {};
     const registeredDoctors = settings.registered_doctors || [];
     const opQueueState = settings.op_queue_state || {};
+    const opCaseCounts = settings.op_case_counts || {};
 
     // If OP is not active, we do not sync updates to Discord unless forced
     if (!opActive && !forceNewMessage && !forceUpdate) {
@@ -100,7 +101,7 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
     }
 
     // 4. Group doctors
-    const doctors: Array<{ email: string; name: string; discordUsername: string; status: string; queueCategory: string }> = [];
+    const doctors: Array<{ email: string; name: string; discordUsername: string; status: string; queueCategory: string; cases?: number; recases?: number }> = [];
     const addedEmails = new Set<string>();
 
     if (activeShifts) {
@@ -113,13 +114,16 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
         const discordUsername = registered?.discordUsername || shift.discord_username || "";
         const rawCat = opQueueState[email] || "active";
         const qCategory = rawCat.startsWith("skipped:") ? "skipped" : rawCat;
+        const counts = opCaseCounts[email] || { cases: 0, recases: 0 };
 
         doctors.push({
           email,
           name,
           discordUsername,
           status: "active",
-          queueCategory: qCategory
+          queueCategory: qCategory,
+          cases: counts.cases || 0,
+          recases: counts.recases || 0
         });
         addedEmails.add(email);
       });
@@ -145,19 +149,27 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
       });
     }
 
+    const formatCounts = (d: typeof doctors[0]) => {
+      const parts: string[] = [];
+      if (d.cases && d.cases > 0) parts.push(`🟢 ${d.cases} เคส`);
+      if (d.recases && d.recases > 0) parts.push(`🟡 ${d.recases} รีเคส`);
+      return parts.length > 0 ? ` [${parts.join(" | ")}]` : "";
+    };
+
     const activeList = doctors
       .filter(d => d.queueCategory === "active" || d.queueCategory === "receiving" || d.queueCategory === "recase")
       .map(d => {
+        const counts = formatCounts(d);
         if (d.queueCategory === "receiving") {
-          return `${d.name} **(รับเคส)**`;
+          return `${d.name} **(รับเคส)**${counts}`;
         }
         if (d.queueCategory === "recase") {
-          return `${d.name} **(Re-Case)**`;
+          return `${d.name} **(Re-Case)**${counts}`;
         }
-        return d.name;
+        return `${d.name}${counts}`;
       });
-    const skippedList = doctors.filter(d => d.queueCategory === "skipped").map(d => d.name);
-    const storyList = doctors.filter(d => d.queueCategory === "story").map(d => d.name);
+    const skippedList = doctors.filter(d => d.queueCategory === "skipped").map(d => `${d.name}${formatCounts(d)}`);
+    const storyList = doctors.filter(d => d.queueCategory === "story").map(d => `${d.name}${formatCounts(d)}`);
     const inactiveList = doctors.filter(d => d.queueCategory === "inactive").map(d => d.name);
 
     // 5. Determine today's day & OP details
@@ -442,11 +454,12 @@ export async function teardownOpQueue() {
       console.error(`[OP Teardown] Discord API returned ${postRes.status} for summary: ${errText}`);
     }
 
-    // 7. Clear state, message ID, and OP owner
+    // 7. Clear state, message ID, OP owner, and case counts
     await Promise.all([
       supabase.from("system_settings").upsert({ key: "op_discord_message_id", value: null }, { onConflict: "key" }),
       supabase.from("system_settings").upsert({ key: "op_queue_state", value: {} }, { onConflict: "key" }),
-      supabase.from("system_settings").upsert({ key: "op_opened_by", value: null }, { onConflict: "key" })
+      supabase.from("system_settings").upsert({ key: "op_opened_by", value: null }, { onConflict: "key" }),
+      supabase.from("system_settings").upsert({ key: "op_case_counts", value: {} }, { onConflict: "key" })
     ]);
   } catch (err: any) {
     console.error("[OP Teardown] Error in teardownOpQueue:", err);
