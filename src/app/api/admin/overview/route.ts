@@ -51,10 +51,28 @@ export async function GET() {
       }
     });
 
-    const overview = Object.values(userMap).map(u => ({
-      ...u,
-      totalHours: parseFloat((u.totalMinutes / 60).toFixed(1))
-    })).sort((a, b) => b.totalHours - a.totalHours);
+    let registeredDoctors: Array<{ email?: string; name?: string }> = [];
+    try {
+      const { data: settingsData } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "registered_doctors")
+        .single();
+      if (settingsData?.value) {
+        registeredDoctors = settingsData.value;
+      }
+    } catch {
+      // safe ignore
+    }
+
+    const overview = Object.values(userMap).map(u => {
+      const docRecord = registeredDoctors.find(d => d.email === u.email);
+      return {
+        ...u,
+        name: docRecord?.name || u.name,
+        totalHours: parseFloat((u.totalMinutes / 60).toFixed(1))
+      };
+    }).sort((a, b) => b.totalHours - a.totalHours);
 
     return NextResponse.json({ overview, totalShifts: shifts?.length || 0 });
   } catch (error) {

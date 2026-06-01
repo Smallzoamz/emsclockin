@@ -329,3 +329,6 @@
 
 ## [2026-06-02 05:50] | File: multiple | Line: 1 | Keyword: TS & ESLint Fixes for Discord settings | Status: ✅ Complete | Change: Resolved all TypeScript errors and ESLint warnings/errors in the discord bot settings migration files. Fixed explicit any issues, type assertions, unused catch parameters, and unescaped entity quote marks in auth callback configurations, sync-nicknames API route, and Master settings page.
 
+## [2026-06-02 06:31] | File: multiple | Line: 1 | Keyword: Resolve Names Globally & Show Rank in Admin Cards | Status: ✅ Complete | Change: Standardized doctor name queries to always use custom names from registered_doctors or synced Discord names. Fixed sidebar, ranking page, and admin overview APIs. Updated admin card UI in Admin page to show Rank (ยศ) on the second line under username with "นร.แพทย์" as default fallback.
+
+

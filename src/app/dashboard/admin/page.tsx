@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { formatThaiDate, formatHoursToHHMMSS, formatDuration } from "@/lib/utils";
-import { getSession } from "next-auth/react";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { CrownIcon, CameraIcon, TrashIcon, RefreshIcon, SaveIcon, UsersIcon, HospitalIcon } from "@/components/Icons";
 
@@ -27,7 +26,6 @@ interface ShiftDetail {
 
 export default function AdminDashboardPage() {
   const confirm = useConfirm();
-  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
 
   const [overview, setOverview] = useState<AdminOverviewEntry[]>([]);
   const [totalShifts, setTotalShifts] = useState(0);
@@ -48,6 +46,8 @@ export default function AdminDashboardPage() {
 
   // OP Schedule & Settings State
   const [registeredDoctors, setRegisteredDoctors] = useState<Array<{ email: string, name: string, discordUsername: string, avatarUrl?: string, discordId?: string }>>([]);
+  const [doctorRanks, setDoctorRanks] = useState<Array<{ id: string; name: string; rate: number }>>([]);
+  const [userRanks, setUserRanks] = useState<Record<string, string>>({});
   const [opSchedule, setOpSchedule] = useState<Record<string, Array<string>>>({
     Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [], Saturday: [], Sunday: []
   });
@@ -57,13 +57,6 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     document.title = "แดชบอร์ดแอดมิน | EMS Clock-in";
-    // Get Session and determine Master Admin
-    getSession().then((session) => {
-      const user = session?.user as any;
-      if (user && user.role === "admin" && !user.discordId) {
-        setIsMasterAdmin(true);
-      }
-    });
 
     // Fetch Settings
     fetch("/api/admin/settings")
@@ -74,6 +67,12 @@ export default function AdminDashboardPage() {
         }
         if (data.settings?.daily_min_hours) {
           setDailyMinHours(Number(data.settings.daily_min_hours));
+        }
+        if (data.settings?.doctor_ranks) {
+          setDoctorRanks(data.settings.doctor_ranks);
+        }
+        if (data.settings?.user_ranks) {
+          setUserRanks(data.settings.user_ranks);
         }
       })
       .catch(err => console.error("Failed to load settings:", err));
@@ -144,7 +143,7 @@ export default function AdminDashboardPage() {
     });
   };
 
-  const saveOpSettings = async (updatedSchedule: any, mode: string) => {
+  const saveOpSettings = async (updatedSchedule: Record<string, string[]>, mode: string) => {
     setIsSavingOpSettings(true);
     try {
       await Promise.all([
@@ -160,7 +159,7 @@ export default function AdminDashboardPage() {
         })
       ]);
       alert("บันทึกตารางเวรและโหมดการทำงาน OP สำเร็จ");
-    } catch (err) {
+    } catch {
       alert("บันทึกไม่สำเร็จ");
     } finally {
       setIsSavingOpSettings(false);
@@ -190,7 +189,7 @@ export default function AdminDashboardPage() {
       } else {
         alert(data.error || "เกิดข้อผิดพลาดในการซิงค์");
       }
-    } catch (err) {
+    } catch {
       alert("เกิดข้อผิดพลาดในการซิงค์");
     } finally {
       setIsSyncingNicknames(false);
@@ -258,7 +257,7 @@ export default function AdminDashboardPage() {
         })
       ]);
       alert("บันทึกการตั้งค่าสำเร็จ");
-    } catch (err) {
+    } catch {
       alert("บันทึกไม่สำเร็จ");
     } finally {
       setIsSavingSettings(false);
@@ -311,8 +310,8 @@ export default function AdminDashboardPage() {
       setUserShifts(prev =>
         prev.map(s => s.id === shiftId ? { ...s, is_deducted: !currentlyDeducted } : s)
       );
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      alert((err as Error).message);
     }
   };
 
@@ -414,9 +413,13 @@ export default function AdminDashboardPage() {
                     <div className="admin-name">
                       {entry.discordUsername ? `@${entry.discordUsername}` : entry.name}
                     </div>
-                    {entry.discordUsername && entry.name && (
-                      <div className="admin-subname">{entry.name}</div>
-                    )}
+                    <div className="admin-subname">
+                      {(() => {
+                        const userRankId = userRanks[entry.email];
+                        const rankObj = doctorRanks.find((r) => r.id === userRankId);
+                        return rankObj ? rankObj.name : "นร.แพทย์";
+                      })()}
+                    </div>
                     <div className="admin-email">{entry.email}</div>
                   </div>
                   

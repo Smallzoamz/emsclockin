@@ -233,6 +233,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             updatedAt: new Date().toISOString()
           };
 
+          token.name = finalName;
+
           if (existingIdx > -1) {
             registeredDoctors[existingIdx] = {
               ...registeredDoctors[existingIdx],
@@ -258,6 +260,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         user.discordUsername = token.discordUsername;
         user.avatar = token.avatar || token.discordAvatar;
         user.role = token.role;
+        if (typeof token.name === "string") {
+          user.name = token.name;
+        }
       }
       return session;
     },

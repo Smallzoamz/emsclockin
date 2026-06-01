@@ -61,7 +61,7 @@ export async function GET() {
         
         if (pastHistory) {
           for (const history of pastHistory) {
-            const entry = history.snapshot_data.find((e: any) => 
+            const entry = (history.snapshot_data as Array<{ email?: string; discordUsername?: string; name?: string; totalHours?: number; appliedRate?: number }> || []).find((e) => 
                (user.email && e.email === user.email) ||
                (user.discordUsername && e.discordUsername === user.discordUsername) ||
                (user.name && e.name === user.name)
@@ -82,17 +82,18 @@ export async function GET() {
           }
         }
 
-        const docRecord = (registeredDoctors || []).find((d: any) => 
+        const docRecord = (registeredDoctors as Array<{ email?: string; name?: string; discordUsername?: string; discordId?: string }> || []).find((d) => 
           (user.email && d.email === user.email) ||
           (user.discordUsername && d.discordUsername === user.discordUsername)
         );
+        const resolvedName = docRecord?.name || user.name;
         const discordId = docRecord?.discordId || null;
 
         const currentWeekHours = parseFloat((user.totalMinutes / 60).toFixed(1));
 
         return {
           email: user.email,
-          name: user.name,
+          name: resolvedName,
           discordUsername: user.discordUsername,
           discordId: discordId,
           currentWeekHours: currentWeekHours,
