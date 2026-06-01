@@ -283,3 +283,5 @@
 
 ## [2026-06-01 09:20] | File: multiple | Line: 1 | Keyword: UI/UX Overhaul & Optimization | Status: ✅ Complete | Change: Completed UI/UX overhaul of the FiveM Clock-in system. Declared `--primary` color variables in globals.css, upgraded typography to Outfit, replaced text gradients, smoothed transitions by replacing bouncy easing curves with exponential transitions, removed redundant borders on lists/buttons, replaced UI em-dashes to clear AI slop alerts, and refactored layout.tsx dynamic style overrides to use split-string inline CSS properties on the html tag to resolve the remaining false-positive em-dash warning. Verified 0 anti-patterns with impeccable detect and built successfully.
 
+## [2026-06-01 09:34] | File: src/app/globals.css | Line: 3199 | Keyword: Add Portal Styles | Status: ✅ Complete | Change: Appended styling code for the landing page portal (split grid, dynamic slider/carousel, LED status pulses, and custom modal overlays) to globals.css.
+
