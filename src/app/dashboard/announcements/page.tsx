@@ -20,8 +20,10 @@ import {
   PlusIcon,
   TrashIcon,
   EditIcon,
-  FolderIcon
+  FolderIcon,
+  HospitalIcon
 } from "@/components/Icons";
+import { Bell, Mail, Eye, MoreVertical, Building2, Calendar, Users, ArrowLeft, ArrowRight, CheckCircle, Search, Filter } from "lucide-react";
 
 interface Category {
   id: string;
@@ -49,6 +51,16 @@ export default function AnnouncementsPage() {
 
   // ─── Mode Switch: "create" (default) | "settings" (admin only) ───
   const [mode, setMode] = useState<"create" | "settings">("create");
+
+  // ─── Stepper & UX States ───
+  const [step, setStep] = useState(1);
+  const [isUrgent, setIsUrgent] = useState(false);
+  const [targetGroup, setTargetGroup] = useState("ทุกคน");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [tableFilterTab, setTableFilterTab] = useState("ทั้งหมด");
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userRankName, setUserRankName] = useState("แพทย์ประจำการ");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // ─── Data States ───
   const [blacklistHistory, setBlacklistHistory] = useState<any[]>([]);
@@ -209,13 +221,16 @@ export default function AnnouncementsPage() {
         return;
       }
       const user = session.user as any;
+      setCurrentUser(user);
       if (user && user.role === "admin") {
         setIsAdmin(true);
       }
 
-      fetch("/api/announcements/settings")
-        .then((res) => res.json())
-        .then((data) => {
+      Promise.all([
+        fetch("/api/announcements/settings").then(r => r.json()),
+        fetch("/api/admin/settings").then(r => r.json()).catch(() => ({}))
+      ])
+        .then(([data, adminSettings]) => {
           if (data.categories) {
             setCategories(data.categories);
             if (data.categories.length > 0) setSelectedCatId(data.categories[0].id);
@@ -231,6 +246,16 @@ export default function AnnouncementsPage() {
           }
           if (data.announcementWebhookUrl) setDiscordAnnouncementWebhookUrl(data.announcementWebhookUrl);
           if (data.blacklistReleaseTemplate) setBlacklistReleaseTemplate(data.blacklistReleaseTemplate);
+
+          // Resolve rank name
+          if (user.email && adminSettings.settings?.user_ranks && adminSettings.settings?.doctor_ranks) {
+            const userRankId = adminSettings.settings.user_ranks[user.email];
+            const rankObj = adminSettings.settings.doctor_ranks.find((r: any) => r.id === userRankId);
+            if (rankObj) {
+              setUserRankName(rankObj.name);
+            }
+          }
+
           fetchBlacklistHistory();
           setLoading(false);
         })
@@ -259,6 +284,11 @@ export default function AnnouncementsPage() {
     setFixedEndTime(null);
     setLoggedBlacklistId(null);
   }, [name, phone, gang, gangA, gangB, JSON.stringify(storyPairs), selectedPenaltyId, multiplier, cooldownMinutes, commandPrefix, selectedTplId, selectedCatId]);
+
+  // Reset pagination when search query or category filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, tableFilterTab]);
 
   const activeTemplate = templates.find((t) => t.id === selectedTplId);
 
@@ -641,87 +671,106 @@ export default function AnnouncementsPage() {
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
 
-      {/* ═══════ Page Header with Switch ═══════ */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px" }}>
+      {/* ═══════ Page Header with Switch & User Details ═══════ */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "20px" }}>
         <div>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: "10px" }}>
-            <MegaphoneIcon size={26} style={{ color: "var(--accent)" }} />
+          <h1 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--text-primary)", margin: 0, display: "flex", alignItems: "center", gap: "12px" }}>
+            <MegaphoneIcon size={28} style={{ color: "var(--accent)" }} />
             {mode === "create" ? "ศูนย์จัดการข้อความประกาศ" : "ตั้งค่าระบบประกาศ & Blacklist"}
           </h1>
           <p style={{ fontSize: "0.88rem", color: "var(--text-secondary)", margin: "6px 0 0 0" }}>
             {mode === "create"
-              ? "สร้างข้อความประกาศ ติด Blacklist หรือ ค้นเคสไม่เจอ พร้อมจัดโครงสร้างและคำนวณโทษปรับโดยอัตโนมัติ"
+              ? "สร้าง จัดการ และเผยแพร่ประกาศไปยังบุคลากรทางการแพทย์ทั้งหมด"
               : "จัดการหมวดหมู่ รูปแบบเทมเพลตประกาศ และอัตราโทษปรับ Blacklist"}
           </p>
         </div>
 
-        {/* ─── Admin Switch Toggle ─── */}
-        {isAdmin && (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            padding: "6px 14px",
-            background: "var(--bg-glass)",
-            border: "1px solid var(--border-subtle)",
-            borderRadius: "12px",
-            backdropFilter: "blur(8px)"
-          }}>
-            <span style={{
-              fontSize: "0.8rem",
-              fontWeight: mode === "create" ? 700 : 500,
-              color: mode === "create" ? "var(--accent-light)" : "var(--text-muted)",
-              transition: "all 0.3s"
-            }}>
-              <MegaphoneIcon size={14} style={{ verticalAlign: "middle", marginRight: "4px" }} />
-              สร้างประกาศ
-            </span>
-
-            <label className="toggle-switch" style={{ position: "relative", display: "inline-block", width: "36px", height: "18px", margin: 0 }}>
-              <input
-                type="checkbox"
-                checked={mode === "settings"}
-                onChange={() => setMode(prev => prev === "create" ? "settings" : "create")}
-                style={{ opacity: 0, width: 0, height: 0 }}
-              />
-              <span className="toggle-slider" style={{
-                position: "absolute",
-                cursor: "pointer",
-                inset: 0,
-                background: mode === "settings" ? "var(--accent)" : "var(--bg-tertiary)",
-                borderRadius: "18px",
-                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                border: `1px solid ${mode === "settings" ? "var(--accent)" : "var(--border)"}`,
-              }}>
-                <span style={{
-                  content: "''",
-                  position: "absolute",
-                  height: "14px",
-                  width: "14px",
-                  left: mode === "settings" ? "19px" : "2px",
-                  top: "1px",
-                  background: "white",
-                  borderRadius: "50%",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.3)"
-                }} />
-              </span>
-            </label>
-
-            <span style={{
-              fontSize: "0.8rem",
-              fontWeight: mode === "settings" ? 700 : 500,
-              color: mode === "settings" ? "var(--accent-light)" : "var(--text-muted)",
-              transition: "all 0.3s"
-            }}>
-              <SettingsIcon size={14} style={{ verticalAlign: "middle", marginRight: "4px" }} />
-              ตั้งค่าประกาศ
-            </span>
+        {/* Right side: Notifications + User Profile */}
+        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+          {/* Notifications Icons */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ position: "relative", cursor: "pointer", padding: "6px", background: "var(--bg-secondary)", borderRadius: "50%", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Bell size={16} style={{ color: "var(--text-secondary)" }} />
+              <span style={{ position: "absolute", top: "-2px", right: "-2px", background: "var(--danger)", color: "white", fontSize: "0.6rem", fontWeight: "bold", borderRadius: "50%", width: "14px", height: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}>3</span>
+            </div>
+            <div style={{ position: "relative", cursor: "pointer", padding: "6px", background: "var(--bg-secondary)", borderRadius: "50%", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Mail size={16} style={{ color: "var(--text-secondary)" }} />
+              <span style={{ position: "absolute", top: "-2px", right: "-2px", background: "var(--info)", color: "white", fontSize: "0.6rem", fontWeight: "bold", borderRadius: "50%", width: "14px", height: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}>5</span>
+            </div>
           </div>
-        )}
+
+          {/* User Profile Card */}
+          {currentUser && (
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "6px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", borderRadius: "24px" }}>
+              {currentUser.image ? (
+                <img src={currentUser.image} alt={currentUser.name || "User"} style={{ width: "32px", height: "32px", borderRadius: "50%", border: "1px solid var(--border-glow)", objectFit: "cover" }} />
+              ) : (
+                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "var(--accent-glow)", color: "var(--accent-light)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "0.85rem" }}>
+                  {currentUser.name ? currentUser.name.charAt(0) : "D"}
+                </div>
+              )}
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "var(--text-primary)", whiteSpace: "nowrap" }}>{currentUser.name || "OHM"}</span>
+                <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: "500", marginTop: "-2px" }}>{userRankName || "Paramedic"}</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ═══════ Status Bar ═══════ */}
+      {/* ═══════ Tabs Navigation Bar ═══════ */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "1px", marginTop: "-8px", flexWrap: "wrap", gap: "12px" }}>
+        <div style={{ display: "flex", gap: "4px" }}>
+          <button onClick={() => setMode("create")} className={`announce-tab-btn ${mode === "create" ? "active" : ""}`}>
+            จัดการประกาศ
+          </button>
+          {isAdmin && (
+            <>
+              <button onClick={() => { setMode("settings"); setActiveSettingsTab("templates"); }} className={`announce-tab-btn ${mode === "settings" && activeSettingsTab === "templates" ? "active" : ""}`}>
+                เทมเพลตประกาศ
+              </button>
+              <button onClick={() => { setMode("settings"); setActiveSettingsTab("categories"); }} className={`announce-tab-btn ${mode === "settings" && activeSettingsTab === "categories" ? "active" : ""}`}>
+                หมวดหมู่ประกาศ
+              </button>
+              <button onClick={() => { setMode("settings"); setActiveSettingsTab("penalties"); }} className={`announce-tab-btn ${mode === "settings" && activeSettingsTab === "penalties" ? "active" : ""}`}>
+                ข้อหา & ค่าปรับ
+              </button>
+              <button onClick={() => { setMode("settings"); setActiveSettingsTab("general" as any); }} className={`announce-tab-btn ${mode === "settings" && activeSettingsTab === ("general" as any) ? "active" : ""}`}>
+                ตั้งค่าการแจ้งเตือน
+              </button>
+            </>
+          )}
+        </div>
+
+        <button
+          onClick={() => {
+            setName("");
+            setPhone("");
+            setGang("");
+            setGangA("");
+            setGangB("");
+            setMultiplier(1);
+            setCooldownMinutes(10);
+            setStoryPairs([
+              { gangA: "", tagA: "", scoreA: "", gangB: "", tagB: "", scoreB: "" },
+              { gangA: "", tagA: "", scoreA: "", gangB: "", tagB: "", scoreB: "" },
+              { gangA: "", tagA: "", scoreA: "", gangB: "", tagB: "", scoreB: "" },
+              { gangA: "", tagA: "", scoreA: "", gangB: "", tagB: "", scoreB: "" },
+              { gangA: "", tagA: "", scoreA: "", gangB: "", tagB: "", scoreB: "" }
+            ]);
+            setFixedStartTime(null);
+            setFixedEndTime(null);
+            setStep(1);
+            setMode("create");
+          }}
+          className="btn btn-primary"
+          style={{ borderRadius: "8px", padding: "8px 16px", fontSize: "0.85rem", textDecoration: "none" }}
+        >
+          <PlusIcon size={14} /> สร้างประกาศใหม่
+        </button>
+      </div>
+
+      {/* Status Bar */}
       {statusMessage && (
         <div style={{
           padding: "12px 16px",
@@ -730,8 +779,7 @@ export default function AnnouncementsPage() {
           background: statusMessage.type === "success" ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "rgba(239, 68, 68, 0.1)",
           border: `1px solid ${statusMessage.type === "success" ? "var(--success)" : "var(--danger)"}`,
           color: statusMessage.type === "success" ? "var(--success)" : "var(--danger)",
-          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-          transition: "all 0.3s"
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)"
         }}>
           {statusMessage.message}
         </div>
@@ -742,218 +790,398 @@ export default function AnnouncementsPage() {
       {/* ╚════════════════════════════════════════════════════════════╝ */}
       {mode === "create" && (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px", alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "24px", alignItems: "start" }}>
 
-            {/* ─── Left Side: Form Controls ─── */}
-            <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
-              <h2 style={{ fontSize: "1.15rem", color: "var(--accent-light)", margin: 0, borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
-                <SettingsIcon size={20} />
-                เลือกประเภทและกรอกข้อมูล
-              </h2>
-
-              {/* Category Selector */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>1. เลือกหมวดหมู่ประกาศ</label>
-                <select value={selectedCatId} onChange={(e) => setSelectedCatId(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-                  {categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
-                </select>
-                {categories.find(c => c.id === selectedCatId)?.description && (
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
-                    <InfoIcon size={12} />
-                    {categories.find(c => c.id === selectedCatId)?.description}
-                  </span>
-                )}
-              </div>
-
-              {/* Template Selector */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>2. เลือกรูปแบบข้อความ</label>
-                {filteredTemplates.length === 0 ? (
-                  <div style={{ padding: "10px", background: "rgba(255,255,255,0.02)", border: "1px dashed var(--border)", color: "var(--text-muted)", fontSize: "0.8rem", borderRadius: "8px", textAlign: "center" }}>
-                    ไม่มีรูปแบบประกาศในหมวดหมู่นี้
+            {/* ─── Left Panel: Stepper + Form Wizard ─── */}
+            <div className="card" style={{ padding: "24px" }}>
+              <div className="announce-wizard-card">
+                {/* Stepper Steps */}
+                <div className="announce-stepper">
+                  <div className={`announce-step ${step === 1 ? "active" : step > 1 ? "completed" : ""}`}>
+                    <div className="announce-step-number">1</div>
+                    <div className="announce-step-info">
+                      <span className="announce-step-title">ตั้งค่าประกาศ</span>
+                      <span className="announce-step-desc">กำหนดหมวดหมู่และรูปแบบ</span>
+                    </div>
                   </div>
-                ) : (
-                  <select value={selectedTplId} onChange={(e) => setSelectedTplId(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-                    {filteredTemplates.map((tpl) => (<option key={tpl.id} value={tpl.id}>{tpl.title}</option>))}
-                  </select>
-                )}
-              </div>
-
-              {/* Dynamic Form Fields */}
-              {activeTemplate && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "8px", padding: "16px", background: "rgba(255,255,255,0.01)", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.5px" }}>✍️ ข้อมูลเสริมในประกาศ</div>
-
-                  {hasPlaceholder("[ชื่อคน]") && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}><UserIcon size={14} /> ชื่อ-นามสกุล คนไข้/บุคคล</label>
-                      <input type="text" placeholder="ระบุชื่อจริง-นามสกุล หรือชื่อเรียก" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+                  <div className={`announce-step ${step === 2 ? "active" : step > 2 ? "completed" : ""}`}>
+                    <div className="announce-step-number">2</div>
+                    <div className="announce-step-info">
+                      <span className="announce-step-title">เนื้อหาประกาศ</span>
+                      <span className="announce-step-desc">เขียนรายละเอียดข้อความ</span>
                     </div>
+                  </div>
+                  <div className={`announce-step ${step === 3 ? "active" : ""}`}>
+                    <div className="announce-step-number">3</div>
+                    <div className="announce-step-info">
+                      <span className="announce-step-title">การเผยแพร่</span>
+                      <span className="announce-step-desc">เลือกเป้าหมายและส่ง</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Wizard Forms */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                  
+                  {/* STEP 1: Type Selection */}
+                  {step === 1 && (
+                    <>
+                      <h3 style={{ fontSize: "1.05rem", color: "var(--accent-light)", margin: 0, fontWeight: "bold" }}>1. เลือกหมวดหมู่และเทมเพลตประกาศ</h3>
+                      
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>ประเภทประกาศ (Category)</label>
+                        <select value={selectedCatId} onChange={(e) => setSelectedCatId(e.target.value)} style={{ ...inputStyle, cursor: "pointer", width: "100%" }}>
+                          {categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
+                        </select>
+                        {categories.find(c => c.id === selectedCatId)?.description && (
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
+                            <InfoIcon size={12} />
+                            {categories.find(c => c.id === selectedCatId)?.description}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>เลือกเทมเพลตประกาศ (Template)</label>
+                          {activeTemplate && (
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                              {activeTemplate.title.length}/100
+                            </span>
+                          )}
+                        </div>
+                        {filteredTemplates.length === 0 ? (
+                          <div style={{ padding: "12px", background: "rgba(255,255,255,0.01)", border: "1px dashed var(--border-subtle)", color: "var(--text-muted)", fontSize: "0.8rem", borderRadius: "8px", textAlign: "center" }}>
+                            ไม่มีรูปแบบประกาศในหมวดหมู่นี้
+                          </div>
+                        ) : (
+                          <select value={selectedTplId} onChange={(e) => setSelectedTplId(e.target.value)} style={{ ...inputStyle, cursor: "pointer", width: "100%" }}>
+                            {filteredTemplates.map((tpl) => (<option key={tpl.id} value={tpl.id}>{tpl.title}</option>))}
+                          </select>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.015)", border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "12px 16px" }}>
+                        <div>
+                          <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-primary)" }}>แสดงผลเป็นประกาศด่วน (Urgent Announcement)</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>เน้นความสำคัญและแสดงแถบสีแดงแจ้งเตือนเด่นชัด</div>
+                        </div>
+                        <label className="toggle-switch" style={{ position: "relative", display: "inline-block", width: "36px", height: "18px", margin: 0 }}>
+                          <input
+                            type="checkbox"
+                            checked={isUrgent}
+                            onChange={(e) => setIsUrgent(e.target.checked)}
+                            style={{ opacity: 0, width: 0, height: 0 }}
+                          />
+                          <span className="toggle-slider" style={{
+                            position: "absolute", cursor: "pointer", inset: 0,
+                            background: isUrgent ? "var(--danger)" : "var(--bg-tertiary)",
+                            borderRadius: "18px", transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                            border: `1px solid ${isUrgent ? "var(--danger)" : "var(--border)"}`,
+                          }}>
+                            <span style={{
+                              position: "absolute", height: "14px", width: "14px",
+                              left: isUrgent ? "19px" : "2px", top: "1px",
+                              background: "white", borderRadius: "50%", transition: "all 0.3s"
+                            }} />
+                          </span>
+                        </label>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
+                        <button disabled={filteredTemplates.length === 0} onClick={() => setStep(2)} className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          ถัดไป <ArrowRight size={14} />
+                        </button>
+                      </div>
+                    </>
                   )}
 
-                  {hasPlaceholder("[เบอร์โทร]") && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}><PhoneIcon size={14} /> เบอร์โทรศัพท์</label>
-                      <input type="text" placeholder="เช่น 123-4567 หรือ 0812345678" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
-                    </div>
-                  )}
+                  {/* STEP 2: Content Variables */}
+                  {step === 2 && (
+                    <>
+                      <h3 style={{ fontSize: "1.05rem", color: "var(--accent-light)", margin: 0, fontWeight: "bold" }}>2. กรอกรายละเอียดข้อความประกาศ</h3>
 
-                  {hasPlaceholder("[ชื่อแก๊ง]") && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}><FlagIcon size={14} /> ชื่อกลุ่ม / แก๊ง / สังกัด</label>
-                      <input type="text" placeholder="ระบุชื่อแก๊ง (ถ้าไม่มีให้ใส่ - หรือ ประชาชน)" value={gang} onChange={(e) => setGang(e.target.value)} style={inputStyle} />
-                    </div>
-                  )}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        {hasPlaceholder("[ชื่อคน]") && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>👤 ชื่อ-นามสกุล คนไข้/บุคคล</label>
+                            <input type="text" placeholder="ระบุชื่อจริง-นามสกุล หรือชื่อเรียก" value={name} onChange={(e) => setName(e.target.value)} style={{ ...inputStyle, width: "100%" }} />
+                          </div>
+                        )}
 
-                  {hasPlaceholder("[แก๊งA]") && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}><FlagIcon size={14} style={{ color: "var(--accent)" }} /> แก๊ง A / ฝั่ง A</label>
-                      <input type="text" placeholder="ระบุชื่อแก๊ง A หรือฝั่งแรก" value={gangA} onChange={(e) => setGangA(e.target.value)} style={inputStyle} />
-                    </div>
-                  )}
+                        {hasPlaceholder("[เบอร์โทร]") && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>📞 เบอร์โทรศัพท์</label>
+                            <input type="text" placeholder="เช่น 123-4567 หรือ 0812345678" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ ...inputStyle, width: "100%" }} />
+                          </div>
+                        )}
 
-                  {hasPlaceholder("[แก๊งB]") && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}><FlagIcon size={14} style={{ color: "var(--accent)" }} /> แก๊ง B / ฝั่ง B</label>
-                      <input type="text" placeholder="ระบุชื่อแก๊ง B หรือฝั่งตรงข้าม" value={gangB} onChange={(e) => setGangB(e.target.value)} style={inputStyle} />
-                    </div>
-                  )}
+                        {hasPlaceholder("[ชื่อแก๊ง]") && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>🏴‍☠️ ชื่อกลุ่ม / แก๊ง / สังกัด</label>
+                            <input type="text" placeholder="ระบุชื่อแก๊ง (ถ้าไม่มีให้ใส่ - หรือ ประชาชน)" value={gang} onChange={(e) => setGang(e.target.value)} style={{ ...inputStyle, width: "100%" }} />
+                          </div>
+                        )}
 
-                  {/* 5-Pairs Story Score Form */}
-                  {hasPlaceholder("[คะแนนสตอรี่]") && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                      <div style={{ fontSize: "0.8rem", color: "var(--accent-light)", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.5px" }}>📊 ตารางบันทึกคะแนนสตอรี่ (สูงสุด 5 คู่)</div>
-                      {storyPairs.map((pair, index) => {
-                        const isRowActive = pair.gangA.trim() || pair.gangB.trim() || pair.scoreA || pair.scoreB;
-                        return (
-                          <div key={index} style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "16px", background: isRowActive ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.005)", border: `1px solid ${isRowActive ? "var(--accent)" : "var(--border-subtle)"}`, borderRadius: "10px", position: "relative", transition: "all 0.2s" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ fontSize: "0.8rem", fontWeight: "bold", color: isRowActive ? "var(--accent-light)" : "var(--text-secondary)" }}>⚔️ คู่ที่ {index + 1}</span>
-                              <button type="button" onClick={() => { const text = formatPair(pair.gangA, pair.tagA, pair.scoreA, pair.gangB, pair.tagB, pair.scoreB); const cmdText = commandPrefix.trim() ? `${commandPrefix.trim()} ${text}` : text; navigator.clipboard.writeText(cmdText); alert(`คัดลอกคะแนนคู่ที่ ${index + 1} พร้อมคำสั่งเรียบร้อยแล้วค่ะ!`); }} title="คัดลอกคู่นี้" style={{ padding: "4px 8px", background: isRowActive ? "var(--primary)" : "var(--bg-secondary)", color: "white", border: "none", borderRadius: "4px", fontSize: "0.75rem", cursor: isRowActive ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: "4px", opacity: isRowActive ? 1 : 0.5, pointerEvents: isRowActive ? "auto" : "none", transition: "all 0.2s" }}>
-                                <ClipboardIcon size={12} /> คัดลอกคู่นี้
-                              </button>
-                            </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 110px 1fr", gap: "12px", alignItems: "center" }}>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                                <input type="text" placeholder="ชื่อแก๊ง A" value={pair.gangA} onChange={(e) => updateStoryPair(index, "gangA", e.target.value)} style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }} />
-                                <input type="text" placeholder="Tag A (เช่น ABC)" value={pair.tagA} onChange={(e) => updateStoryPair(index, "tagA", e.target.value)} style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }} />
-                              </div>
-                              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "bold" }}>SCORE</div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                  <input type="number" min="0" placeholder="0" value={pair.scoreA} onChange={(e) => updateStoryPair(index, "scoreA", e.target.value)} style={{ width: "38px", padding: "6px 4px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.85rem", textAlign: "center", outline: "none", fontFamily: "var(--font-mono)" }} />
-                                  <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: "bold" }}>-</span>
-                                  <input type="number" min="0" placeholder="0" value={pair.scoreB} onChange={(e) => updateStoryPair(index, "scoreB", e.target.value)} style={{ width: "38px", padding: "6px 4px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.85rem", textAlign: "center", outline: "none", fontFamily: "var(--font-mono)" }} />
+                        {hasPlaceholder("[แก๊งA]") && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>💥 แก๊ง A / ฝั่ง A</label>
+                            <input type="text" placeholder="ระบุชื่อแก๊ง A หรือฝั่งแรก" value={gangA} onChange={(e) => setGangA(e.target.value)} style={{ ...inputStyle, width: "100%" }} />
+                          </div>
+                        )}
+
+                        {hasPlaceholder("[แก๊งB]") && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>💥 แก๊ง B / ฝั่ง B</label>
+                            <input type="text" placeholder="ระบุชื่อแก๊ง B หรือฝั่งตรงข้าม" value={gangB} onChange={(e) => setGangB(e.target.value)} style={{ ...inputStyle, width: "100%" }} />
+                          </div>
+                        )}
+
+                        {/* 5-Pairs Story Score Form */}
+                        {hasPlaceholder("[คะแนนสตอรี่]") && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                            <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>📊 ตารางบันทึกคะแนนสตอรี่ (สูงสุด 5 คู่)</label>
+                            {storyPairs.map((pair, index) => {
+                              const isRowActive = pair.gangA.trim() || pair.gangB.trim() || pair.scoreA || pair.scoreB;
+                              return (
+                                <div key={index} style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px", background: isRowActive ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.005)", border: `1px solid ${isRowActive ? "var(--accent)" : "var(--border-subtle)"}`, borderRadius: "8px", position: "relative" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: isRowActive ? "var(--accent-light)" : "var(--text-secondary)" }}>คู่ที่ {index + 1}</span>
+                                    <button type="button" onClick={() => { const text = formatPair(pair.gangA, pair.tagA, pair.scoreA, pair.gangB, pair.tagB, pair.scoreB); const cmdText = commandPrefix.trim() ? `${commandPrefix.trim()} ${text}` : text; navigator.clipboard.writeText(cmdText); alert(`คัดลอกคะแนนคู่ที่ ${index + 1} เรียบร้อยแล้วค่ะ!`); }} disabled={!isRowActive} style={{ padding: "2px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", borderRadius: "4px", fontSize: "0.7rem", cursor: isRowActive ? "pointer" : "not-allowed", opacity: isRowActive ? 1 : 0.5, color: "var(--text-secondary)" }}>คัดลอกคู่นี้</button>
+                                  </div>
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 1fr", gap: "8px", alignItems: "center" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                      <input type="text" placeholder="ชื่อแก๊ง A" value={pair.gangA} onChange={(e) => updateStoryPair(index, "gangA", e.target.value)} style={{ width: "100%", padding: "5px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "4px", fontSize: "0.75rem", outline: "none" }} />
+                                      <input type="text" placeholder="Tag A (เช่น ABC)" value={pair.tagA} onChange={(e) => updateStoryPair(index, "tagA", e.target.value)} style={{ width: "100%", padding: "5px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "4px", fontSize: "0.75rem", outline: "none" }} />
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+                                      <div style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: "bold" }}>SCORE</div>
+                                      <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                                        <input type="number" min="0" placeholder="0" value={pair.scoreA} onChange={(e) => updateStoryPair(index, "scoreA", e.target.value)} style={{ width: "32px", padding: "5px 2px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "4px", fontSize: "0.8rem", textAlign: "center", outline: "none" }} />
+                                        <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>-</span>
+                                        <input type="number" min="0" placeholder="0" value={pair.scoreB} onChange={(e) => updateStoryPair(index, "scoreB", e.target.value)} style={{ width: "32px", padding: "5px 2px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "4px", fontSize: "0.8rem", textAlign: "center", outline: "none" }} />
+                                      </div>
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                      <input type="text" placeholder="ชื่อแก๊ง B" value={pair.gangB} onChange={(e) => updateStoryPair(index, "gangB", e.target.value)} style={{ width: "100%", padding: "5px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "4px", fontSize: "0.75rem", outline: "none" }} />
+                                      <input type="text" placeholder="Tag B (เช่น XYZ)" value={pair.tagB} onChange={(e) => updateStoryPair(index, "tagB", e.target.value)} style={{ width: "100%", padding: "5px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "4px", fontSize: "0.75rem", outline: "none" }} />
+                                    </div>
+                                  </div>
                                 </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Penalties Dropdown */}
+                        {hasPlaceholder("[โทษ]") && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>⚖️ ข้อหา / โทษที่ทำความผิด</label>
+                            {penalties.length === 0 ? (
+                              <span style={{ fontSize: "0.8rem", color: "var(--danger)" }}>ไม่มีข้อมูลโทษแบล็คลิสต์ในระบบ (ติดต่อแอดมิน)</span>
+                            ) : (
+                              <select value={selectedPenaltyId} onChange={(e) => setSelectedPenaltyId(e.target.value)} style={{ ...inputStyle, cursor: "pointer", width: "100%" }}>
+                                {penalties.map((pen) => (<option key={pen.id} value={pen.id}>{pen.name}</option>))}
+                              </select>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Fines */}
+                        {hasPlaceholder("[ค่าปรับ]") && (
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                              <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>💵 ค่าปรับรวม</label>
+                              <div style={{ padding: "10px 12px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--accent-light)", borderRadius: "8px", fontSize: "0.9rem", fontWeight: "bold", fontFamily: "var(--font-mono)", display: "flex", alignItems: "center" }}>
+                                {totalFine.toLocaleString()} IC
                               </div>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                                <input type="text" placeholder="ชื่อแก๊ง B" value={pair.gangB} onChange={(e) => updateStoryPair(index, "gangB", e.target.value)} style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }} />
-                                <input type="text" placeholder="Tag B (เช่น XYZ)" value={pair.tagB} onChange={(e) => updateStoryPair(index, "tagB", e.target.value)} style={{ width: "100%", padding: "6px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }} />
-                              </div>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                              <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>✖️ Blacklist ซ้ำ (ตัวคูณโทษ)</label>
+                              <input type="number" min="1" max="10" value={multiplier} onChange={(e) => setMultiplier(Math.max(1, Number(e.target.value)))} style={{ ...inputStyle, width: "100%", fontFamily: "var(--font-mono)" }} />
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                        )}
+
+                        {/* Cooldown duration */}
+                        {(hasPlaceholder("[คูลดาวน์]") || hasPlaceholder("[เวลาเริ่ม]") || hasPlaceholder("[เวลาจบ]")) && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold", display: "flex", alignItems: "center", gap: "6px" }}>
+                              <ClockIcon size={14} /> เวลาคูลดาวน์ (นาที)
+                            </label>
+                            <input type="number" min="1" placeholder="ระยะเวลาคูลดาวน์ เช่น 10, 15, 30" value={cooldownMinutes} onChange={(e) => setCooldownMinutes(Math.max(1, Number(e.target.value)))} style={{ ...inputStyle, width: "100%" }} />
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "12px", gap: "12px" }}>
+                        <button onClick={() => setStep(1)} className="btn btn-ghost" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <ArrowLeft size={14} /> ย้อนกลับ
+                        </button>
+                        <button onClick={() => setStep(3)} className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          ถัดไป <ArrowRight size={14} />
+                        </button>
+                      </div>
+                    </>
                   )}
 
-                  {/* Blacklist Penalties Dropdown */}
-                  {hasPlaceholder("[โทษ]") && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>⚖️ ข้อหา / โทษที่ทำความผิด</label>
-                      {penalties.length === 0 ? (
-                        <span style={{ fontSize: "0.8rem", color: "var(--danger)" }}>ไม่มีข้อมูลโทษแบล็คลิสต์ในระบบ (ติดต่อแอดมิน)</span>
-                      ) : (
-                        <select value={selectedPenaltyId} onChange={(e) => setSelectedPenaltyId(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-                          {penalties.map((pen) => (<option key={pen.id} value={pen.id}>{pen.name}</option>))}
-                        </select>
-                      )}
-                    </div>
-                  )}
+                  {/* STEP 3: Targeting & Confirm */}
+                  {step === 3 && (
+                    <>
+                      <h3 style={{ fontSize: "1.05rem", color: "var(--accent-light)", margin: 0, fontWeight: "bold" }}>3. ตั้งค่ากลุ่มเป้าหมายและเผยแพร่</h3>
 
-                  {/* Penalty Fine + Multiplier */}
-                  {hasPlaceholder("[ค่าปรับ]") && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>💵 ค่าปรับรวม</label>
-                        <div style={{ padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border-subtle)", color: "var(--accent-light)", borderRadius: "6px", fontSize: "0.95rem", fontWeight: "bold", fontFamily: "var(--font-mono)", display: "flex", alignItems: "center" }}>
-                          {totalFine.toLocaleString()} IC
+                      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>🎯 เลือกกลุ่มเป้าหมาย (Access Target)</label>
+                          <select value={targetGroup} onChange={(e) => setTargetGroup(e.target.value)} style={{ ...inputStyle, cursor: "pointer", width: "100%" }}>
+                            <option value="ทุกคน">ทุกคน (Everyone)</option>
+                            <option value="แพทย์, พยาบาล, EMT">แพทย์, พยาบาล, EMT</option>
+                            <option value="แพทย์">เฉพาะแพทย์ (Doctors)</option>
+                            <option value="พยาบาล">เฉพาะพยาบาล (Nurses)</option>
+                            <option value="EMT">เฉพาะ EMT</option>
+                          </select>
+                        </div>
+
+                        <div style={{ padding: "16px", background: "rgba(255, 255, 255, 0.015)", border: "1px solid var(--border-subtle)", borderRadius: "8px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <CheckCircle size={14} style={{ color: "var(--accent)" }} /> สรุปการประกาศ
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                            <div>หมวดหมู่: <span style={{ color: "var(--text-primary)" }}>{categories.find(c => c.id === selectedCatId)?.name || "ทั่วไป"}</span></div>
+                            <div>ผู้ส่ง: <span style={{ color: "var(--text-primary)" }}>{currentUser?.name || "ระบบ"}</span></div>
+                            {cooldownMinutes > 0 && (
+                              <>
+                                <div>คูลดาวน์: <span style={{ color: "var(--text-primary)" }}>{cooldownMinutes} นาที</span></div>
+                                <div>เวลาคูลดาวน์: <span style={{ color: "var(--text-primary)" }}>{fixedStartTime || "--.--"} ถึง {fixedEndTime || "--.--"}</span></div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
+                          <InfoIcon size={14} /> ระบบจะคัดลอกข้อความพร้อมคำสั่ง และบันทึกประวัติการแบล็คลิสต์ลงในฐานข้อมูลให้ทันทีค่ะ
                         </div>
                       </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold" }}>✖️ Blacklist ซ้ำ (ตัวคูณโทษ)</label>
-                        <input type="number" min="1" max="10" value={multiplier} onChange={(e) => setMultiplier(Math.max(1, Number(e.target.value)))} style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} />
+
+                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "12px", gap: "12px" }}>
+                        <button onClick={() => setStep(2)} className="btn btn-ghost" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <ArrowLeft size={14} /> ย้อนกลับ
+                        </button>
+                        <button onClick={handleCopyText} className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold" }}>
+                          <CheckCircle size={14} /> ยืนยันเผยแพร่ประกาศ
+                        </button>
                       </div>
-                    </div>
+                    </>
                   )}
 
-                  {/* Cooldown Duration Input */}
-                  {(hasPlaceholder("[คูลดาวน์]") || hasPlaceholder("[เวลาเริ่ม]") || hasPlaceholder("[เวลาจบ]")) && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: "bold", display: "flex", alignItems: "center", gap: "6px" }}>
-                        <ClockIcon size={14} /> เวลาคูลดาวน์ (นาที)
-                      </label>
-                      <input type="number" min="1" placeholder="ระบุระยะเวลาคูลดาวน์ เช่น 10, 15, 30" value={cooldownMinutes} onChange={(e) => setCooldownMinutes(Math.max(1, Number(e.target.value)))} style={inputStyle} />
-                    </div>
-                  )}
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* ─── Right Side: Live Preview & Actions ─── */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px", minHeight: "360px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
-                  <h2 style={{ fontSize: "1.15rem", color: "var(--accent-light)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-                    ตัวอย่างประกาศเรียลไทม์ (Live Preview)
-                  </h2>
-                  {activeTemplate && (
-                    <span style={{ fontSize: "0.75rem", background: "var(--bg-secondary)", padding: "4px 10px", borderRadius: "10px", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
-                      {activeTemplate.title}
-                    </span>
-                  )}
-                </div>
-
-                <div style={{ flex: 1, position: "relative", display: "flex", flexDirection: "column" }}>
-                  <textarea readOnly value={formattedResultText} style={{ width: "100%", flex: 1, minHeight: "220px", padding: "16px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", fontSize: "0.9rem", fontFamily: "var(--font-mono)", lineHeight: "1.6", outline: "none", resize: "none", boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.2)" }} />
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  {discordStatus && (
-                    <div style={{ padding: "10px 14px", borderRadius: "6px", fontSize: "0.85rem", background: discordStatus.type === "success" ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "rgba(239, 68, 68, 0.1)", border: `1px solid ${discordStatus.type === "success" ? "var(--success)" : "var(--danger)"}`, color: discordStatus.type === "success" ? "var(--success)" : "var(--danger)", textAlign: "center" }}>
-                      {discordStatus.message}
-                    </div>
-                  )}
-                  <div style={{ display: "flex", gap: "12px" }}>
-                    <button onClick={handleCopyText} disabled={!formattedResultText} style={{ flex: 1, padding: "12px", background: copySuccess ? "var(--success)" : "var(--primary)", color: "white", border: "none", borderRadius: "8px", fontWeight: "bold", fontSize: "0.9rem", cursor: formattedResultText ? "pointer" : "not-allowed", opacity: formattedResultText ? 1 : 0.6, transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", boxShadow: copySuccess ? "0 0 10px var(--accent-glow)" : "none" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <ClipboardIcon size={16} />
-                        {copySuccess ? "คัดลอกสำเร็จแล้ว!" : "คัดลอกข้อความประกาศ"}
-                      </span>
-                    </button>
-                    <button onClick={handleSendToDiscord} disabled={!formattedResultText || isSendingDiscord} style={{ flex: 1, padding: "12px", background: "#5865F2", color: "white", border: "none", borderRadius: "8px", fontWeight: "bold", fontSize: "0.9rem", cursor: (formattedResultText && !isSendingDiscord) ? "pointer" : "not-allowed", opacity: (formattedResultText && !isSendingDiscord) ? 1 : 0.6, transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <SendIcon size={16} />
-                        {isSendingDiscord ? "กำลังส่ง..." : "ส่งเข้า Discord"}
-                      </span>
-                    </button>
-                  </div>
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center" }}>
-                    * สามารถคัดลอกไปวางในดิสคอร์ดหรือพิมพ์ประกาศในแชทเกม FiveM ได้เลยค่ะ
+            {/* ─── Right Panel: Live Preview Card ─── */}
+            <div className="live-preview-container">
+              <div className={`preview-system-card ${isUrgent ? "urgent" : ""}`} style={{ minHeight: "360px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "10px" }}>
+                  <span style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                    ตัวอย่างประกาศ (Live Preview)
+                  </span>
+                  <span className="preview-embed-badge" style={{ fontSize: "0.65rem", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", borderRadius: "10px", color: "var(--text-muted)", padding: "2px 8px" }}>
+                    ตัวอย่างระบบ
                   </span>
                 </div>
+
+                <div className="preview-alert-box" style={{ flex: 1, display: "flex", flexDirection: "column", gap: "12px", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", gap: "14px", alignItems: "start" }}>
+                    <div className="preview-alert-icon-wrapper">
+                      <MegaphoneIcon size={20} />
+                    </div>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                      <span className={`preview-embed-badge ${isUrgent ? "urgent" : ""}`} style={{ marginBottom: "6px" }}>
+                        {isUrgent ? "ประกาศด่วน" : categories.find(c => c.id === selectedCatId)?.name || "ทั่วไป"}
+                      </span>
+                      <h4 className="preview-embed-title" style={{ margin: 0 }}>
+                        {activeTemplate ? activeTemplate.title : "หัวข้อประกาศจะแสดงที่นี่"}
+                      </h4>
+                      <pre className="preview-embed-body" style={{ marginTop: "10px", margin: "10px 0 0 0" }}>
+                        {formattedResultText || "ข้อความเนื้อหาของประกาศจะแสดงที่นี่"}
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div className="preview-embed-meta" style={{ marginTop: "12px" }}>
+                    <div className="preview-meta-item">
+                      <HospitalIcon size={12} /> Pillbox Hill Medical Center
+                    </div>
+                    <div className="preview-meta-item">
+                      <ClockIcon size={12} /> {fixedStartTime ? `เริ่ม ${fixedStartTime} - จบ ${fixedEndTime}` : formatThaiDate(new Date())}
+                    </div>
+                    <div className="preview-meta-item">
+                      <Users size={12} /> {targetGroup}
+                    </div>
+                  </div>
+                </div>
+
+                {discordStatus && (
+                  <div style={{ padding: "10px 14px", borderRadius: "6px", fontSize: "0.85rem", background: discordStatus.type === "success" ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "rgba(239, 68, 68, 0.1)", border: `1px solid ${discordStatus.type === "success" ? "var(--success)" : "var(--danger)"}`, color: discordStatus.type === "success" ? "var(--success)" : "var(--danger)", textAlign: "center" }}>
+                    {discordStatus.message}
+                  </div>
+                )}
+
+                <div className="preview-embed-buttons" style={{ marginTop: "auto" }}>
+                  <button onClick={handleCopyText} disabled={!formattedResultText} className="btn btn-ghost" style={{ justifyContent: "center", borderRadius: "8px" }}>
+                    <ClipboardIcon size={14} /> คัดลอกประกาศ
+                  </button>
+                  <button onClick={handleSendToDiscord} disabled={!formattedResultText || isSendingDiscord} className="btn btn-primary" style={{ justifyContent: "center", background: "#5865F2", color: "white", border: "none", borderRadius: "8px" }}>
+                    <SendIcon size={14} /> {isSendingDiscord ? "กำลังส่ง..." : "ส่งเข้า Discord"}
+                  </button>
+                </div>
+                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "center" }}>
+                  * พรีวิวในระบบและดิสคอร์ด เมื่อส่งข้อมูลสำเร็จจะปรากฏในช่องทางต่างๆ
+                </span>
               </div>
             </div>
           </div>
 
           {/* ─── Blacklist History Table Card ─── */}
-          <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
+          <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
               <h2 style={{ fontSize: "1.15rem", color: "var(--accent-light)", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
                 <ClipboardIcon size={20} style={{ color: "var(--accent)" }} />
                 ประวัติการติด Blacklist ในระบบ (Active Blacklists)
               </h2>
-              {loadingHistory && <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>กำลังโหลดข้อมูล...</span>}
+
+              {/* Table search filter bar */}
+              <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                {/* Search box */}
+                <div style={{ position: "relative", width: "240px" }}>
+                  <input
+                    type="text"
+                    placeholder="ค้นหาชื่อ หรือความผิด..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{ ...inputStyle, width: "100%", paddingLeft: "32px", height: "36px" }}
+                  />
+                  <Search size={14} style={{ position: "absolute", left: "10px", top: "11px", color: "var(--text-muted)" }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Filter pills below title */}
+            <div className="blacklist-filter-tabs">
+              {[
+                { label: "ทั้งหมด", value: "ทั้งหมด", count: blacklistHistory.length },
+                { label: "ติดแบล็คลิสต์", value: "ติดแบล็คลิสต์", count: blacklistHistory.filter(r => r.status !== 'released').length },
+                { label: "ปลดแบล็คลิสต์แล้ว", value: "ปลดแบล็คลิสต์แล้ว", count: blacklistHistory.filter(r => r.status === 'released').length }
+              ].map(tab => (
+                <button
+                  key={tab.value}
+                  onClick={() => setTableFilterTab(tab.value)}
+                  className={`blacklist-filter-tab ${tableFilterTab === tab.value ? "active" : ""}`}
+                >
+                  {tab.label}
+                  <span className="blacklist-filter-badge">{tab.count}</span>
+                </button>
+              ))}
             </div>
 
             {dbWarning && (
@@ -967,56 +1195,202 @@ export default function AnnouncementsPage() {
 
             {!dbWarning && (
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", textAlign: "left" }}>
+                <table className="shift-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", textAlign: "left", marginTop: 0 }}>
                   <thead>
-                    <tr style={{ borderBottom: "1px solid var(--border)", color: "var(--text-secondary)" }}>
-                      <th style={{ padding: "12px 8px", fontWeight: "bold" }}>ชื่อ-นามสกุล</th>
-                      <th style={{ padding: "12px 8px", fontWeight: "bold" }}>เบอร์โทร</th>
-                      <th style={{ padding: "12px 8px", fontWeight: "bold" }}>แก๊ง/สังกัด</th>
-                      <th style={{ padding: "12px 8px", fontWeight: "bold" }}>ข้อหา/ความผิด</th>
-                      <th style={{ padding: "12px 8px", fontWeight: "bold" }}>ค่าปรับ</th>
-                      <th style={{ padding: "12px 8px", fontWeight: "bold" }}>ผู้ลงบันทึก</th>
-                      <th style={{ padding: "12px 8px", fontWeight: "bold" }}>วันที่บันทึก</th>
-                      <th style={{ padding: "12px 8px", fontWeight: "bold", textAlign: "right" }}>การจัดการ</th>
+                    <tr style={{ borderBottom: "1px solid var(--border-subtle)", color: "var(--text-muted)" }}>
+                      <th style={{ padding: "12px 16px", fontWeight: "bold" }}>หัวข้อประกาศ / รายละเอียด</th>
+                      <th style={{ padding: "12px 16px", fontWeight: "bold" }}>ประเภท</th>
+                      <th style={{ padding: "12px 16px", fontWeight: "bold" }}>ผู้สร้าง</th>
+                      <th style={{ padding: "12px 16px", fontWeight: "bold" }}>เผยแพร่เมื่อ</th>
+                      <th style={{ padding: "12px 16px", fontWeight: "bold" }}>สถานะ</th>
+                      <th style={{ padding: "12px 16px", fontWeight: "bold" }}>การเข้าถึง</th>
+                      <th style={{ padding: "12px 16px", fontWeight: "bold", textAlign: "right" }}>การจัดการ</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {blacklistHistory.length === 0 ? (
-                      <tr><td colSpan={8} style={{ padding: "24px", textAlign: "center", color: "var(--text-muted)" }}>{loadingHistory ? "กำลังโหลดข้อมูล..." : "ไม่มีประวัติการติด Blacklist ที่มีผลใช้งานในขณะนี้"}</td></tr>
-                    ) : (
-                      blacklistHistory.map((record) => (
+                    {(() => {
+                      const filteredHistory = blacklistHistory.filter(record => {
+                        const matchesSearch = searchQuery.trim() === "" ||
+                          record.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (record.phone && record.phone.includes(searchQuery)) ||
+                          (record.gang && record.gang.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                          (record.penalty && record.penalty.toLowerCase().includes(searchQuery.toLowerCase()));
+
+                        if (tableFilterTab === "ติดแบล็คลิสต์") {
+                          return matchesSearch && record.status !== "released";
+                        }
+                        if (tableFilterTab === "ปลดแบล็คลิสต์แล้ว") {
+                          return matchesSearch && record.status === "released";
+                        }
+                        return matchesSearch;
+                      });
+
+                      const itemsPerPage = 5;
+                      const totalPages = Math.ceil(filteredHistory.length / itemsPerPage) || 1;
+                      const safeCurrentPage = Math.min(currentPage, totalPages);
+                      const paginatedHistory = filteredHistory.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage);
+
+                      if (paginatedHistory.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={7} style={{ padding: "24px", textAlign: "center", color: "var(--text-muted)" }}>
+                              {loadingHistory ? "กำลังโหลดข้อมูล..." : "ไม่มีประวัติการติด Blacklist ที่ต้องการแสดงค่ะ"}
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return paginatedHistory.map((record) => (
                         <tr key={record.id} style={{ borderBottom: "1px solid var(--border-subtle)", color: "var(--text-primary)" }}>
-                          <td style={{ padding: "12px 8px", fontWeight: "bold" }}>{record.name}</td>
-                          <td style={{ padding: "12px 8px", fontFamily: "var(--font-mono)" }}>{record.phone || "-"}</td>
-                          <td style={{ padding: "12px 8px" }}>
-                            {record.gang ? (
-                              <span style={{ padding: "2px 6px", background: "rgba(255, 255, 255, 0.05)", border: "1px solid var(--border-subtle)", borderRadius: "4px", fontSize: "0.75rem" }}>{record.gang}</span>
-                            ) : "-"}
+                          {/* Title / Details */}
+                          <td style={{ padding: "14px 16px" }}>
+                            <div style={{ fontWeight: "bold", fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                              {record.penalty || "ข้อหาแบล็คลิสต์"} : {record.name}
+                            </div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                              เบอร์โทร: {record.phone || "-"} | สังกัด: {record.gang || "-"}
+                            </div>
                           </td>
-                          <td style={{ padding: "12px 8px" }}>
-                            <span style={{ padding: "2px 6px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", color: "var(--danger)", borderRadius: "4px", fontSize: "0.75rem", fontWeight: "bold" }}>{record.penalty || "-"}</span>
+
+                          {/* Category badge */}
+                          <td style={{ padding: "14px 16px" }}>
+                            <span style={{
+                              padding: "2px 8px",
+                              background: record.status === "released" ? "rgba(16, 185, 129, 0.08)" : "rgba(239, 68, 68, 0.08)",
+                              border: `1px solid ${record.status === "released" ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"}`,
+                              color: record.status === "released" ? "var(--success)" : "var(--danger)",
+                              borderRadius: "4px",
+                              fontSize: "0.72rem",
+                              fontWeight: "bold"
+                            }}>
+                              {record.status === "released" ? "ปลดแบล็คลิสต์" : "แบล็คลิสต์"}
+                            </span>
                           </td>
-                          <td style={{ padding: "12px 8px", fontFamily: "var(--font-mono)" }}>
-                            <span style={{ color: "var(--accent-light)", fontWeight: "bold" }}>{(record.fine || 0).toLocaleString()} IC</span>
-                            {record.multiplier > 1 && (
-                              <span style={{ marginLeft: "4px", padding: "1px 4px", background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)", color: "var(--warning)", borderRadius: "4px", fontSize: "0.7rem", fontWeight: "bold" }}>x{record.multiplier}</span>
-                            )}
+
+                          {/* Creator */}
+                          <td style={{ padding: "14px 16px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                                {record.created_by ? record.created_by.charAt(0).toUpperCase() : "M"}
+                              </div>
+                              <span style={{ fontSize: "0.8rem" }}>{record.created_by?.split("@")[0] || "แพทย์"}</span>
+                            </div>
                           </td>
-                          <td style={{ padding: "12px 8px", color: "var(--text-muted)" }}>{record.created_by?.split("@")[0]}</td>
-                          <td style={{ padding: "12px 8px", color: "var(--text-muted)" }}>{record.created_at ? formatThaiDate(new Date(record.created_at)) : "-"}</td>
-                          <td style={{ padding: "12px 8px", textAlign: "right" }}>
-                            <button onClick={() => handleReleaseBlacklist(record)} disabled={releasingId === record.id} style={{ padding: "6px 12px", background: "var(--primary)", color: "white", border: "none", borderRadius: "6px", fontWeight: "bold", fontSize: "0.75rem", cursor: releasingId === record.id ? "not-allowed" : "pointer", opacity: releasingId === record.id ? 0.6 : 1, transition: "all 0.2s" }}
-                              onMouseOver={(e) => { if (releasingId !== record.id) e.currentTarget.style.boxShadow = "0 0 8px var(--accent-glow)"; }}
-                              onMouseOut={(e) => { e.currentTarget.style.boxShadow = "none"; }}
-                            >
-                              {releasingId === record.id ? "กำลังปลด..." : "🔓 ปลด"}
-                            </button>
+
+                          {/* Published At */}
+                          <td style={{ padding: "14px 16px", color: "var(--text-muted)", fontSize: "0.8rem" }}>
+                            {record.created_at ? formatThaiDate(new Date(record.created_at)) : "-"}
+                          </td>
+
+                          {/* Status indicator dot */}
+                          <td style={{ padding: "14px 16px" }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                              <span style={{
+                                width: "6px",
+                                height: "6px",
+                                borderRadius: "50%",
+                                background: record.status === "released" ? "var(--success)" : "var(--danger)",
+                                display: "inline-block"
+                              }} />
+                              <span style={{ fontSize: "0.8rem", color: record.status === "released" ? "var(--success)" : "var(--danger)" }}>
+                                {record.status === "released" ? "ปลดแบล็คลิสต์แล้ว" : "ติดแบล็คลิสต์"}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Access */}
+                          <td style={{ padding: "14px 16px", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
+                            ทุกคน
+                          </td>
+
+                          {/* Actions */}
+                          <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", alignItems: "center" }}>
+                              {record.status !== "released" && (
+                                <button
+                                  onClick={() => handleReleaseBlacklist(record)}
+                                  disabled={releasingId === record.id}
+                                  className="btn btn-primary"
+                                  style={{ padding: "4px 10px", fontSize: "0.72rem", borderRadius: "6px" }}
+                                >
+                                  {releasingId === record.id ? "กำลังปลด..." : "🔓 ปลด"}
+                                </button>
+                              )}
+                              <span style={{ color: "var(--text-muted)", cursor: "pointer", display: "inline-flex" }}>
+                                <MoreVertical size={16} />
+                              </span>
+                            </div>
                           </td>
                         </tr>
-                      ))
-                    )}
+                      ));
+                    })()}
                   </tbody>
                 </table>
+
+                {/* Pagination Controls */}
+                {(() => {
+                  const filteredHistory = blacklistHistory.filter(record => {
+                    const matchesSearch = searchQuery.trim() === "" ||
+                      record.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      (record.phone && record.phone.includes(searchQuery)) ||
+                      (record.gang && record.gang.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                      (record.penalty && record.penalty.toLowerCase().includes(searchQuery.toLowerCase()));
+
+                    if (tableFilterTab === "ติดแบล็คลิสต์") {
+                      return matchesSearch && record.status !== "released";
+                    }
+                    if (tableFilterTab === "ปลดแบล็คลิสต์แล้ว") {
+                      return matchesSearch && record.status === "released";
+                    }
+                    return matchesSearch;
+                  });
+
+                  const itemsPerPage = 5;
+                  const totalPages = Math.ceil(filteredHistory.length / itemsPerPage) || 1;
+                  const safeCurrentPage = Math.min(currentPage, totalPages);
+                  const startIndex = filteredHistory.length === 0 ? 0 : (safeCurrentPage - 1) * itemsPerPage + 1;
+                  const endIndex = Math.min(safeCurrentPage * itemsPerPage, filteredHistory.length);
+
+                  return (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0", flexWrap: "wrap", gap: "12px", borderTop: "1px solid var(--border-subtle)", marginTop: "12px" }}>
+                      <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                        แสดง {startIndex} ถึง {endIndex} จาก {filteredHistory.length} รายการ
+                      </span>
+                      
+                      {totalPages > 1 && (
+                        <div style={{ display: "flex", gap: "4px" }}>
+                          <button
+                            disabled={safeCurrentPage === 1}
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            className="btn btn-ghost"
+                            style={{ padding: "4px 10px", minWidth: "32px", fontSize: "0.75rem", borderRadius: "6px" }}
+                          >
+                            &lt;
+                          </button>
+                          {Array.from({ length: totalPages }, (_, idx) => (
+                            <button
+                              key={idx + 1}
+                              onClick={() => setCurrentPage(idx + 1)}
+                              className={`btn ${safeCurrentPage === idx + 1 ? "btn-primary" : "btn-ghost"}`}
+                              style={{ padding: "4px 10px", minWidth: "32px", fontSize: "0.75rem", borderRadius: "6px" }}
+                            >
+                              {idx + 1}
+                            </button>
+                          ))}
+                          <button
+                            disabled={safeCurrentPage === totalPages}
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            className="btn btn-ghost"
+                            style={{ padding: "4px 10px", minWidth: "32px", fontSize: "0.75rem", borderRadius: "6px" }}
+                          >
+                            &gt;
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
               </div>
             )}
           </div>
@@ -1027,262 +1401,233 @@ export default function AnnouncementsPage() {
       {/* ║                   SETTINGS MODE (Admin Only)              ║ */}
       {/* ╚════════════════════════════════════════════════════════════╝ */}
       {mode === "settings" && isAdmin && (
-        <>
-          {/* General Settings Card */}
-          <section className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <h2 style={{ fontSize: "1.1rem", color: "var(--accent-light)", margin: 0, borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-              <SettingsIcon size={20} />
-              ตั้งค่าทั่วไปสำหรับประกาศ (General Settings)
-            </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>คำสั่งประกาศหน่วยงานเริ่มต้น</label>
-                <input type="text" placeholder="เช่น /ems, /gov" value={announcementCommandPrefix} onChange={(e) => setAnnouncementCommandPrefix(e.target.value)} style={inputStyle} />
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>คำสั่งที่ระบบจะนำไปเติมข้างหน้าข้อความประกาศในหน้าแพทย์</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>Discord Webhook สำหรับส่งข้อความประกาศ</label>
-                <input type="url" placeholder="https://discord.com/api/webhooks/..." value={discordAnnouncementWebhookUrl} onChange={(e) => setDiscordAnnouncementWebhookUrl(e.target.value.trim())} style={inputStyle} />
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>ใช้ส่งประกาศแบล็คลิสต์/แจ้งเคสแยกห้องต่างหาก (หากเว้นว่างจะใช้ Webhook ทั่วไป)</span>
-              </div>
-            </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
-              <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>รูปแบบข้อความประกาศปลด Blacklist (Release Template)</label>
-              <textarea placeholder="พิมพ์โครงสร้างประกาศปลดแบล็คลิสต์..." value={blacklistReleaseTemplate} onChange={(e) => setBlacklistReleaseTemplate(e.target.value)} rows={4} style={{ ...inputStyle, fontFamily: "var(--font-mono)", resize: "vertical", lineHeight: "1.5" }} />
-              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>โครงสร้างข้อความเมื่อแพทย์คลิกปลดแบล็คลิสต์ในระบบ (รองรับตัวแปร [ชื่อคน], [เบอร์โทร], [ชื่อแก๊ง], [โทษ], [ค่าปรับ], [ตัวคูณ])</span>
-            </div>
+          {/* TAB: General & Webhooks Settings */}
+          {activeSettingsTab === ("general" as any) && (
+            <section className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <h2 style={{ fontSize: "1.1rem", color: "var(--accent-light)", margin: 0, borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <SettingsIcon size={20} />
+                ตั้งค่าทั่วไปสำหรับประกาศ (General Settings)
+              </h2>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>คำสั่งประกาศหน่วยงานเริ่มต้น</label>
+                  <input type="text" placeholder="เช่น /ems, /gov" value={announcementCommandPrefix} onChange={(e) => setAnnouncementCommandPrefix(e.target.value)} style={{ ...inputStyle, width: "100%" }} />
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>คำสั่งเริ่มต้นสำหรับข้อความประกาศ</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>Discord Webhook สำหรับประกาศ</label>
+                  <input type="url" placeholder="https://discord.com/api/webhooks/..." value={discordAnnouncementWebhookUrl} onChange={(e) => setDiscordAnnouncementWebhookUrl(e.target.value.trim())} style={{ ...inputStyle, width: "100%" }} />
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>ระบุเว็บบุ๊คส่งแชลเนล Discord ที่ต้องการแยกประกาศโดยเฉพาะ</span>
+                </div>
+              </div>
 
-            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "4px" }}>
-              <button onClick={async () => {
-                setIsSaving(true);
-                try {
-                  await Promise.all([
-                    fetch("/api/announcements/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "announcement_command_prefix", value: announcementCommandPrefix }) }),
-                    fetch("/api/announcements/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "discord_announcement_webhook_url", value: discordAnnouncementWebhookUrl }) }),
-                    fetch("/api/announcements/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "blacklist_release_template", value: blacklistReleaseTemplate }) })
-                  ]);
-                  showMessage("บันทึกการตั้งค่าทั่วไปเรียบร้อยแล้วค่ะ", "success");
-                  setCommandPrefix(announcementCommandPrefix);
-                } catch (err) { showMessage("บันทึกไม่สำเร็จ", "error"); } finally { setIsSaving(false); }
-              }} disabled={isSaving} style={{ padding: "10px 20px", background: "var(--primary)", color: "white", border: "none", borderRadius: "6px", fontWeight: "bold", fontSize: "0.85rem", cursor: "pointer" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
+                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>รูปแบบประกาศปลด Blacklist (Release Template)</label>
+                <textarea placeholder="พิมพ์โครงสร้างประกาศปลดแบล็คลิสต์..." value={blacklistReleaseTemplate} onChange={(e) => setBlacklistReleaseTemplate(e.target.value)} rows={4} style={{ ...inputStyle, width: "100%", fontFamily: "var(--font-mono)", resize: "vertical", lineHeight: "1.5" }} />
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>โครงสร้างข้อความปลดแบล็คลิสต์ (รองรับ [ชื่อคน], [เบอร์โทร], [ชื่อแก๊ง], [โทษ], [ค่าปรับ], [ตัวคูณ])</span>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "4px" }}>
+                <button onClick={async () => {
+                  setIsSaving(true);
+                  try {
+                    await Promise.all([
+                      fetch("/api/announcements/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "announcement_command_prefix", value: announcementCommandPrefix }) }),
+                      fetch("/api/announcements/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "discord_announcement_webhook_url", value: discordAnnouncementWebhookUrl }) }),
+                      fetch("/api/announcements/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: "blacklist_release_template", value: blacklistReleaseTemplate }) })
+                    ]);
+                    showMessage("บันทึกการตั้งค่าทั่วไปเรียบร้อยแล้วค่ะ", "success");
+                    setCommandPrefix(announcementCommandPrefix);
+                  } catch (err) { showMessage("บันทึกไม่สำเร็จ", "error"); } finally { setIsSaving(false); }
+                }} disabled={isSaving} className="btn btn-primary" style={{ padding: "10px 20px" }}>
                   <SaveIcon size={14} />
-                  {isSaving ? "กำลังบันทึก..." : "บันทึกการตั้งค่าทั่วไป"}
-                </span>
-              </button>
-            </div>
-          </section>
-
-          {/* ─── Sub-Tabs: Templates / Categories / Penalties ─── */}
-          <div style={{ display: "flex", borderBottom: "1px solid var(--border)", gap: "4px", paddingBottom: "1px" }}>
-            {(["templates", "categories", "penalties"] as const).map((tab) => {
-              const labels = { templates: "รูปแบบเทมเพลตประกาศ", categories: "หมวดหมู่ประกาศ", penalties: "โทษปรับ Blacklist สำเร็จรูป" };
-              const isActive = activeSettingsTab === tab;
-              return (
-                <button key={tab} onClick={() => setActiveSettingsTab(tab)} style={{
-                  padding: "10px 20px", background: isActive ? "var(--bg-secondary)" : "transparent",
-                  color: isActive ? "var(--accent-light)" : "var(--text-secondary)",
-                  border: "1px solid transparent",
-                  borderBottomColor: isActive ? "var(--bg-secondary)" : "transparent",
-                  borderTopLeftRadius: "6px", borderTopRightRadius: "6px",
-                  cursor: "pointer", fontWeight: "bold", fontSize: "0.9rem", marginBottom: "-1px",
-                  borderStyle: isActive ? "solid solid none solid" : "none",
-                  borderColor: isActive ? "var(--border)" : "transparent"
-                }}>
-                  {labels[tab]}
+                  {isSaving ? "กำลังบันทึก..." : "บันทึกตั้งค่าการแจ้งเตือน"}
                 </button>
-              );
-            })}
-          </div>
-
-          <div style={{ minHeight: "500px" }}>
-
-            {/* ─── TAB: Templates ─── */}
-            {activeSettingsTab === "templates" && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px", alignItems: "start" }}>
-                <form onSubmit={handleSaveTemplate} className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
-                    {editingTemplateId ? (<><EditIcon size={16} /> แก้ไขรูปแบบประกาศ</>) : (<><PlusIcon size={16} /> เพิ่มรูปแบบประกาศใหม่</>)}
-                  </h3>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>หัวข้อของประกาศ</label>
-                    <input type="text" placeholder="เช่น ประกาศติด Blacklist บุคคล, หาประวัติไม่เจอ..." value={tempTitle} onChange={(e) => setTempTitle(e.target.value)} required style={inputStyle} />
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>หมวดหมู่ประกาศ</label>
-                    <select value={tempCatId} onChange={(e) => setTempCatId(e.target.value)} required style={{ ...inputStyle, cursor: "pointer" }}>
-                      <option value="">-- เลือกหมวดหมู่ --</option>
-                      {categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
-                    </select>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>โครงสร้างข้อความประกาศ (Template Body)</label>
-                    <textarea ref={textareaRef} placeholder={`พิมพ์โครงสร้างข้อความประกาศที่ต้องการโดยใช้ตัวแปรเพื่อเว้นช่องให้แพทย์กรอก เช่น:\n\n**[แบล็คลิสต์]**\nชื่อ: [ชื่อคน]\nเบอร์โทร: [เบอร์โทร]\nสังกัด: [ชื่อแก๊ง]\nความผิด: [โทษ]\nค่าปรับ: [ค่าปรับ] ดับเบิ้ลปรับ x[ตัวคูณ]`} value={tempContent} onChange={(e) => setTempContent(e.target.value)} required rows={8} style={{ ...inputStyle, fontFamily: "var(--font-mono)", resize: "vertical", lineHeight: "1.5" }} />
-                  </div>
-
-                  {/* Placeholder Buttons */}
-                  <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border-subtle)", borderRadius: "6px", padding: "12px" }}>
-                    <div style={{ fontSize: "0.75rem", fontWeight: "bold", color: "var(--accent-light)", marginBottom: "8px" }}>💡 คลิกที่ปุ่มด้านล่างเพื่อแทรกตัวแปรตรงตำแหน่งเคอร์เซอร์:</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                      {[
-                        { label: "👤 [ชื่อคน]", placeholder: "[ชื่อคน]" },
-                        { label: "📞 [เบอร์โทร]", placeholder: "[เบอร์โทร]" },
-                        { label: "🏴‍☠️ [ชื่อแก๊ง]", placeholder: "[ชื่อแก๊ง]" },
-                        { label: "💥 [แก๊งA]", placeholder: "[แก๊งA]" },
-                        { label: "💥 [แก๊งB]", placeholder: "[แก๊งB]" },
-                        { label: "📊 [คะแนนสตอรี่]", placeholder: "[คะแนนสตอรี่]" },
-                        { label: "⚖️ [โทษ]", placeholder: "[โทษ]" },
-                        { label: "💵 [ค่าปรับ]", placeholder: "[ค่าปรับ]" },
-                        { label: "✖️ [ตัวคูณ]", placeholder: "[ตัวคูณ]" },
-                        { label: "⏱️ [คูลดาวน์]", placeholder: "[คูลดาวน์]" },
-                        { label: "🕒 [เวลาเริ่ม]", placeholder: "[เวลาเริ่ม]" },
-                        { label: "🕒 [เวลาจบ]", placeholder: "[เวลาจบ]" }
-                      ].map((item) => (
-                        <button key={item.placeholder} type="button" onClick={() => insertPlaceholder(item.placeholder)} style={{ padding: "6px 10px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", borderRadius: "6px", color: "var(--text-secondary)", fontSize: "0.75rem", cursor: "pointer", transition: "all 0.2s", fontWeight: "500" }}
-                          onMouseOver={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent-light)"; e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 8%, transparent)"; }}
-                          onMouseOut={(e) => { e.currentTarget.style.borderColor = "var(--border-subtle)"; e.currentTarget.style.color = "var(--text-secondary)"; e.currentTarget.style.background = "var(--bg-secondary)"; }}
-                        >{item.label}</button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "8px" }}>
-                    {editingTemplateId && (
-                      <button type="button" onClick={handleCancelEdit} style={{ padding: "10px 16px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem" }}>ยกเลิก</button>
-                    )}
-                    <button type="submit" disabled={isSaving} style={{ padding: "10px 20px", background: "var(--primary)", border: "none", color: "white", borderRadius: "6px", cursor: "pointer", fontWeight: "bold", fontSize: "0.85rem" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        {isSaving ? "กำลังบันทึก..." : editingTemplateId ? (<><SaveIcon size={14} /> อัปเดตข้อมูล</>) : (<><PlusIcon size={14} /> เพิ่มเทมเพลต</>)}
-                      </span>
-                    </button>
-                  </div>
-                </form>
-
-                {/* Right Side: List of Templates */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>รูปแบบประกาศปัจจุบัน ({templates.length})</h3>
-                  {templates.length === 0 ? (
-                    <div className="card" style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)" }}>ยังไม่มีเทมเพลต ถูกตั้งค่าไว้</div>
-                  ) : (
-                    templates.map((tpl) => {
-                      const cat = categories.find((c) => c.id === tpl.categoryId);
-                      return (
-                        <div key={tpl.id} className="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px", border: editingTemplateId === tpl.id ? "1px solid var(--accent)" : undefined }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: "12px" }}>
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: "bold" }}>{tpl.title}</h4>
-                                <span style={{ fontSize: "0.7rem", background: "color-mix(in srgb, var(--accent) 15%, transparent)", color: "var(--accent-light)", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold", display: "flex", alignItems: "center", gap: "4px" }}>
-                                  <FolderIcon size={12} /> {cat?.name || "ไม่ระบุหมวดหมู่"}
-                                </span>
-                              </div>
-                            </div>
-                            <div style={{ display: "flex", gap: "6px" }}>
-                              <button onClick={() => handleEditClick(tpl)} style={{ padding: "4px 8px", background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-subtle)", color: "var(--text-secondary)", borderRadius: "4px", cursor: "pointer", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "4px" }}><EditIcon size={12} /> แก้ไข</button>
-                              <button onClick={() => handleDeleteTemplate(tpl.id, tpl.title)} style={{ padding: "4px 8px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--danger)", borderRadius: "4px", cursor: "pointer", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "4px" }}><TrashIcon size={12} /> ลบ</button>
-                            </div>
-                          </div>
-                          <pre style={{ margin: 0, padding: "10px", background: "var(--bg-secondary)", borderRadius: "6px", fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap", wordBreak: "break-all", border: "1px solid var(--border-subtle)" }}>{tpl.content}</pre>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
               </div>
-            )}
+            </section>
+          )}
 
-            {/* ─── TAB: Categories ─── */}
-            {activeSettingsTab === "categories" && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px", alignItems: "start" }}>
-                <form onSubmit={handleAddCategory} className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}><PlusIcon size={18} /> เพิ่มหมวดหมู่ใหม่</h3>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>ชื่อหมวดหมู่</label>
-                    <input type="text" placeholder="เช่น Blacklist, หาเคสไม่เจอ, ทั่วไป..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} required style={inputStyle} />
+          {/* TAB: Templates */}
+          {activeSettingsTab === "templates" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px", alignItems: "start" }}>
+              <form onSubmit={handleSaveTemplate} className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  {editingTemplateId ? (<><EditIcon size={16} /> แก้ไขรูปแบบประกาศ</>) : (<><PlusIcon size={16} /> เพิ่มรูปแบบประกาศใหม่</>)}
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>หัวข้อของประกาศ</label>
+                  <input type="text" placeholder="เช่น ประกาศติด Blacklist บุคคล..." value={tempTitle} onChange={(e) => setTempTitle(e.target.value)} required style={{ ...inputStyle, width: "100%" }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>หมวดหมู่ประกาศ</label>
+                  <select value={tempCatId} onChange={(e) => setTempCatId(e.target.value)} required style={{ ...inputStyle, cursor: "pointer", width: "100%" }}>
+                    <option value="">-- เลือกหมวดหมู่ --</option>
+                    {categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
+                  </select>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>โครงสร้างข้อความประกาศ (Template Body)</label>
+                  <textarea ref={textareaRef} placeholder="ใช้ตัวแปรเพื่อสร้างเทมเพลต เช่น [ชื่อคน], [เบอร์โทร], [โทษ]" value={tempContent} onChange={(e) => setTempContent(e.target.value)} required rows={8} style={{ ...inputStyle, width: "100%", fontFamily: "var(--font-mono)", resize: "vertical", lineHeight: "1.5" }} />
+                </div>
+
+                {/* Placeholder insertion buttons */}
+                <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid var(--border-subtle)", borderRadius: "6px", padding: "12px" }}>
+                  <div style={{ fontSize: "0.75rem", fontWeight: "bold", color: "var(--accent-light)", marginBottom: "8px" }}>💡 คลิกเพื่อแทรกตัวแปรตรงตำแหน่งเคอร์เซอร์:</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    {[
+                      { label: "👤 [ชื่อคน]", placeholder: "[ชื่อคน]" },
+                      { label: "📞 [เบอร์โทร]", placeholder: "[เบอร์โทร]" },
+                      { label: "🏴‍☠️ [ชื่อแก๊ง]", placeholder: "[ชื่อแก๊ง]" },
+                      { label: "💥 [แก๊งA]", placeholder: "[แก๊งA]" },
+                      { label: "💥 [แก๊งB]", placeholder: "[แก๊งB]" },
+                      { label: "📊 [คะแนนสตอรี่]", placeholder: "[คะแนนสตอรี่]" },
+                      { label: "⚖️ [โทษ]", placeholder: "[โทษ]" },
+                      { label: "💵 [ค่าปรับ]", placeholder: "[ค่าปรับ]" },
+                      { label: "✖️ [ตัวคูณ]", placeholder: "[ตัวคูณ]" },
+                      { label: "⏱️ [คูลดาวน์]", placeholder: "[คูลดาวน์]" },
+                      { label: "🕒 [เวลาเริ่ม]", placeholder: "[เวลาเริ่ม]" },
+                      { label: "🕒 [เวลาจบ]", placeholder: "[เวลาจบ]" }
+                    ].map((item) => (
+                      <button key={item.placeholder} type="button" onClick={() => insertPlaceholder(item.placeholder)} style={{ padding: "4px 8px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", borderRadius: "4px", color: "var(--text-secondary)", fontSize: "0.72rem", cursor: "pointer" }}>
+                        {item.label}
+                      </button>
+                    ))}
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>คำอธิบายย่อ</label>
-                    <input type="text" placeholder="เช่น ประกาศคนร้ายที่ไม่ชุบ, แจ้งเคสติดต่อไม่ได้..." value={newCatDesc} onChange={(e) => setNewCatDesc(e.target.value)} style={inputStyle} />
-                  </div>
-                  <button type="submit" disabled={isSaving} style={{ alignSelf: "flex-end", padding: "10px 20px", background: "var(--primary)", border: "none", color: "white", borderRadius: "6px", cursor: "pointer", fontWeight: "bold", fontSize: "0.85rem" }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: "6px" }}><PlusIcon size={14} /> {isSaving ? "กำลังบันทึก..." : "บันทึกหมวดหมู่"}</span>
+                </div>
+
+                <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "8px" }}>
+                  {editingTemplateId && (
+                    <button type="button" onClick={handleCancelEdit} className="btn btn-ghost" style={{ padding: "8px 16px" }}>ยกเลิก</button>
+                  )}
+                  <button type="submit" disabled={isSaving} className="btn btn-primary" style={{ padding: "8px 20px" }}>
+                    {isSaving ? "กำลังบันทึก..." : editingTemplateId ? "อัปเดตข้อมูล" : "เพิ่มเทมเพลต"}
                   </button>
-                </form>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}><FolderIcon size={18} /> รายการหมวดหมู่ทั้งหมด ({categories.length})</h3>
-                  {categories.length === 0 ? (
-                    <div className="card" style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)" }}>ยังไม่มีหมวดหมู่</div>
-                  ) : (
-                    categories.map((cat) => (
-                      <div key={cat.id} className="card" style={{ padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: "bold" }}>📁 {cat.name}</h4>
-                          {cat.description && (<p style={{ margin: "4px 0 0 0", fontSize: "0.8rem", color: "var(--text-muted)" }}>{cat.description}</p>)}
-                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>ID: {cat.id}</span>
-                        </div>
-                        <button onClick={() => handleDeleteCategory(cat.id, cat.name)} style={{ padding: "6px 12px", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--danger)", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "4px" }}><TrashIcon size={12} /> ลบ</button>
-                      </div>
-                    ))
-                  )}
                 </div>
-              </div>
-            )}
+              </form>
 
-            {/* ─── TAB: Penalties ─── */}
-            {activeSettingsTab === "penalties" && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px", alignItems: "start" }}>
-                <form onSubmit={handleAddPenalty} className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
-                    {editingPenaltyId ? (<><EditIcon size={18} /> แก้ไขความผิด / โทษปรับสำเร็จรูป</>) : (<><PlusIcon size={18} /> เพิ่มความผิด / โทษปรับสำเร็จรูป</>)}
-                  </h3>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>ประเภทความผิด / โทษข้อหา</label>
-                    <input type="text" placeholder="เช่น ทำร้ายร่างกายแพทย์, ขโมยรถพยาบาล..." value={newPenName} onChange={(e) => setNewPenName(e.target.value)} required style={inputStyle} />
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>วงเงินค่าปรับตั้งต้น (IC)</label>
-                    <input type="number" min="0" placeholder="เช่น 50000" value={newPenFine || ""} onChange={(e) => setNewPenFine(Number(e.target.value))} required style={inputStyle} />
-                  </div>
-                  <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
-                    {editingPenaltyId && (
-                      <button type="button" onClick={handleCancelEditPenalty} style={{ padding: "10px 16px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem" }}>ยกเลิก</button>
-                    )}
-                    <button type="submit" disabled={isSaving} style={{ padding: "10px 20px", background: "var(--primary)", border: "none", color: "white", borderRadius: "6px", cursor: "pointer", fontWeight: "bold", fontSize: "0.85rem" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        {isSaving ? "กำลังบันทึก..." : editingPenaltyId ? (<><SaveIcon size={14} /> อัปเดตข้อหา</>) : (<><PlusIcon size={14} /> บันทึกอัตราโทษ</>)}
-                      </span>
-                    </button>
-                  </div>
-                </form>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>รายการอัตราโทษปรับสำเร็จรูป ({penalties.length})</h3>
-                  {penalties.length === 0 ? (
-                    <div className="card" style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)" }}>ยังไม่มีรายการตั้งค่าไว้</div>
-                  ) : (
-                    penalties.map((pen) => (
-                      <div key={pen.id} className="card" style={{ padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: "bold" }}>{pen.name}</h4>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
-                            <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>ค่าปรับเริ่มต้น:</span>
-                            <span style={{ fontSize: "0.95rem", fontWeight: "bold", color: "var(--accent-light)", fontFamily: "var(--font-mono)" }}>{pen.fine.toLocaleString()} IC</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>รูปแบบประกาศปัจจุบัน ({templates.length})</h3>
+                {templates.length === 0 ? (
+                  <div className="card" style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)" }}>ยังไม่มีการเพิ่มเทมเพลตในระบบ</div>
+                ) : (
+                  templates.map((tpl) => {
+                    const cat = categories.find((c) => c.id === tpl.categoryId);
+                    return (
+                      <div key={tpl.id} className="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px", border: editingTemplateId === tpl.id ? "1px solid var(--accent)" : undefined }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: "12px" }}>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: "bold" }}>{tpl.title}</h4>
+                              <span style={{ fontSize: "0.7rem", background: "color-mix(in srgb, var(--accent) 15%, transparent)", color: "var(--accent-light)", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold", display: "flex", alignItems: "center", gap: "4px" }}>
+                                <FolderIcon size={12} /> {cat?.name || "ทั่วไป"}
+                              </span>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: "6px" }}>
+                            <button onClick={() => handleEditClick(tpl)} className="btn btn-ghost" style={{ padding: "4px 8px", fontSize: "0.75rem", borderRadius: "4px" }}><EditIcon size={12} /> แก้ไข</button>
+                            <button onClick={() => handleDeleteTemplate(tpl.id, tpl.title)} className="btn btn-danger" style={{ padding: "4px 8px", fontSize: "0.75rem", borderRadius: "4px" }}><TrashIcon size={12} /> ลบ</button>
                           </div>
                         </div>
-                        <div style={{ display: "flex", gap: "6px" }}>
-                          <button onClick={() => handleEditPenaltyClick(pen)} style={{ padding: "6px 12px", background: "rgba(255, 255, 255, 0.05)", border: "1px solid var(--border-subtle)", color: "var(--text-secondary)", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "4px" }}><EditIcon size={12} /> แก้ไข</button>
-                          <button onClick={() => handleDeletePenalty(pen.id, pen.name)} style={{ padding: "6px 12px", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--danger)", borderRadius: "6px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "4px" }}><TrashIcon size={12} /> ลบ</button>
+                        <pre style={{ margin: 0, padding: "10px", background: "var(--bg-secondary)", borderRadius: "6px", fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap", wordBreak: "break-all", border: "1px solid var(--border-subtle)" }}>{tpl.content}</pre>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB: Categories */}
+          {activeSettingsTab === "categories" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px", alignItems: "start" }}>
+              <form onSubmit={handleAddCategory} className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}><PlusIcon size={18} /> เพิ่มหมวดหมู่ใหม่</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>ชื่อหมวดหมู่</label>
+                  <input type="text" placeholder="เช่น Blacklist, ทั่วไป..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} required style={{ ...inputStyle, width: "100%" }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>คำอธิบายย่อ</label>
+                  <input type="text" placeholder="เช่น โพสต์สำหรับคนร้าย..." value={newCatDesc} onChange={(e) => setNewCatDesc(e.target.value)} style={{ ...inputStyle, width: "100%" }} />
+                </div>
+                <button type="submit" disabled={isSaving} className="btn btn-primary" style={{ alignSelf: "flex-end" }}>
+                  <PlusIcon size={14} /> บันทึกหมวดหมู่
+                </button>
+              </form>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}><FolderIcon size={18} /> รายการหมวดหมู่ทั้งหมด ({categories.length})</h3>
+                {categories.length === 0 ? (
+                  <div className="card" style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)" }}>ยังไม่มีหมวดหมู่</div>
+                ) : (
+                  categories.map((cat) => (
+                    <div key={cat.id} className="card" style={{ padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: "bold" }}>📁 {cat.name}</h4>
+                        {cat.description && (<p style={{ margin: "4px 0 0 0", fontSize: "0.8rem", color: "var(--text-muted)" }}>{cat.description}</p>)}
+                        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>ID: {cat.id}</span>
+                      </div>
+                      <button onClick={() => handleDeleteCategory(cat.id, cat.name)} className="btn btn-danger" style={{ padding: "6px 12px", fontSize: "0.8rem" }}><TrashIcon size={12} /> ลบ</button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB: Penalties */}
+          {activeSettingsTab === "penalties" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px", alignItems: "start" }}>
+              <form onSubmit={handleAddPenalty} className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  {editingPenaltyId ? (<><EditIcon size={18} /> แก้ไขความผิด / โทษปรับสำเร็จรูป</>) : (<><PlusIcon size={18} /> เพิ่มความผิด / โทษปรับสำเร็จรูป</>)}
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>ประเภทความผิด / โทษข้อหา</label>
+                  <input type="text" placeholder="เช่น ทำร้ายร่างกายแพทย์..." value={newPenName} onChange={(e) => setNewPenName(e.target.value)} required style={{ ...inputStyle, width: "100%" }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "500" }}>วงเงินค่าปรับตั้งต้น (IC)</label>
+                  <input type="number" min="0" placeholder="เช่น 50000" value={newPenFine || ""} onChange={(e) => setNewPenFine(Number(e.target.value))} required style={{ ...inputStyle, width: "100%" }} />
+                </div>
+                <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+                  {editingPenaltyId && (
+                    <button type="button" onClick={handleCancelEditPenalty} className="btn btn-ghost" style={{ padding: "8px 16px" }}>ยกเลิก</button>
+                  )}
+                  <button type="submit" disabled={isSaving} className="btn btn-primary" style={{ padding: "8px 20px" }}>
+                    {editingPenaltyId ? "อัปเดตข้อหา" : "บันทึกอัตราโทษ"}
+                  </button>
+                </div>
+              </form>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--text-primary)" }}>รายการอัตราโทษปรับสำเร็จรูป ({penalties.length})</h3>
+                {penalties.length === 0 ? (
+                  <div className="card" style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)" }}>ยังไม่มีรายการข้อหาตั้งค่าในระบบ</div>
+                ) : (
+                  penalties.map((pen) => (
+                    <div key={pen.id} className="card" style={{ padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: "bold" }}>{pen.name}</h4>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                          <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>ค่าปรับเริ่มต้น:</span>
+                          <span style={{ fontSize: "0.95rem", fontWeight: "bold", color: "var(--accent-light)", fontFamily: "var(--font-mono)" }}>{pen.fine.toLocaleString()} IC</span>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
+                      <div style={{ display: "flex", gap: "6px" }}>
+                        <button onClick={() => handleEditPenaltyClick(pen)} className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: "0.8rem" }}><EditIcon size={12} /> แก้ไข</button>
+                        <button onClick={() => handleDeletePenalty(pen.id, pen.name)} className="btn btn-danger" style={{ padding: "6px 12px", fontSize: "0.8rem" }}><TrashIcon size={12} /> ลบ</button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            )}
-          </div>
-        </>
+            </div>
+          )}
+
+        </div>
       )}
 
     </div>
