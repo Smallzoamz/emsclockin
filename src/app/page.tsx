@@ -16,7 +16,7 @@ export default async function LoginPage({
   const resolvedSearchParams = await searchParams;
   const error = typeof resolvedSearchParams?.error === "string" ? resolvedSearchParams.error : undefined;
 
-  let logoUrl = "";
+  let logoUrl = "/images/logo.png";
   try {
     const { data: logoSetting } = await supabase
       .from("system_settings")

@@ -15,7 +15,7 @@ export default async function DashboardLayout({
   const headerList = await headers();
   const pathname = headerList.get("x-pathname") || "";
 
-  let logoUrl = "";
+  let logoUrl = "/images/logo.png";
   try {
     const { data: settingsData } = await supabase
       .from("system_settings")

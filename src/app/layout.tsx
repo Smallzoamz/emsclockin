@@ -15,7 +15,7 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   let accentColor = "#10b981"; // Default Emerald
-  let logoUrl = "";
+  let logoUrl = "/images/logo.png";
   let bgOpacity = 0.05;
   let bgStyle = "contain";
 

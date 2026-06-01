@@ -111,6 +111,35 @@ export async function GET() {
       weeklyShifts: weeklyShiftsCount || 0
     };
 
+    // Construct the recent shifts log (active + completed) for landing page log table
+    const completedDoctors = (recentCompleted || []).map((shift: any) => {
+      const doctor = registeredDoctors.find((d: any) => d.email === shift.user_email);
+      return {
+        id: shift.id,
+        name: doctor?.name || shift.user_name || "แพทย์ประจำการ",
+        avatarUrl: doctor?.avatarUrl || null,
+        rank: doctor?.rank || "แพทย์ประจำการ",
+        clockIn: shift.clock_in,
+        clockOut: shift.clock_out,
+        status: "completed"
+      };
+    });
+
+    const activeDoctorsList = (activeShifts || []).map((shift: any) => {
+      const doctor = registeredDoctors.find((d: any) => d.email === shift.user_email);
+      return {
+        id: shift.id,
+        name: doctor?.name || shift.user_name || "แพทย์ประจำการ",
+        avatarUrl: doctor?.avatarUrl || null,
+        rank: doctor?.rank || "แพทย์ประจำการ",
+        clockIn: shift.clock_in,
+        clockOut: null,
+        status: "active"
+      };
+    });
+
+    const recentShiftsList = [...activeDoctorsList, ...completedDoctors];
+
     // 7. If authenticated, fetch their personal active/pending shifts
     if (userEmail) {
       const { data: activeShift } = await supabase
@@ -134,6 +163,7 @@ export async function GET() {
         activeCount: activeDoctors.length,
         activeDoctors,
         recentActivity,
+        recentShifts: recentShiftsList,
         stats,
         recruitmentQuota
       });
@@ -147,6 +177,7 @@ export async function GET() {
       activeCount: activeDoctors.length,
       activeDoctors,
       recentActivity,
+      recentShifts: recentShiftsList,
       stats,
       recruitmentQuota
     });
