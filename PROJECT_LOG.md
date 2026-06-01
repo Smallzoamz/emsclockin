@@ -326,3 +326,6 @@
 
 
 ## [2026-06-01 21:23] | File: multiple | Line: 1 | Keyword: Blacklist Target Type Variables | Status: ✅ Complete | Change: Implemented target type selector (Gang, Family, MC, Citizen) for Blacklist and Release Blacklist announcements. Added [ประเภท] placeholder in default templates, rendered interactive radio selectors in Form step 2, updated generateFormattedText and handleReleaseBlacklist logic, updated backend API routes with graceful retry database fallback for target_type to support backward compatibility, updated Blacklist History table to display target type, and documented placeholders in settings.
+
+## [2026-06-02 05:50] | File: multiple | Line: 1 | Keyword: TS & ESLint Fixes for Discord settings | Status: ✅ Complete | Change: Resolved all TypeScript errors and ESLint warnings/errors in the discord bot settings migration files. Fixed explicit any issues, type assertions, unused catch parameters, and unescaped entity quote marks in auth callback configurations, sync-nicknames API route, and Master settings page.
+

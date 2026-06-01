@@ -38,10 +38,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             .eq("key", "admin_credentials_accounts")
             .single();
 
-          const adminAccounts = settingsData?.value || [];
+          const adminAccounts = (settingsData?.value || []) as Array<{ username?: string; password?: string; name?: string; email?: string }>;
           if (Array.isArray(adminAccounts)) {
             const matched = adminAccounts.find(
-              (acc: any) => acc.username === username && acc.password === password
+              (acc) => acc.username === username && acc.password === password
             );
             if (matched) {
               return {
@@ -64,15 +64,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/",
   },
   callbacks: {
-    async signIn({ user, account, profile, email, credentials }) {
+    async signIn({ account }) {
       if (account?.provider === "discord") {
         const discordId = account.providerAccountId;
-        const botToken = process.env.DISCORD_BOT_TOKEN;
-        const guildId = process.env.DISCORD_GUILD_ID;
+        let botToken = process.env.DISCORD_BOT_TOKEN;
+        let guildId = process.env.DISCORD_GUILD_ID;
 
-        // Bypassing if environment variables are not configured (e.g. local dev fallback)
+        try {
+          const { data: dbSettings } = await supabase
+            .from("system_settings")
+            .select("key, value")
+            .in("key", ["discord_bot_token", "discord_guild_id"]);
+
+          const settingsMap = (dbSettings || []).reduce((acc: Record<string, unknown>, curr) => {
+            acc[curr.key] = curr.value;
+            return acc;
+          }, {});
+
+          if (typeof settingsMap["discord_bot_token"] === "string") botToken = settingsMap["discord_bot_token"];
+          if (typeof settingsMap["discord_guild_id"] === "string") guildId = settingsMap["discord_guild_id"];
+        } catch (dbErr) {
+          console.error("[Auth Guild Guard DB Fetch] Error:", dbErr);
+        }
+
+        // Bypassing if environment variables and DB settings are not configured (e.g. local dev fallback)
         if (!botToken || !guildId) {
-          console.warn("[Auth Guild Guard] DISCORD_BOT_TOKEN or DISCORD_GUILD_ID is not configured. Bypassing check.");
+          console.warn("[Auth Guild Guard] DISCORD_BOT_TOKEN or DISCORD_GUILD_ID is not configured in .env or DB. Bypassing check.");
           return true;
         }
 
@@ -125,10 +142,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               .eq("key", "admin_discord_accounts")
               .single();
 
-            const discordAdmins = discAdminsData?.value || [];
+            const discordAdmins = (discAdminsData?.value || []) as Array<{ email?: string; username?: string }>;
             if (Array.isArray(discordAdmins)) {
               const isDiscordAdmin = discordAdmins.some(
-                (adm: any) =>
+                (adm) =>
                   (adm.email && typeof user.email === "string" && adm.email.toLowerCase() === user.email.toLowerCase()) ||
                   (adm.username && typeof token.discordUsername === "string" && adm.username.toLowerCase() === (token.discordUsername as string).toLowerCase())
               );
@@ -148,32 +165,38 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // Register/update doctor in system_settings
         try {
-          const { data: settingsData } = await supabase
+          const { data: settingsRows } = await supabase
             .from("system_settings")
-            .select("value")
-            .eq("key", "registered_doctors")
-            .single();
+            .select("key, value")
+            .in("key", ["registered_doctors", "op_nickname_mode", "user_names", "discord_bot_token", "discord_guild_id"]);
 
-          let registeredDoctors = settingsData?.value || [];
+          const settingsMap = (settingsRows || []).reduce((acc: Record<string, unknown>, curr) => {
+            acc[curr.key] = curr.value;
+            return acc;
+          }, {});
+
+          let registeredDoctors = (settingsMap["registered_doctors"] || []) as Array<{
+            email?: string;
+            name?: string;
+            discordUsername?: string;
+            avatarUrl?: string;
+            discordId?: string;
+            updatedAt?: string;
+          }>;
           if (!Array.isArray(registeredDoctors)) {
             registeredDoctors = [];
           }
 
           const userEmail = user.email;
-          const userName = user.name || token.discordUsername || "Unknown";
+          const userName = (user.name || (token.discordUsername as string) || "Unknown") as string;
 
-          const existingIdx = registeredDoctors.findIndex((d: any) => d.email === userEmail);
+          const existingIdx = registeredDoctors.findIndex((d) => d.email === userEmail);
           
           // Check if we should fetch nickname from Discord (Mode 1 check)
-          let finalName = userName;
-          const { data: opModeData } = await supabase
-            .from("system_settings")
-            .select("value")
-            .eq("key", "op_nickname_mode")
-            .single();
-          const syncMode = opModeData?.value || "manual";
-          const botToken = process.env.DISCORD_BOT_TOKEN;
-          const guildId = process.env.DISCORD_GUILD_ID;
+          let finalName: string = userName;
+          const syncMode = typeof settingsMap["op_nickname_mode"] === "string" ? settingsMap["op_nickname_mode"] : "manual";
+          const botToken = typeof settingsMap["discord_bot_token"] === "string" ? settingsMap["discord_bot_token"] : process.env.DISCORD_BOT_TOKEN;
+          const guildId = typeof settingsMap["discord_guild_id"] === "string" ? settingsMap["discord_guild_id"] : process.env.DISCORD_GUILD_ID;
 
           if (syncMode === "discord" && botToken && guildId && token.discordId) {
             try {
@@ -183,7 +206,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 }
               });
               if (res.ok) {
-                const memberData = await res.json();
+                const memberData = (await res.json()) as { nick?: string; user?: { global_name?: string } };
                 if (memberData.nick) {
                   finalName = memberData.nick;
                 } else if (memberData.user?.global_name) {
@@ -195,13 +218,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }
           } else {
             // Check manual custom name override from user_names setting
-            const { data: namesData } = await supabase
-              .from("system_settings")
-              .select("value")
-              .eq("key", "user_names")
-              .single();
-            const customNames = namesData?.value || {};
-            if (customNames[userEmail]) {
+            const customNames = (settingsMap["user_names"] || {}) as Record<string, string>;
+            if (userEmail && customNames[userEmail]) {
               finalName = customNames[userEmail];
             }
           }
@@ -209,9 +227,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const doctorInfo = {
             email: userEmail,
             name: finalName,
-            discordUsername: token.discordUsername,
+            discordUsername: token.discordUsername as string,
             avatarUrl: avatarUrl,
-            discordId: token.discordId,
+            discordId: token.discordId as string,
             updatedAt: new Date().toISOString()
           };
 

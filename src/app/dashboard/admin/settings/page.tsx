@@ -39,6 +39,12 @@ export default function AdminSettingsPage() {
   const [isSavingWebhooks, setIsSavingWebhooks] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
 
+  // Discord Bot and Guild State
+  const [discordBotToken, setDiscordBotToken] = useState("");
+  const [discordGuildId, setDiscordGuildId] = useState("");
+  const [isSavingBotConfig, setIsSavingBotConfig] = useState(false);
+  const [botConfigStatus, setBotConfigStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
+
   // Admin Management State
   const [adminCredentials, setAdminCredentials] = useState<Array<{ username: string, name: string, password?: string }>>([]);
   const [adminDiscord, setAdminDiscord] = useState<Array<{ email?: string, username?: string, name: string }>>([]);
@@ -197,7 +203,7 @@ export default function AdminSettingsPage() {
       } else {
         setLandingStatus({ message: data.error || "อัปโหลดรูปภาพไม่สำเร็จ", type: "error" });
       }
-    } catch (err) {
+    } catch {
       setLandingStatus({ message: "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ", type: "error" });
     } finally {
       setIsUploadingSlideIndex(null);
@@ -230,7 +236,7 @@ export default function AdminSettingsPage() {
       } else {
         setLandingStatus({ message: data.error || "อัปโหลดรูปภาพไม่สำเร็จ", type: "error" });
       }
-    } catch (err) {
+    } catch {
       setLandingStatus({ message: "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ", type: "error" });
     } finally {
       setIsUploadingNewsIndex(null);
@@ -264,7 +270,7 @@ export default function AdminSettingsPage() {
         const data = await res.json();
         setLandingStatus({ message: data.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
       }
-    } catch (err) {
+    } catch {
       setLandingStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     } finally {
       setIsSavingLanding(false);
@@ -276,7 +282,7 @@ export default function AdminSettingsPage() {
     document.title = "ตั้งค่าระบบ | EMS Clock-in";
     // Get Session and determine Master Admin
     getSession().then((session) => {
-      const user = session?.user as any;
+      const user = session?.user as { role?: string; discordId?: string } | null | undefined;
       if (user && user.role === "admin" && !user.discordId) {
         setIsMasterAdmin(true);
         setLoadingAuth(false);
@@ -301,6 +307,12 @@ export default function AdminSettingsPage() {
         }
         if (data.settings?.discord_op_webhook_url) {
           setDiscordOpWebhookUrl(data.settings.discord_op_webhook_url);
+        }
+        if (data.settings?.discord_bot_token) {
+          setDiscordBotToken(data.settings.discord_bot_token);
+        }
+        if (data.settings?.discord_guild_id) {
+          setDiscordGuildId(data.settings.discord_guild_id);
         }
         if (data.settings?.theme_accent_color) {
           setThemeAccentColor(data.settings.theme_accent_color);
@@ -436,11 +448,46 @@ export default function AdminSettingsPage() {
         const d2 = await res2.json();
         setWebhookStatus({ message: d1.error || d2.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
       }
-    } catch (err) {
+    } catch {
       setWebhookStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     } finally {
       setIsSavingWebhooks(false);
       setTimeout(() => setWebhookStatus(null), 4000);
+    }
+  };
+
+  const handleSaveBotConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isMasterAdmin) return;
+    setIsSavingBotConfig(true);
+    setBotConfigStatus(null);
+
+    try {
+      // Save Bot Token
+      const res1 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "discord_bot_token", value: discordBotToken }),
+      });
+      // Save Guild ID
+      const res2 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "discord_guild_id", value: discordGuildId }),
+      });
+
+      if (res1.ok && res2.ok) {
+        setBotConfigStatus({ message: "บันทึกข้อมูล Discord Bot & Guild ID เรียบร้อยแล้วค่ะ", type: "success" });
+      } else {
+        const d1 = await res1.json();
+        const d2 = await res2.json();
+        setBotConfigStatus({ message: d1.error || d2.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
+      }
+    } catch {
+      setBotConfigStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    } finally {
+      setIsSavingBotConfig(false);
+      setTimeout(() => setBotConfigStatus(null), 4000);
     }
   };
 
@@ -471,7 +518,7 @@ export default function AdminSettingsPage() {
         const d2 = await res2.json();
         setServerSyncStatus({ message: d1.error || d2.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
       }
-    } catch (err) {
+    } catch {
       setServerSyncStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     } finally {
       setIsSavingServerSync(false);
@@ -523,7 +570,7 @@ export default function AdminSettingsPage() {
       } else {
         alert("ไม่สามารถเพิ่มบัญชีผู้ดูแลระบบได้");
       }
-    } catch (err) {
+    } catch {
       alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
     }
   };
@@ -545,7 +592,7 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    const newAdmin: any = { name: newDiscordName };
+    const newAdmin: { name: string; email?: string; username?: string } = { name: newDiscordName };
     if (discordAddMode === "email") {
       newAdmin.email = newDiscordEmail;
       if (newDiscordEmail.toLowerCase() === "lneeobee@gmail.com") {
@@ -580,7 +627,7 @@ export default function AdminSettingsPage() {
       } else {
         alert("ไม่สามารถบันทึกข้อมูลได้");
       }
-    } catch (err) {
+    } catch {
       alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
     }
   };
@@ -606,12 +653,12 @@ export default function AdminSettingsPage() {
         setAdminCredentials(updated);
         alert("ลบบัญชีแอดมินสำเร็จ");
       }
-    } catch (err) {
+    } catch {
       alert("ลบไม่สำเร็จ");
     }
   };
 
-  const handleDeleteDiscordAdmin = async (adminObj: any) => {
+  const handleDeleteDiscordAdmin = async (adminObj: { email?: string; username?: string; name?: string }) => {
     if (!isMasterAdmin) return;
     const displayName = adminObj.email ? adminObj.email : `@${adminObj.username}`;
     if (!await confirm({
@@ -635,7 +682,7 @@ export default function AdminSettingsPage() {
         setAdminDiscord(updated);
         alert("ลบสิทธิ์แอดมิน Discord สำเร็จ");
       }
-    } catch (err) {
+    } catch {
       alert("ลบไม่สำเร็จ");
     }
   };
@@ -678,7 +725,7 @@ export default function AdminSettingsPage() {
         const d3 = await resStyle.json();
         setThemeStatus({ message: d1.error || d2.error || d3.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
       }
-    } catch (err) {
+    } catch {
       setThemeStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     } finally {
       setIsSavingTheme(false);
@@ -710,7 +757,7 @@ export default function AdminSettingsPage() {
       } else {
         setThemeStatus({ message: data.error || "อัปโหลดรูปภาพไม่สำเร็จ", type: "error" });
       }
-    } catch (err) {
+    } catch {
       setThemeStatus({ message: "เกิดข้อผิดพลาดในการอัปโหลดไฟล์", type: "error" });
     } finally {
       setIsUploadingLogo(false);
@@ -746,7 +793,7 @@ export default function AdminSettingsPage() {
         const data = await res.json();
         setThemeStatus({ message: data.error || "เกิดข้อผิดพลาดในการลบโลโก้", type: "error" });
       }
-    } catch (err) {
+    } catch {
       setThemeStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
     } finally {
       setIsUploadingLogo(false);
@@ -1191,6 +1238,96 @@ export default function AdminSettingsPage() {
         </form>
       </section>
 
+      {/* Discord Bot & Guild Configuration */}
+      <section className="card" style={{ padding: "24px" }}>
+        <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
+          <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+            <LockIcon size={20} style={{ color: "var(--accent)" }} />
+            ตั้งค่าบอทและเซิร์ฟเวอร์ Discord (Discord Bot & Guild Settings)
+          </h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
+            กำหนด Token บอทดิสคอร์ด และ Server ID สำหรับใช้ตรวจสอบสิทธิ์การเป็นสมาชิกกลุ่ม (Guild Membership Guard) และใช้ซิงค์ชื่อเล่น (Discord Nicknames)
+          </p>
+        </div>
+
+        <form onSubmit={handleSaveBotConfig} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px" }}>
+            
+            {/* Input 1: Bot Token */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                🤖 Discord Bot Token
+              </label>
+              <input 
+                type="password" 
+                placeholder="MT..." 
+                value={discordBotToken}
+                onChange={e => setDiscordBotToken(e.target.value.trim())}
+                style={{ width: "100%", padding: "10px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem" }}
+              />
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                รหัสโทเค็นของบอทดิสคอร์ดสำหรับดึงข้อมูลสมาชิกและชื่อเล่น (ระบบจะเก็บและแสดงผลแบบปิดบังเพื่อความปลอดภัย)
+              </span>
+            </div>
+
+            {/* Input 2: Guild ID */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                🆔 Discord Server ID (Guild ID)
+              </label>
+              <input 
+                type="text" 
+                placeholder="เช่น 1505396570563022988" 
+                value={discordGuildId}
+                onChange={e => setDiscordGuildId(e.target.value.trim())}
+                style={{ width: "100%", padding: "10px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem" }}
+              />
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                รหัสไอดีของเซิร์ฟเวอร์ Discord ของหน่วยงาน
+              </span>
+            </div>
+
+          </div>
+
+          {/* Status Message */}
+          {botConfigStatus && (
+            <div style={{
+              padding: "10px 14px",
+              borderRadius: "6px",
+              fontSize: "0.85rem",
+              background: botConfigStatus.type === "success" ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "rgba(239, 68, 68, 0.1)",
+              border: `1px solid ${botConfigStatus.type === "success" ? "var(--success)" : "var(--danger)"}`,
+              color: botConfigStatus.type === "success" ? "var(--success)" : "var(--danger)"
+            }}>
+              {botConfigStatus.message}
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <button 
+            type="submit" 
+            disabled={isSavingBotConfig}
+            style={{
+              alignSelf: "flex-end",
+              padding: "10px 24px",
+              background: "var(--primary)",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              opacity: isSavingBotConfig ? 0.7 : 1
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
+              <SaveIcon size={14} />
+              {isSavingBotConfig ? "กำลังบันทึก..." : "บันทึกการตั้งค่าบอท Discord"}
+            </span>
+          </button>
+        </form>
+      </section>
+
       {/* Server Sync Integration */}
       <section className="card" style={{ padding: "24px" }}>
         <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
@@ -1324,7 +1461,7 @@ export default function AdminSettingsPage() {
                 
                 <div style={{ marginTop: "12px", color: "var(--text-muted)", fontSize: "0.75rem", display: "flex", flexDirection: "column", gap: "4px" }}>
                   <span>⚠️ *ระบบจะบันทึกเข้า-ออกงานให้อัตโนมัติทันทีหากตรวจพบรหัสผู้ใช้งานที่ลงทะเบียนไว้</span>
-                  <span>⚠️ *การออกงานจากระบบเซิฟเวอร์ จะเป็นการเปลี่ยนสถานะเป็น "รอส่งหลักฐาน" (Pending Proof) เพื่อให้หมอมาแนบรูปสกรีนช็อตที่หน้าเว็บของตนเองก่อน จึงจะสิ้นสุดชั่วโมงเวรสมบูรณ์และส่ง Log เข้าห้องดิสคอร์ดหลัก</span>
+                  <span>⚠️ *การออกงานจากระบบเซิฟเวอร์ จะเป็นการเปลี่ยนสถานะเป็น &quot;รอส่งหลักฐาน&quot; (Pending Proof) เพื่อให้หมอมาแนบรูปสกรีนช็อตที่หน้าเว็บของตนเองก่อน จึงจะสิ้นสุดชั่วโมงเวรสมบูรณ์และส่ง Log เข้าห้องดิสคอร์ดหลัก</span>
                 </div>
               </div>
             )}
@@ -1577,15 +1714,15 @@ export default function AdminSettingsPage() {
 
         {/* Tabs selector */}
         <div style={{ display: "flex", gap: "12px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px", marginBottom: "24px" }}>
-          {[
+          {([
             { id: "slides", label: "🖼️ สไลด์แบนเนอร์ (Slideshow)" },
             { id: "news", label: "📰 ข่าวสาร & ประกาศ (News)" },
             { id: "forum", label: "💬 บอร์ดสนทนาล่าสุด (Forum)" }
-          ].map((tab) => (
+          ] as const).map((tab) => (
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveLandingTab(tab.id as any)}
+              onClick={() => setActiveLandingTab(tab.id)}
               style={{
                 padding: "8px 16px",
                 background: activeLandingTab === tab.id ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "transparent",

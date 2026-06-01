@@ -10,30 +10,41 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  const guildId = process.env.DISCORD_GUILD_ID;
-
-  if (!botToken || !guildId) {
-    return NextResponse.json({
-      error: "Discord Bot Token or Guild ID is not configured in .env.local"
-    }, { status: 400 });
-  }
-
   try {
-    const { data: settingsData } = await supabase
+    const { data: settingsRows } = await supabase
       .from("system_settings")
-      .select("value")
-      .eq("key", "registered_doctors")
-      .single();
+      .select("key, value")
+      .in("key", ["registered_doctors", "discord_bot_token", "discord_guild_id"]);
 
-    let registeredDoctors = settingsData?.value || [];
+    const settingsMap = (settingsRows || []).reduce((acc: Record<string, unknown>, curr) => {
+      acc[curr.key] = curr.value;
+      return acc;
+    }, {});
+
+    const botToken = typeof settingsMap["discord_bot_token"] === "string" ? settingsMap["discord_bot_token"] : process.env.DISCORD_BOT_TOKEN;
+    const guildId = typeof settingsMap["discord_guild_id"] === "string" ? settingsMap["discord_guild_id"] : process.env.DISCORD_GUILD_ID;
+
+    if (!botToken || !guildId) {
+      return NextResponse.json({
+        error: "กรุณาตั้งค่า Discord Bot Token และ Guild ID ในระบบตั้งค่าผู้ดูแลหลัก หรือไฟล์ .env ก่อนค่ะ"
+      }, { status: 400 });
+    }
+
+    const registeredDoctors = (settingsMap["registered_doctors"] || []) as Array<{
+      email?: string;
+      name?: string;
+      discordUsername?: string;
+      avatarUrl?: string;
+      discordId?: string;
+      updatedAt?: string;
+    }>;
     if (!Array.isArray(registeredDoctors)) {
       return NextResponse.json({ success: true, count: 0, message: "No registered doctors found." });
     }
 
     let updatedCount = 0;
     const updatedDoctors = await Promise.all(
-      registeredDoctors.map(async (doc: any) => {
+      registeredDoctors.map(async (doc) => {
         if (!doc.discordId) return doc;
 
         try {
@@ -44,7 +55,7 @@ export async function POST() {
           });
 
           if (res.ok) {
-            const memberData = await res.json();
+            const memberData = (await res.json()) as { nick?: string; user?: { global_name?: string; username?: string; avatar?: string } };
             let newName = doc.name;
 
             if (memberData.nick) {
@@ -90,8 +101,9 @@ export async function POST() {
       updatedCount,
       message: `Successfully synchronized ${updatedCount} nicknames from Discord.`
     });
-  } catch (error: any) {
-    console.error("[OP Sync Nicknames API] Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to sync nicknames" }, { status: 500 });
+  } catch (error) {
+    const err = error as Error;
+    console.error("[OP Sync Nicknames API] Error:", err);
+    return NextResponse.json({ error: err.message || "Failed to sync nicknames" }, { status: 500 });
   }
 }

@@ -61,7 +61,9 @@ export async function POST(req: Request) {
       "discord_webhook_url", 
       "discord_op_webhook_url",
       "server_sync_enabled",
-      "server_sync_api_key"
+      "server_sync_api_key",
+      "discord_bot_token",
+      "discord_guild_id"
     ].includes(key);
     if (isSensitiveKey && (user.discordId || user.email !== "lneeobee@gmail.com")) {
       return NextResponse.json({ error: "เฉพาะบัญชีผู้ดูแลระบบหลักของเว็บ (Master Admin) เท่านั้นที่สามารถจัดการสิทธิ์ผู้ดูแลระบบได้" }, { status: 403 });
