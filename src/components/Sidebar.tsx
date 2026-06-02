@@ -244,6 +244,14 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
               </Link>
 
               <Link
+                href="/dashboard/admin/leaves"
+                className={`nav-link ${pathname === "/dashboard/admin/leaves" ? "active" : ""}`}
+              >
+                <FileTextIcon size={18} />
+                จัดการใบลาพักงาน
+              </Link>
+
+              <Link
                 href="/dashboard/bonus"
                 className={`nav-link ${pathname === "/dashboard/bonus" ? "active" : ""}`}
               >

@@ -77,6 +77,10 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; di
             <CoinsIcon size={20} />
             โบนัส
           </Link>
+          <Link href="/dashboard/admin/leaves" className={pathname === "/dashboard/admin/leaves" ? "active" : ""}>
+            <FileTextIcon size={20} />
+            ใบลา
+          </Link>
           <Link href="/dashboard/admin/mentor" className={pathname === "/dashboard/admin/mentor" ? "active" : ""}>
             <CrownIcon size={20} />
             พี่เลี้ยง
