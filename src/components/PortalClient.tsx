@@ -75,9 +75,9 @@ export function PortalClient({
     return [
       {
         image: "/images/ems_hero_bg.png",
-        tag: "LOS SANTOS MEDICAL SERVICE",
+        tag: "FiveM EMS Service",
         title: "เราพร้อมดูแล และช่วยเหลือประชาชนในทุกสถานการณ์",
-        description: "ยินดีต้อนรับสู่ศูนย์บริการการแพทย์นครลอสซานโตส"
+        description: "ยินดีต้อนรับสู่ศูนย์บริการการแพทย์"
       }
     ];
   });
@@ -421,11 +421,8 @@ export function PortalClient({
             )}
             <div>
               <h2 style={{ fontSize: "0.95rem", fontWeight: "900", color: "#ffffff", margin: 0, letterSpacing: "0.5px", lineHeight: "1.1" }}>
-                LOS SANTOS
+                FiveM EMS Service
               </h2>
-              <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.4)", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Medical Service
-              </span>
             </div>
           </div>
 
@@ -998,7 +995,7 @@ export function PortalClient({
               fontSize: "0.72rem",
               color: "rgba(255,255,255,0.35)"
             }}>
-              <p style={{ margin: 0 }}>© 2024 Los Santos Medical Service | All rights reserved.</p>
+              <p style={{ margin: 0 }}>© 2026 FiveM EMS Service | All rights reserved.</p>
               <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
                 <a href="/dashboard/rules" style={{ textDecoration: "none", color: "rgba(255,255,255,0.4)" }}>กฎระเบียบหน่วยงาน</a>
                 <span>·</span>

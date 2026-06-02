@@ -344,7 +344,7 @@ export default function AdminSettingsPage() {
           setLandingSlides([
             {
               image: "/images/ems_hero_bg.png",
-              tag: "LOS SANTOS MEDICAL SERVICE",
+              tag: "FiveM EMS Service",
               title: "เราพร้อมดูแล และช่วยเหลือประชาชนในทุกสถานการณ์",
               description: "เพราะชีวิต...คือหน้าที่ของเรา"
             },

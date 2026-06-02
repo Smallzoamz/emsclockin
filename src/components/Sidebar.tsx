@@ -105,8 +105,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
           )}
         </div>
         <div>
-          <h1 style={{ fontSize: "0.95rem", letterSpacing: "-0.5px" }}>MEDICAL SERVICE</h1>
-          <span style={{ letterSpacing: "1px" }}>FIVEM HOSPITAL SYSTEM</span>
+          <h1 style={{ fontSize: "0.95rem", letterSpacing: "-0.5px", fontWeight: "900" }}>FiveM EMS Service</h1>
         </div>
       </div>
 
