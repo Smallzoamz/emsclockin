@@ -46,6 +46,11 @@ export default function ExamPage({ params }: PageProps) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Refs to avoid stale closures in intervals and event handlers
+  const answersRef = useRef<Record<string, string>>({});
+  const focusLostCountRef = useRef(0);
+  const screenShareDetectedRef = useRef(false);
+
   // User details for watermark
   const [watermarkText, setWatermarkText] = useState("STUDENT DOCTOR");
 
@@ -77,9 +82,15 @@ export default function ExamPage({ params }: PageProps) {
       }
 
       setAttempt(currentAttempt);
-      setAnswers(currentAttempt.student_answers || {});
-      setFocusLostCount(currentAttempt.focus_lost_count || 0);
-      setScreenShareDetected(currentAttempt.screen_share_detected || false);
+      const initialAnswers = currentAttempt.student_answers || {};
+      const initialFocusLost = currentAttempt.focus_lost_count || 0;
+      const initialScreenShare = currentAttempt.screen_share_detected || false;
+      setAnswers(initialAnswers);
+      answersRef.current = initialAnswers;
+      setFocusLostCount(initialFocusLost);
+      focusLostCountRef.current = initialFocusLost;
+      setScreenShareDetected(initialScreenShare);
+      screenShareDetectedRef.current = initialScreenShare;
 
       // Create dynamic watermark text
       if (relatedMsg) {
@@ -131,7 +142,7 @@ export default function ExamPage({ params }: PageProps) {
     };
   }, [timeLeftSeconds, attempt?.status]);
 
-  // Auto-save progress every 30 seconds
+  // Auto-save progress every 30 seconds (uses refs to avoid stale closures)
   useEffect(() => {
     if (attempt?.status !== "in_progress") return;
 
@@ -142,9 +153,9 @@ export default function ExamPage({ params }: PageProps) {
     return () => {
       if (autoSaveRef.current) clearInterval(autoSaveRef.current);
     };
-  }, [answers, focusLostCount, screenShareDetected, attempt?.status]);
+  }, [attempt?.status]);
 
-  // Save progress function (non-blocking)
+  // Save progress function (non-blocking, reads from refs for latest data)
   const saveProgressOnly = async () => {
     if (attempt?.status !== "in_progress") return;
     try {
@@ -153,9 +164,9 @@ export default function ExamPage({ params }: PageProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           attemptId,
-          answers,
-          focusLostCount,
-          screenShareDetected,
+          answers: answersRef.current,
+          focusLostCount: focusLostCountRef.current,
+          screenShareDetected: screenShareDetectedRef.current,
           isAutoSave: true
         })
       });
@@ -214,16 +225,17 @@ export default function ExamPage({ params }: PageProps) {
     const handleFocusLoss = () => {
       setFocusLostCount(prev => {
         const next = prev + 1;
+        focusLostCountRef.current = next;
         setShowFocusWarning(true);
-        // Persist count right away to prevent bypasses
+        // Persist count right away to prevent bypasses (read from refs for latest data)
         fetch(`/api/exams/submit`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             attemptId,
-            answers,
+            answers: answersRef.current,
             focusLostCount: next,
-            screenShareDetected,
+            screenShareDetected: screenShareDetectedRef.current,
             isFocusLossEvent: true
           })
         }).catch(err => console.error("Focus sync error:", err));
@@ -267,10 +279,11 @@ export default function ExamPage({ params }: PageProps) {
 
   // Handlers for input change
   const handleAnswerChange = (qId: string, value: string) => {
-    setAnswers(prev => ({
-      ...prev,
-      [qId]: value
-    }));
+    setAnswers(prev => {
+      const next = { ...prev, [qId]: value };
+      answersRef.current = next;
+      return next;
+    });
   };
 
   // Force automatic submission
@@ -282,9 +295,9 @@ export default function ExamPage({ params }: PageProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           attemptId,
-          answers,
-          focusLostCount,
-          screenShareDetected,
+          answers: answersRef.current,
+          focusLostCount: focusLostCountRef.current,
+          screenShareDetected: screenShareDetectedRef.current,
           isAutoSubmit: isTimeUp
         })
       });
@@ -305,7 +318,8 @@ export default function ExamPage({ params }: PageProps) {
 
   // Normal submit trigger with Confirm Modal
   const handleSubmitClick = async () => {
-    const questionsAnswered = Object.keys(answers).filter(k => answers[k]?.trim()).length;
+    const currentAnswers = answersRef.current;
+    const questionsAnswered = Object.keys(currentAnswers).filter(k => currentAnswers[k]?.trim()).length;
     const totalQuestions = attempt?.randomized_questions.length || 0;
 
     const ok = await confirm({

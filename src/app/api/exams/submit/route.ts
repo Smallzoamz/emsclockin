@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { attemptId, answers, focusLostCount, screenShareDetected, isAutoSubmit } = body;
+    const { attemptId, answers, focusLostCount, screenShareDetected, isAutoSubmit, isAutoSave, isFocusLossEvent } = body;
 
     if (!attemptId) {
       return NextResponse.json({ error: "attemptId is required" }, { status: 400 });
@@ -40,6 +40,34 @@ export async function POST(req: Request) {
       });
     }
 
+    // 2a. Auto-save or focus-loss event: save progress only WITHOUT changing status
+    if (isAutoSave || isFocusLossEvent) {
+      const progressUpdate: Record<string, unknown> = {
+        focus_lost_count: focusLostCount !== undefined ? focusLostCount : attempt.focus_lost_count,
+        screen_share_detected: screenShareDetected !== undefined ? screenShareDetected : attempt.screen_share_detected
+      };
+
+      // Only update student_answers if provided and non-empty
+      if (answers && Object.keys(answers).length > 0) {
+        // Merge with existing answers to prevent stale closures from overwriting
+        const mergedAnswers = { ...(attempt.student_answers || {}), ...answers };
+        progressUpdate.student_answers = mergedAnswers;
+      }
+
+      const { error: saveErr } = await supabase
+        .from("exam_attempts")
+        .update(progressUpdate)
+        .eq("id", attemptId);
+
+      if (saveErr) {
+        console.error("[Exams Auto-save] Error:", saveErr);
+        return NextResponse.json({ error: "Auto-save failed" }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, message: "Progress saved" });
+    }
+
+    // 2b. Final submission
     const now = new Date();
     const startTime = new Date(attempt.started_at);
     const elapsedMs = now.getTime() - startTime.getTime();
@@ -47,11 +75,13 @@ export async function POST(req: Request) {
     const elapsedSeconds = Math.floor((elapsedMs % 60000) / 1000);
     const durationStr = `${elapsedMinutes} นาที ${elapsedSeconds} วินาที`;
 
-    // 2. Update exam attempt
+    // Merge answers with existing saved progress to prevent data loss
+    const finalAnswers = { ...(attempt.student_answers || {}), ...(answers || {}) };
+
     const { data: updatedAttempt, error: submitErr } = await supabase
       .from("exam_attempts")
       .update({
-        student_answers: answers || {},
+        student_answers: finalAnswers,
         status: "submitted",
         submitted_at: now.toISOString(),
         focus_lost_count: focusLostCount !== undefined ? focusLostCount : attempt.focus_lost_count,
