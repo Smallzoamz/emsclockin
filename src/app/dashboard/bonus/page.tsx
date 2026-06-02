@@ -37,6 +37,7 @@ interface DoctorRank {
   id: string;
   name: string;
   rate: number;
+  discordRoleId?: string;
 }
 
 interface BonusHistory {
@@ -737,40 +738,55 @@ export default function BonusCalculatorPage() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "24px" }}>
               {doctorRanks.map((r, i) => (
-                <div key={r.id} style={{ display: "flex", gap: "8px", alignItems: "center", background: "var(--bg-secondary)", padding: "12px", borderRadius: "8px" }}>
-                  <input 
-                    type="text" 
-                    value={r.name}
-                    onChange={e => {
-                      const newRanks = [...doctorRanks];
-                      newRanks[i].name = e.target.value;
-                      setDoctorRanks(newRanks);
-                    }}
-                    placeholder="ชื่อยศ..."
-                    style={{ flex: 1, background: "var(--bg-card)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", padding: "8px", borderRadius: "4px" }}
-                  />
-                  <input 
-                    type="number" 
-                    value={r.rate}
-                    onChange={e => {
-                      const newRanks = [...doctorRanks];
-                      newRanks[i].rate = Number(e.target.value) || 0;
-                      setDoctorRanks(newRanks);
-                    }}
-                    placeholder="เรท/ชม."
-                    style={{ width: "100px", background: "var(--bg-card)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", padding: "8px", borderRadius: "4px" }}
-                  />
-                  <button 
-                    onClick={() => setDoctorRanks(doctorRanks.filter(x => x.id !== r.id))}
-                    style={{ background: "rgba(239, 68, 68, 0.2)", color: "#ef4444", border: "none", padding: "8px 12px", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}
-                  >
-                    ลบ
-                  </button>
+                <div key={r.id} style={{ display: "flex", flexDirection: "column", gap: "8px", background: "var(--bg-secondary)", padding: "12px", borderRadius: "8px" }}>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <input 
+                      type="text" 
+                      value={r.name}
+                      onChange={e => {
+                        const newRanks = [...doctorRanks];
+                        newRanks[i].name = e.target.value;
+                        setDoctorRanks(newRanks);
+                      }}
+                      placeholder="ชื่อยศ..."
+                      style={{ flex: 1, background: "var(--bg-card)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", padding: "8px", borderRadius: "4px" }}
+                    />
+                    <input 
+                      type="number" 
+                      value={r.rate}
+                      onChange={e => {
+                        const newRanks = [...doctorRanks];
+                        newRanks[i].rate = Number(e.target.value) || 0;
+                        setDoctorRanks(newRanks);
+                      }}
+                      placeholder="เรท/ชม."
+                      style={{ width: "110px", background: "var(--bg-card)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", padding: "8px", borderRadius: "4px" }}
+                    />
+                    <button 
+                      onClick={() => setDoctorRanks(doctorRanks.filter(x => x.id !== r.id))}
+                      style={{ background: "rgba(239, 68, 68, 0.2)", color: "#ef4444", border: "none", padding: "8px 12px", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}
+                    >
+                      ลบ
+                    </button>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <input 
+                      type="text" 
+                      value={r.discordRoleId || ""}
+                      onChange={e => {
+                        const newRanks = [...doctorRanks];
+                        newRanks[i].discordRoleId = e.target.value;
+                        setDoctorRanks(newRanks);
+                      }}
+                      placeholder="Discord Role ID (สำหรับการซิงค์ยศอัตโนมัติ)..."
+                      style={{ flex: 1, background: "var(--bg-card)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", padding: "8px", borderRadius: "4px", fontSize: "0.85rem" }}
+                    />
+                  </div>
                 </div>
               ))}
               
               <button 
-                onClick={() => setDoctorRanks([...doctorRanks, { id: Date.now().toString(), name: "", rate: 30000 }])}
+                onClick={() => setDoctorRanks([...doctorRanks, { id: Date.now().toString(), name: "", rate: 30000, discordRoleId: "" }])}
                 style={{ background: "var(--bg-secondary)", border: "1px dashed var(--border-subtle)", padding: "12px", borderRadius: "8px", color: "var(--text-primary)", cursor: "pointer", fontWeight: "bold" }}
               >
                 + เพิ่มยศใหม่

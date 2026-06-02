@@ -6,7 +6,7 @@ export async function runNicknameSync() {
   const { data: settingsRows } = await supabase
     .from("system_settings")
     .select("key, value")
-    .in("key", ["registered_doctors", "discord_bot_token", "discord_guild_id"]);
+    .in("key", ["registered_doctors", "discord_bot_token", "discord_guild_id", "doctor_ranks", "user_ranks"]);
 
   const settingsMap = (settingsRows || []).reduce((acc: Record<string, unknown>, curr) => {
     acc[curr.key] = curr.value;
@@ -28,6 +28,16 @@ export async function runNicknameSync() {
     discordId?: string;
     updatedAt?: string;
   }>;
+
+  const doctorRanks = (settingsMap["doctor_ranks"] || []) as Array<{
+    id: string;
+    name: string;
+    rate: number;
+    discordRoleId?: string;
+  }>;
+
+  const userRanks = (settingsMap["user_ranks"] || {}) as Record<string, string>;
+  let ranksUpdated = false;
   if (!Array.isArray(registeredDoctors)) {
     return { success: true, updatedCount: 0, message: "No registered doctors found." };
   }
@@ -45,7 +55,7 @@ export async function runNicknameSync() {
         });
 
         if (res.ok) {
-          const memberData = (await res.json()) as { nick?: string; user?: { global_name?: string; username?: string; avatar?: string } };
+          const memberData = (await res.json()) as { nick?: string; user?: { global_name?: string; username?: string; avatar?: string }; roles?: string[] };
           let newName = doc.name;
 
           if (memberData.nick) {
@@ -56,14 +66,42 @@ export async function runNicknameSync() {
             newName = memberData.user.username;
           }
 
-          if (newName !== doc.name) {
+          // Sync ranks from Discord roles
+          if (memberData.roles && Array.isArray(memberData.roles) && doc.email) {
+            // Find which configured rank matches the user's roles on Discord.
+            const matchedRank = doctorRanks.find(r => r.discordRoleId && memberData.roles?.includes(r.discordRoleId));
+            
+            if (matchedRank) {
+              const currentRankId = userRanks[doc.email];
+              if (currentRankId !== matchedRank.id) {
+                userRanks[doc.email] = matchedRank.id;
+                ranksUpdated = true;
+              }
+            } else {
+              // No matching Discord role was found. 
+              // Check if their current rank was bound to a Discord role.
+              const currentRankId = userRanks[doc.email];
+              if (currentRankId) {
+                const currentRankObj = doctorRanks.find(r => r.id === currentRankId);
+                // If their current rank was bound to a Discord role, but they no longer have it, clear it.
+                if (currentRankObj && currentRankObj.discordRoleId) {
+                  delete userRanks[doc.email];
+                  ranksUpdated = true;
+                }
+              }
+            }
+          }
+
+          const newAvatarUrl = memberData.user?.avatar 
+            ? `https://cdn.discordapp.com/avatars/${doc.discordId}/${memberData.user.avatar}.png` 
+            : doc.avatarUrl;
+
+          if (newName !== doc.name || newAvatarUrl !== doc.avatarUrl) {
             updatedCount++;
             return {
               ...doc,
               name: newName,
-              avatarUrl: memberData.user?.avatar 
-                ? `https://cdn.discordapp.com/avatars/${doc.discordId}/${memberData.user.avatar}.png` 
-                : doc.avatarUrl,
+              avatarUrl: newAvatarUrl,
               updatedAt: new Date().toISOString()
             };
           }
@@ -82,6 +120,16 @@ export async function runNicknameSync() {
       .upsert({
         key: "registered_doctors",
         value: updatedDoctors,
+        updated_at: new Date().toISOString()
+      });
+  }
+
+  if (ranksUpdated) {
+    await supabase
+      .from("system_settings")
+      .upsert({
+        key: "user_ranks",
+        value: userRanks,
         updated_at: new Date().toISOString()
       });
   }
