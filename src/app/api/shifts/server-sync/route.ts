@@ -111,8 +111,12 @@ export async function POST(req: Request) {
         await supabase.from("shifts").update({ discord_message_id: messageId }).eq("id", newShift.id);
       }
 
-      // Sync OP Queue
-      await syncOpQueueToDiscord();
+      // Sync OP Queue or Closed Summary
+      if (isOpActive) {
+        await syncOpQueueToDiscord();
+      } else {
+        await teardownOpQueue();
+      }
 
       return NextResponse.json({
         success: true,
@@ -169,12 +173,16 @@ export async function POST(req: Request) {
 
       if (updateErr) throw updateErr;
 
-      // Trigger OP Queue Teardown if opener clocks out
+      // Trigger OP Queue Teardown or update Closed Summary
       const isOpOwner = opOpenedBy && opOpenedBy.email === userEmail;
-      if (isOpActive && isOpOwner) {
-        await teardownOpQueue();
+      if (isOpActive) {
+        if (isOpOwner) {
+          await teardownOpQueue();
+        } else {
+          await syncOpQueueToDiscord();
+        }
       } else {
-        await syncOpQueueToDiscord();
+        await teardownOpQueue();
       }
 
       return NextResponse.json({

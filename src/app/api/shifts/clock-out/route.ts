@@ -170,13 +170,18 @@ export async function POST(req: Request) {
     // Check if the user who clocked out is the OP opener
     const isOpOwner = opOpenedBy && opOpenedBy.email === userEmail;
 
-    if (isOpOwner) {
-      // If OP opener clocks out, perform complete queue teardown:
-      // clear op_queue_state, delete queue message and post daily summary.
-      await teardownOpQueue();
+    if (isOpActive) {
+      if (isOpOwner) {
+        // If OP opener clocks out, perform complete queue teardown:
+        // clear op_queue_state, delete queue message and post daily summary.
+        await teardownOpQueue();
+      } else {
+        // Otherwise, update OP Discord queue message normally in real-time and await completion
+        await syncOpQueueToDiscord();
+      }
     } else {
-      // Otherwise, update OP Discord queue message normally in real-time and await completion
-      await syncOpQueueToDiscord();
+      // OP is closed, update the closed summary message with the updated off-duty lists
+      await teardownOpQueue();
     }
 
     return NextResponse.json({

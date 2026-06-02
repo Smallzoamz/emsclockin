@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
 import { sendDiscordWebhook } from "@/lib/discord-webhook";
 import { formatThaiDate } from "@/lib/utils";
-import { syncOpQueueToDiscord } from "@/lib/op-discord-sync";
+import { syncOpQueueToDiscord, teardownOpQueue } from "@/lib/op-discord-sync";
 
 export async function POST() {
   const session = await auth();
@@ -79,8 +79,19 @@ export async function POST() {
       await supabase.from("shifts").update({ discord_message_id: messageId }).eq("id", newShift.id);
     }
 
-    // Update OP Discord queue message in real-time and await completion
-    await syncOpQueueToDiscord();
+    // Fetch op_active from system_settings to see if we should sync active queue or update closed summary
+    const { data: opActiveData } = await supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "op_active")
+      .maybeSingle();
+    const isOpActive = opActiveData?.value === true;
+
+    if (isOpActive) {
+      await syncOpQueueToDiscord();
+    } else {
+      await teardownOpQueue();
+    }
 
     return NextResponse.json({
       success: true,

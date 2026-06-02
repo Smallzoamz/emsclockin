@@ -82,7 +82,8 @@ export async function POST(req: Request) {
         supabase.from("system_settings").upsert({ key: "op_active", value: true }, { onConflict: "key" }),
         supabase.from("system_settings").upsert({ key: "op_notice", value: notice || "" }, { onConflict: "key" }),
         supabase.from("system_settings").upsert({ key: "op_opened_at", value: new Date().toISOString() }, { onConflict: "key" }),
-        supabase.from("system_settings").upsert({ key: "op_opened_by", value: { email: session.user.email, discordUsername: discordUsername || "" } }, { onConflict: "key" })
+        supabase.from("system_settings").upsert({ key: "op_opened_by", value: { email: session.user.email, discordUsername: discordUsername || "" } }, { onConflict: "key" }),
+        supabase.from("system_settings").upsert({ key: "op_summary_discord_message_id", value: null }, { onConflict: "key" })
       ]);
 
       // Call sync with forceNewMessage = true to signal activation (will tag OP, but still PATCH if existing)

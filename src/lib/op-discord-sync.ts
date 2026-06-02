@@ -399,6 +399,7 @@ export async function teardownOpQueue() {
     }
 
     const existingMessageId = settings.op_discord_message_id;
+    const existingSummaryMessageId = settings.op_summary_discord_message_id;
     const registeredDoctors = settings.registered_doctors || [];
 
     const activeShifts = activeShiftsRes.data;
@@ -554,33 +555,59 @@ export async function teardownOpQueue() {
       }
     }
 
-    // 6. Send the new summary message
+    // 6. Send the summary message (either update/PATCH existing or create/POST new)
     const summaryRequestBody = {
       username: "EMS Summary Bot",
       avatar_url: "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
       embeds: [embed],
     };
 
-    const postRes = await fetch(`${webhookUrl}?wait=true`, {
-      method: "POST",
+    let summaryUrl = existingSummaryMessageId
+      ? `${webhookUrl}/messages/${existingSummaryMessageId}`
+      : `${webhookUrl}?wait=true`;
+    let summaryMethod = existingSummaryMessageId ? "PATCH" : "POST";
+
+    let summaryResponse = await fetch(summaryUrl, {
+      method: summaryMethod,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(summaryRequestBody),
     });
 
-    if (postRes.ok) {
-      console.log("[OP Teardown] Successfully posted summary message to Discord.");
-    } else {
-      const errText = await postRes.text();
-      console.error(`[OP Teardown] Discord API returned ${postRes.status} for summary: ${errText}`);
+    // Fallback: If PATCH fails (e.g. 404 message deleted), try POSTing a new message
+    if (!summaryResponse.ok && existingSummaryMessageId && (summaryResponse.status === 404 || summaryResponse.status === 400)) {
+      console.warn(`[OP Teardown] PATCH summary failed with status ${summaryResponse.status}. Falling back to POST.`);
+      summaryUrl = `${webhookUrl}?wait=true`;
+      summaryMethod = "POST";
+      summaryResponse = await fetch(summaryUrl, {
+        method: summaryMethod,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(summaryRequestBody),
+      });
     }
 
-    // 7. Clear state, message ID, OP owner, and case counts
-    await Promise.all([
-      supabase.from("system_settings").upsert({ key: "op_discord_message_id", value: null }, { onConflict: "key" }),
-      supabase.from("system_settings").upsert({ key: "op_queue_state", value: {} }, { onConflict: "key" }),
-      supabase.from("system_settings").upsert({ key: "op_opened_by", value: null }, { onConflict: "key" }),
-      supabase.from("system_settings").upsert({ key: "op_case_counts", value: {} }, { onConflict: "key" })
-    ]);
+    if (summaryResponse.ok) {
+      if (summaryMethod === "POST") {
+        const data = await summaryResponse.json();
+        // Save the new summary message ID to settings
+        await supabase
+          .from("system_settings")
+          .upsert({ key: "op_summary_discord_message_id", value: data.id }, { onConflict: "key" });
+      }
+      console.log(`[OP Teardown] Successfully ${summaryMethod}ed summary message to Discord.`);
+    } else {
+      const errText = await summaryResponse.text();
+      console.error(`[OP Teardown] Discord API returned ${summaryResponse.status} for summary: ${errText}`);
+    }
+
+    // 7. Clear state, message ID, OP owner, and case counts ONLY if we are closing from active state
+    if (existingMessageId) {
+      await Promise.all([
+        supabase.from("system_settings").upsert({ key: "op_discord_message_id", value: null }, { onConflict: "key" }),
+        supabase.from("system_settings").upsert({ key: "op_queue_state", value: {} }, { onConflict: "key" }),
+        supabase.from("system_settings").upsert({ key: "op_opened_by", value: null }, { onConflict: "key" }),
+        supabase.from("system_settings").upsert({ key: "op_case_counts", value: {} }, { onConflict: "key" })
+      ]);
+    }
   } catch (err: any) {
     console.error("[OP Teardown] Error in teardownOpQueue:", err);
   }
