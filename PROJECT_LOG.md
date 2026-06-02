@@ -365,3 +365,4 @@
 
 ## [2026-06-02 12:59] | File: EMSBot (leave.ts, leave.test.ts) | Line: 1 | Keyword: Fix Bot Leave Database Constraints | Status: ✅ Complete | Change: Fixed database check constraint violation (code 23514) on leave submissions. Added mapLeaveType helper prioritizing 'อื่นๆ' and dynamically mapping sick/business/vacation keywords to valid database enums. Added normalizeYear helper to resolve 2-digit years (e.g. 69/26) and Thai BE years (2569) to 4-digit Western Gregorian years (2026). Updated test suite to verify all date parsing, year normalization, and keyword mapping cases. Restarted bot task in background.
 
+## [2026-06-02 13:09] | File: src/app/api/admin/leaves/route.ts | Line: 65 | Keyword: Leave Webhook Notification | Status: ✅ Complete | Change: Implemented sendLeaveStatusWebhook function to notify Discord log channel whenever a leave request is approved or rejected by an admin, including user mentions and embeds with Thai timezone dates.
