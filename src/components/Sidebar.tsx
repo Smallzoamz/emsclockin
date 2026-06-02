@@ -110,7 +110,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
         </div>
       </div>
 
-      <nav style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <nav style={{ display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", flex: 1, paddingRight: "4px" }} className="sidebar-nav">
         {/* MAIN MENU SECTION */}
         <div>
           <div style={{

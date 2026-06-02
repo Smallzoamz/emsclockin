@@ -83,7 +83,7 @@ export default function RankingPage() {
 
               return (
                 <div key={index} className={`podium-card rank-${rank}`}>
-                  <div className="rank-badge" style={{ background: accentColor, display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                  <div className="podium-rank-badge" style={{ background: accentColor, display: "inline-flex", alignItems: "center", gap: "2px" }}>
                     {rankIcon} อันดับ {rank}
                   </div>
                   <div className="podium-avatar">
