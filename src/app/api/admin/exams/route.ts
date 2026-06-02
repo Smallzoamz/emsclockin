@@ -33,6 +33,16 @@ export async function GET(req: Request) {
       return NextResponse.json({ questions: data || [] });
     }
 
+    if (action === "assignments") {
+      const { data, error } = await supabase
+        .from("user_inbox")
+        .select("*")
+        .eq("type", "exam");
+
+      if (error) throw error;
+      return NextResponse.json({ assignments: data || [] });
+    }
+
     if (action === "attempts") {
       const { data, error } = await supabase
         .from("exam_attempts")
@@ -194,6 +204,31 @@ export async function PATCH(req: Request) {
 
       if (error) throw error;
       return NextResponse.json({ success: true, question: data });
+    }
+
+    if (action === "reset_attempt") {
+      const { attemptId } = body;
+      if (!attemptId) {
+        return NextResponse.json({ error: "Attempt ID is required" }, { status: 400 });
+      }
+
+      // 1. Reset user_inbox message linked to this attemptId
+      const { error: inboxErr } = await supabase
+        .from("user_inbox")
+        .update({ exam_attempt_id: null, is_read: false })
+        .eq("exam_attempt_id", attemptId);
+
+      if (inboxErr) throw inboxErr;
+
+      // 2. Delete the attempt
+      const { error: attemptErr } = await supabase
+        .from("exam_attempts")
+        .delete()
+        .eq("id", attemptId);
+
+      if (attemptErr) throw attemptErr;
+
+      return NextResponse.json({ success: true });
     }
 
     if (action === "grade_attempt") {
