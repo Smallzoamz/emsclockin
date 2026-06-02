@@ -294,9 +294,9 @@ export default function AdminExamsPage() {
 
   if (loadingSession) {
     return (
-      <div className="flex flex-col items-center justify-center p-20 text-white min-h-[400px]">
-        <div className="inbox-spinner mb-4"></div>
-        <p className="text-sm text-[var(--text-secondary)] font-mono">กำลังยืนยันสิทธิ์ความปลอดภัย...</p>
+      <div className="inbox-loading" style={{ minHeight: "400px" }}>
+        <div className="inbox-spinner"></div>
+        <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>กำลังยืนยันสิทธิ์ความปลอดภัย...</p>
       </div>
     );
   }
@@ -304,41 +304,41 @@ export default function AdminExamsPage() {
   if (!isAdmin) return null;
 
   return (
-    <div className="admin-exams-container pb-20">
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingBottom: "80px" }}>
       
       {/* Page Header */}
-      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+      <header className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
         <div>
-          <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">
+          <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <ShieldAlert size={28} className="text-[var(--accent)]" /> ระบบจัดการสอบเลื่อนขั้นแพทย์ (HR Exam Desk)
           </h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">
+          <p className="page-subtitle">
             คลังข้อสอบสุ่มแบบเขียนตอบอัตนัย, การมอบหมายงานสอบรายหัว และระบบตรวจข้อเขียนพร้อม Anti-cheat Telemetry
           </p>
         </div>
 
         {/* Tab switchers */}
-        <div className="flex gap-2 bg-[#090f1d] border border-[var(--border-subtle)] p-1 rounded-md">
+        <div className="blacklist-filter-tabs">
           <button 
-            className={`px-4 py-1.5 text-xs font-bold rounded transition-all flex items-center gap-1.5 ${activeTab === "questions" ? "bg-[var(--accent)] text-white" : "text-[var(--text-secondary)] hover:text-white"}`}
+            className={`blacklist-filter-tab ${activeTab === "questions" ? "active" : ""}`}
             onClick={() => { setActiveTab("questions"); setSelectedAttempt(null); }}
           >
             <FileText size={14} /> คลังข้อสอบ
           </button>
           <button 
-            className={`px-4 py-1.5 text-xs font-bold rounded transition-all flex items-center gap-1.5 ${activeTab === "assign" ? "bg-[var(--accent)] text-white" : "text-[var(--text-secondary)] hover:text-white"}`}
+            className={`blacklist-filter-tab ${activeTab === "assign" ? "active" : ""}`}
             onClick={() => { setActiveTab("assign"); setSelectedAttempt(null); }}
           >
             <Send size={14} /> มอบหมายสิทธิ์สอบ
           </button>
           <button 
-            className={`px-4 py-1.5 text-xs font-bold rounded transition-all flex items-center gap-1.5 ${activeTab === "grading" ? "bg-[var(--accent)] text-white" : "text-[var(--text-secondary)] hover:text-white"}`}
+            className={`blacklist-filter-tab ${activeTab === "grading" ? "active" : ""}`}
             onClick={() => { setActiveTab("grading"); setSelectedAttempt(null); }}
           >
             <CheckSquare size={14} /> โต๊ะตรวจข้อสอบ
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Global Alerts */}
       {errorMsg && (
@@ -349,21 +349,20 @@ export default function AdminExamsPage() {
       )}
 
       {successMsg && (
-        <div className="flex items-center gap-2 bg-green-950 bg-opacity-20 border border-green-800 text-green-400 p-4 rounded mb-6 text-sm">
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(34, 197, 94, 0.08)", border: "1px solid rgba(34, 197, 94, 0.2)", color: "#4ade80", padding: "12px 16px", borderRadius: "6px", fontSize: "0.85rem", marginBottom: "24px" }}>
           <CheckCircle2 size={18} />
           <span>{successMsg}</span>
         </div>
       )}
 
-      {/* Tab 1: Question Pool */}
       {activeTab === "questions" && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center flex-wrap gap-3">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
               📂 รายการคำถามในคลังข้อสอบ ({questions.length} ข้อ)
             </h2>
             <button 
-              className="btn btn-primary px-4 py-2 font-bold text-xs flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-light)] rounded"
+              className="btn btn-primary"
               onClick={() => {
                 setQuestionId(null);
                 setQuestionText("");
@@ -376,36 +375,41 @@ export default function AdminExamsPage() {
           </div>
 
           {loadingData ? (
-            <div className="text-center py-10 text-[var(--text-secondary)] text-sm">กำลังโหลดคลังข้อสอบ...</div>
+            <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-secondary)", fontSize: "0.85rem" }}>กำลังโหลดคลังข้อสอบ...</div>
           ) : questions.length === 0 ? (
-            <div className="bg-[#090f1d] border border-dashed border-[var(--border-subtle)] rounded-lg p-10 text-center text-[var(--text-secondary)]">
-              <FileText size={48} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm font-semibold">ไม่มีข้อสอบแพทย์ในคลัง</p>
-              <p className="text-xs mt-1">กรุณากดปุ่มเพิ่มข้อสอบเพื่อเริ่มสร้างคลังคำถามสุ่มเขียนตอบ</p>
+            <div className="card" style={{ borderStyle: "dashed", textAlign: "center", padding: "48px 24px" }}>
+              <FileText size={48} className="exam-mx-auto opacity-20" style={{ marginBottom: "12px" }} />
+              <p style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text-secondary)" }}>ไม่มีข้อสอบแพทย์ในคลัง</p>
+              <p style={{ fontSize: "0.75rem", marginTop: "4px", color: "var(--text-muted)" }}>กรุณากดปุ่มเพิ่มข้อสอบเพื่อเริ่มสร้างคลังคำถามสุ่มเขียนตอบ</p>
             </div>
           ) : (
-            <div className="grid gap-4">
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {questions.map((q) => (
-                <div key={q.id} className="bg-[#090f1d] border border-[var(--border-subtle)] rounded-lg p-5 flex justify-between items-start gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${q.exam_type === "general_doctor" ? "bg-[rgba(59,130,246,0.15)] text-blue-400 border border-blue-800" : "bg-[rgba(168,85,247,0.15)] text-purple-400 border border-purple-800"}`}>
+                <div key={q.id} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", padding: "20px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div className="exam-flex-row-center">
+                      <span 
+                        className={q.exam_type === "general_doctor" ? "exam-badge-blue" : "exam-badge-purple"}
+                        style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: "12px", fontSize: "0.68rem", fontWeight: "bold" }}
+                      >
                         {q.exam_type === "general_doctor" ? "แพทย์ทั่วไป (Doctor)" : "แพทย์ชำนาญการ (Specialist)"}
                       </span>
-                      <span className="text-[10px] text-[var(--text-muted)] font-mono">ID: {q.id.substring(0, 8)}</span>
+                      <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>ID: {q.id.substring(0, 8)}</span>
                     </div>
-                    <p className="text-sm text-white font-medium leading-relaxed">{q.question_text}</p>
+                    <p style={{ fontSize: "0.88rem", color: "#fff", fontWeight: 500, lineHeight: 1.6 }}>{q.question_text}</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div style={{ display: "flex", gap: "8px" }}>
                     <button 
-                      className="p-1.5 rounded bg-[rgba(255,255,255,0.02)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white hover:border-white transition-all"
+                      className="btn btn-ghost"
+                      style={{ padding: "6px", borderRadius: "6px" }}
                       onClick={() => handleEditClick(q)}
                       title="แก้ไข"
                     >
                       <Edit2 size={13} />
                     </button>
                     <button 
-                      className="p-1.5 rounded bg-[rgba(239,68,68,0.05)] border border-[rgba(239,68,68,0.15)] text-red-400 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all"
+                      className="btn btn-danger"
+                      style={{ padding: "6px", borderRadius: "6px" }}
                       onClick={() => handleDeleteClick(q)}
                       title="ลบ"
                     >
@@ -421,16 +425,17 @@ export default function AdminExamsPage() {
 
       {/* Tab 2: Assign Exam */}
       {activeTab === "assign" && (
-        <div className="bg-[#090f1d] border border-[var(--border-subtle)] rounded-lg p-6 max-w-2xl mx-auto">
-          <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+        <div className="card" style={{ maxWidth: "600px", margin: "0 auto", padding: "24px" }}>
+          <h2 className="card-title" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "1.1rem" }}>
             ✉️ ออกจดหมายส่งมอบสิทธิ์สอบรายคน
           </h2>
 
-          <form onSubmit={handleAssignExam} className="space-y-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-[var(--text-secondary)]">เลือกแพทย์ที่จะมอบสิทธิ์สอบ:</label>
+          <form onSubmit={handleAssignExam} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="exam-flex-col exam-gap-1">
+              <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)" }}>เลือกแพทย์ที่จะมอบสิทธิ์สอบ:</label>
               <select
-                className="w-full bg-[#030712] border border-[var(--border-subtle)] focus:border-[var(--accent)] rounded p-2.5 text-sm text-white outline-none"
+                className="exam-select"
+                style={{ width: "100%", padding: "10px 14px", fontSize: "0.85rem", borderRadius: "6px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", outline: "none" }}
                 value={selectedDoctorEmail}
                 onChange={(e) => setSelectedDoctorEmail(e.target.value)}
                 required
@@ -444,11 +449,11 @@ export default function AdminExamsPage() {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[var(--text-secondary)]">ยศการสอบ:</label>
+            <div className="exam-grid-2-col">
+              <div className="exam-flex-col exam-gap-1">
+                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)" }}>ยศการสอบ:</label>
                 <select
-                  className="w-full bg-[#030712] border border-[var(--border-subtle)] focus:border-[var(--accent)] rounded p-2.5 text-sm text-white outline-none"
+                  style={{ width: "100%", padding: "10px 14px", fontSize: "0.85rem", borderRadius: "6px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", outline: "none" }}
                   value={assignExamType}
                   onChange={(e) => setAssignExamType(e.target.value)}
                 >
@@ -457,13 +462,13 @@ export default function AdminExamsPage() {
                 </select>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[var(--text-secondary)]">จำนวนข้อสอบที่สุ่ม (Default 5 ข้อ):</label>
+              <div className="exam-flex-col exam-gap-1">
+                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)" }}>จำนวนข้อสอบที่สุ่ม (Default 5 ข้อ):</label>
                 <input
                   type="number"
                   min={1}
                   max={20}
-                  className="w-full bg-[#030712] border border-[var(--border-subtle)] focus:border-[var(--accent)] rounded p-2.5 text-sm text-white font-mono outline-none"
+                  style={{ width: "100%", padding: "10px 14px", fontSize: "0.85rem", borderRadius: "6px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", outline: "none", fontFamily: "var(--font-mono)" }}
                   value={assignQuestionCount}
                   onChange={(e) => setAssignQuestionCount(Number(e.target.value))}
                   required
@@ -471,22 +476,22 @@ export default function AdminExamsPage() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-[var(--text-secondary)]">หัวข้อจดหมาย (มีค่าเริ่มต้นให้):</label>
+            <div className="exam-flex-col exam-gap-1">
+              <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)" }}>หัวข้อจดหมาย (มีค่าเริ่มต้นให้):</label>
               <input
                 type="text"
                 placeholder="เช่น ใบแจ้งสิทธิ์สอบเลื่อนระดับ..."
-                className="w-full bg-[#030712] border border-[var(--border-subtle)] focus:border-[var(--accent)] rounded p-2.5 text-sm text-white outline-none"
+                style={{ width: "100%", padding: "10px 14px", fontSize: "0.85rem", borderRadius: "6px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", outline: "none" }}
                 value={assignTitle}
                 onChange={(e) => setAssignTitle(e.target.value)}
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-[var(--text-secondary)]">เนื้อหาคำอธิบายจดหมาย (มีค่าเริ่มต้นให้):</label>
+            <div className="exam-flex-col exam-gap-1">
+              <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)" }}>เนื้อหาคำอธิบายจดหมาย (มีค่าเริ่มต้นให้):</label>
               <textarea
                 placeholder="คำอธิบายกฎกติกาการสอบ..."
-                className="w-full bg-[#030712] border border-[var(--border-subtle)] focus:border-[var(--accent)] rounded p-2.5 text-sm text-white outline-none resize-none min-h-[100px]"
+                style={{ width: "100%", padding: "10px 14px", fontSize: "0.85rem", borderRadius: "6px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", outline: "none", resize: "none", minHeight: "100px" }}
                 value={assignContent}
                 onChange={(e) => setAssignContent(e.target.value)}
               />
@@ -494,7 +499,8 @@ export default function AdminExamsPage() {
 
             <button
               type="submit"
-              className="btn btn-primary w-full p-3 font-bold text-sm bg-[var(--accent)] hover:bg-[var(--accent-light)] rounded flex items-center justify-center gap-2 mt-4"
+              className="btn btn-primary"
+              style={{ width: "100%", padding: "12px", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", fontWeight: "bold", marginTop: "16px" }}
               disabled={assigning || !selectedDoctorEmail}
             >
               <Send size={15} /> {assigning ? "กำลังส่งสิทธิ์สอบ..." : "ส่งคำเชิญสอบเข้า Inbox 📬"}
@@ -505,53 +511,56 @@ export default function AdminExamsPage() {
 
       {/* Tab 3: Grading Attempts */}
       {activeTab === "grading" && (
-        <div className="space-y-6">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <h2 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
             🧑‍⚖️ รายงานส่งข้อสอบและการบันทึกคะแนนจากผู้สอบ
           </h2>
 
           {loadingData ? (
-            <div className="text-center py-10 text-[var(--text-secondary)] text-sm">กำลังดึงข้อมูลงานสอบ...</div>
+            <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-secondary)", fontSize: "0.85rem" }}>กำลังดึงข้อมูลงานสอบ...</div>
           ) : attempts.length === 0 ? (
-            <div className="bg-[#090f1d] border border-dashed border-[var(--border-subtle)] rounded-lg p-10 text-center text-[var(--text-secondary)]">
-              <CheckSquare size={48} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm font-semibold">ไม่พบบันทึกประวัติการสอบใดๆ</p>
-              <p className="text-xs mt-1">ผู้ใช้ที่สอบเลื่อนขั้นแล้วจะปรากฏรายการให้เกรดและรายงานการโกงที่นี่ค่ะ</p>
+            <div className="card" style={{ borderStyle: "dashed", textAlign: "center", padding: "48px 24px" }}>
+              <CheckSquare size={48} className="exam-mx-auto opacity-20" style={{ marginBottom: "12px" }} />
+              <p style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text-secondary)" }}>ไม่พบบันทึกประวัติการสอบใดๆ</p>
+              <p style={{ fontSize: "0.75rem", marginTop: "4px", color: "var(--text-muted)" }}>ผู้ใช้ที่สอบเลื่อนขั้นแล้วจะปรากฏรายการให้เกรดและรายงานการโกงที่นี่ค่ะ</p>
             </div>
           ) : (
-            <div className="bg-[#090f1d] border border-[var(--border-subtle)] rounded-lg overflow-x-auto">
-              <table className="w-full text-left text-sm text-[var(--text-secondary)]">
-                <thead className="bg-[#030712] text-xs font-bold text-white uppercase border-b border-[var(--border-subtle)]">
+            <div className="card" style={{ overflowX: "auto", padding: "12px" }}>
+              <table className="spreadsheet-table" style={{ width: "100%" }}>
+                <thead>
                   <tr>
-                    <th className="px-6 py-4">ผู้สอบ (Doctor)</th>
-                    <th className="px-6 py-4">การสอบ (Exam)</th>
-                    <th className="px-6 py-4">เริ่มสอบเมื่อ</th>
-                    <th className="px-6 py-4">ความปลอดภัย (Telemetry)</th>
-                    <th className="px-6 py-4">สถานะ (Status)</th>
-                    <th className="px-6 py-4 text-right">ดำเนินการ</th>
+                    <th className="col-header">ผู้สอบ (Doctor)</th>
+                    <th className="col-header">การสอบ (Exam)</th>
+                    <th className="col-header">เริ่มสอบเมื่อ</th>
+                    <th className="col-header">ความปลอดภัย (Telemetry)</th>
+                    <th className="col-header">สถานะ (Status)</th>
+                    <th className="col-header" style={{ textAlign: "right" }}>ดำเนินการ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[var(--border-subtle)]">
+                <tbody>
                   {attempts.map((att) => {
                     const totalFocusLost = att.focus_lost_count;
                     const screenShared = att.screen_share_detected;
                     
                     return (
-                      <tr key={att.id} className="hover:bg-white hover:bg-opacity-5 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-white">{getDoctorNameByEmail(att.user_email)}</div>
-                          <div className="text-xs text-[var(--text-muted)] font-mono">{att.user_email}</div>
+                      <tr key={att.id}>
+                        <td className="cell">
+                          <div style={{ fontWeight: "bold", color: "#fff" }}>{getDoctorNameByEmail(att.user_email)}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{att.user_email}</div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className={`text-xs px-2 py-0.5 rounded font-bold ${att.exam_type === "general_doctor" ? "bg-[rgba(59,130,246,0.1)] text-blue-400" : "bg-[rgba(168,85,247,0.1)] text-purple-400"}`}>
+                        <td className="cell">
+                          <span 
+                            className={att.exam_type === "general_doctor" ? "exam-badge-blue" : "exam-badge-purple"}
+                            style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: "12px", fontSize: "0.68rem", fontWeight: "bold" }}
+                          >
                             {att.exam_type === "general_doctor" ? "แพทย์ทั่วไป" : "แพทย์ชำนาญการ"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-xs font-mono">
+                        <td className="cell" style={{ fontSize: "0.78rem", fontFamily: "var(--font-mono)" }}>
                           {formatDate(att.started_at)}
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-1 text-xs">
+                        <td className="cell">
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.78rem" }}>
                             {screenShared ? (
                               <span className="text-red-400 font-extrabold flex items-center gap-1 animate-pulse">
                                 🚨 ตรวจพบการแชร์จอ!
@@ -564,25 +573,24 @@ export default function AdminExamsPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                            att.status === "passed" ? "bg-green-950 text-green-400 border border-green-800" :
-                            att.status === "failed" ? "bg-red-950 text-red-400 border border-red-800" :
-                            att.status === "submitted" ? "bg-amber-950 text-amber-400 border border-amber-800" :
-                            "bg-slate-900 text-slate-400 border border-slate-700"
-                          }`}>
+                        <td className="cell">
+                          <span 
+                            className={
+                              att.status === "passed" ? "exam-badge-green" :
+                              att.status === "failed" ? "exam-badge-red" :
+                              att.status === "submitted" ? "exam-badge-amber" : "exam-badge-blue"
+                            }
+                            style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: "12px", fontSize: "0.68rem", fontWeight: "bold" }}
+                          >
                             {att.status === "passed" ? "สอบผ่าน" :
                              att.status === "failed" ? "ตกเกณฑ์" :
                              att.status === "submitted" ? "รอตรวจผล" : "กำลังรันสอบ"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="cell" style={{ textAlign: "right" }}>
                           <button
-                            className={`px-3 py-1 text-xs font-bold rounded border ${
-                              att.status === "submitted" 
-                                ? "bg-[var(--accent)] border-[var(--accent)] hover:bg-[var(--accent-light)] text-white" 
-                                : "bg-transparent border-[var(--border-subtle)] hover:bg-[rgba(255,255,255,0.02)] text-[var(--text-secondary)]"
-                            }`}
+                            className={att.status === "submitted" ? "btn btn-primary" : "btn btn-ghost"}
+                            style={{ fontSize: "0.75rem", padding: "6px 12px" }}
                             onClick={() => openGradingModal(att)}
                           >
                             {att.status === "submitted" ? "ตรวจข้อเขียน" : "เปิดดูผล"}
@@ -600,25 +608,25 @@ export default function AdminExamsPage() {
 
       {/* 4. Question Form Popup Modal */}
       {showQuestionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-[100000] flex items-center justify-center p-4">
-          <div className="bg-[#090f1d] border border-[var(--border-subtle)] rounded-lg p-6 max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[var(--border-subtle)]">
-              <h3 className="text-base font-bold text-white">
+        <div className="exam-popup-backdrop">
+          <div className="exam-popup-card" style={{ maxWidth: "500px", width: "100%", padding: "24px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="exam-flex-row-between" style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: "bold", color: "#fff" }}>
                 {questionId ? "📝 แก้ไขโจทย์ข้อสอบแพทย์" : "➕ เพิ่มโจทย์ข้อสอบใหม่"}
               </h3>
               <button 
-                className="text-[var(--text-secondary)] hover:text-white"
+                className="inbox-close-btn"
                 onClick={() => setShowQuestionModal(false)}
               >
                 <XCircle size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveQuestion} className="space-y-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[var(--text-secondary)]">ประเภทข้อสอบ:</label>
+            <form onSubmit={handleSaveQuestion} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div className="exam-flex-col exam-gap-1">
+                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)" }}>ประเภทข้อสอบ:</label>
                 <select
-                  className="w-full bg-[#030712] border border-[var(--border-subtle)] focus:border-[var(--accent)] rounded p-2.5 text-sm text-white outline-none"
+                  style={{ width: "100%", padding: "10px 14px", fontSize: "0.85rem", borderRadius: "6px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", outline: "none" }}
                   value={examType}
                   onChange={(e) => setExamType(e.target.value)}
                 >
@@ -627,28 +635,30 @@ export default function AdminExamsPage() {
                 </select>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[var(--text-secondary)]">โจทย์คำถามเขียนตอบ:</label>
+              <div className="exam-flex-col exam-gap-1">
+                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)" }}>โจทย์คำถามเขียนตอบ:</label>
                 <textarea
                   placeholder="เช่น อธิบายขั้นตอนการชุบชีวิตผู้ประสบภัยกรณีเคสสตอรี่ปะทะ..."
-                  className="w-full bg-[#030712] border border-[var(--border-subtle)] focus:border-[var(--accent)] rounded p-3 text-sm text-white outline-none resize-y min-h-[120px]"
+                  style={{ width: "100%", padding: "10px 14px", fontSize: "0.85rem", borderRadius: "6px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", outline: "none", resize: "vertical", minHeight: "120px" }}
                   value={questionText}
                   onChange={(e) => setQuestionText(e.target.value)}
                   required
                 />
               </div>
 
-              <div className="flex gap-3 justify-end mt-4">
+              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "16px" }}>
                 <button
                   type="button"
-                  className="px-4 py-2 border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[rgba(255,255,255,0.02)] text-xs font-bold rounded"
+                  className="btn btn-ghost"
+                  style={{ fontSize: "0.75rem", padding: "8px 16px" }}
                   onClick={() => setShowQuestionModal(false)}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[var(--accent)] hover:bg-[var(--accent-light)] text-white text-xs font-bold rounded"
+                  className="btn btn-primary"
+                  style={{ fontSize: "0.75rem", padding: "8px 16px", fontWeight: "bold" }}
                 >
                   บันทึกข้อสอบ
                 </button>
@@ -660,16 +670,16 @@ export default function AdminExamsPage() {
 
       {/* 5. Exam Grading & Detail Review Portal Drawer */}
       {selectedAttempt && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 z-[100000] flex justify-end">
-          <div className="bg-[#030712] border-l border-[var(--border-subtle)] w-[650px] max-w-full h-full flex flex-col shadow-2xl animate-slide-drawer">
+        <div className="inbox-drawer-backdrop" onClick={() => setSelectedAttempt(null)}>
+          <div className="inbox-drawer" style={{ width: "650px" }} onClick={(e) => e.stopPropagation()}>
             
             {/* Drawer Header */}
-            <div className="p-6 bg-[#090f1d] border-b border-[var(--border-subtle)] flex justify-between items-center flex-shrink-0">
+            <div className="inbox-drawer-header" style={{ padding: "20px 24px" }}>
               <div>
-                <h3 className="text-base font-bold text-white">
+                <h3 style={{ fontSize: "1rem", fontWeight: "bold", color: "#fff" }}>
                   🧑‍⚕️ โต๊ะประเมินข้อสอบแพทย์เขียนตอบ
                 </h3>
-                <span className="text-xs text-[var(--text-muted)]">
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                   ผู้สอบ: {getDoctorNameByEmail(selectedAttempt.user_email)} ({selectedAttempt.user_email})
                 </span>
               </div>
@@ -682,24 +692,24 @@ export default function AdminExamsPage() {
             </div>
 
             {/* Drawer Body Scroll */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="inbox-drawer-body" style={{ display: "flex", flexDirection: "column", gap: "24px", padding: "24px" }}>
               
               {/* Telemetry Warning Box */}
-              <div className="bg-[#090f1d] border border-[var(--border-subtle)] rounded-lg p-4 space-y-3">
-                <div className="text-xs font-bold text-white flex items-center gap-1.5">
+              <div className="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#fff", display: "flex", alignItems: "center", gap: "6px" }}>
                   <ShieldAlert className="text-[var(--accent)]" size={16} /> รายงานข้อมูลการโกง (Anti-Cheat Logs)
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div className="bg-[#030712] p-2.5 rounded border border-[var(--border-subtle)]">
-                    <span className="text-[var(--text-muted)] block mb-1">การแชร์หน้าจอ (Screen Share)</span>
+                <div className="exam-grid-2-col" style={{ fontSize: "0.78rem" }}>
+                  <div style={{ background: "#030712", padding: "10px", borderRadius: "6px", border: "1px solid var(--border-subtle)" }}>
+                    <span style={{ color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>การแชร์หน้าจอ (Screen Share)</span>
                     {selectedAttempt.screen_share_detected ? (
                       <span className="text-red-500 font-extrabold">🚨 ตรวจพบความพยายามแชร์จอ!</span>
                     ) : (
                       <span className="text-green-400 font-semibold">🔒 ไม่พบบันทึกการโกง</span>
                     )}
                   </div>
-                  <div className="bg-[#030712] p-2.5 rounded border border-[var(--border-subtle)]">
-                    <span className="text-[var(--text-muted)] block mb-1">การหลุดโฟกัสหน้าเว็บ (Alt-Tab)</span>
+                  <div style={{ background: "#030712", padding: "10px", borderRadius: "6px", border: "1px solid var(--border-subtle)" }}>
+                    <span style={{ color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>การหลุดโฟกัสหน้าเว็บ (Alt-Tab)</span>
                     <span className={`font-bold ${selectedAttempt.focus_lost_count > 3 ? "text-amber-500" : "text-white"}`}>
                       {selectedAttempt.focus_lost_count} ครั้ง {selectedAttempt.focus_lost_count > 3 ? "⚠️ ผิดปกติ" : ""}
                     </span>
@@ -708,19 +718,19 @@ export default function AdminExamsPage() {
               </div>
 
               {/* Answers list */}
-              <div className="space-y-4">
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider">คำถามและผลการเขียนบรรยาย</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <h4 style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#fff", textTransform: "uppercase", letterSpacing: "1px" }}>คำถามและผลการเขียนบรรยาย</h4>
                 
                 {selectedAttempt.randomized_questions.map((q, idx) => (
-                  <div key={q.id} className="bg-[#090f1d] border border-[var(--border-subtle)] rounded-lg p-5 space-y-3">
-                    <div className="flex items-start gap-2">
-                      <span className="bg-[rgba(255,255,255,0.03)] border border-[var(--border-subtle)] text-xs text-[var(--accent-light)] font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
+                  <div key={q.id} className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                      <span style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--border-subtle)", fontSize: "0.75rem", color: "var(--accent-light)", fontWeight: "bold", borderRadius: "50%", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         {idx + 1}
                       </span>
-                      <p className="text-sm font-semibold text-white leading-relaxed">{q.question_text}</p>
+                      <p style={{ fontSize: "0.88rem", fontWeight: 600, color: "#fff", lineHeight: 1.5 }}>{q.question_text}</p>
                     </div>
 
-                    <div className="bg-[#030712] border border-[var(--border-subtle)] rounded p-4 text-sm text-[var(--text-secondary)] leading-relaxed select-text min-h-[80px]">
+                    <div style={{ background: "#030712", border: "1px solid var(--border-subtle)", borderRadius: "6px", padding: "16px", fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.6, userSelect: "text", minHeight: "80px" }}>
                       {selectedAttempt.student_answers[q.id] ? (
                         selectedAttempt.student_answers[q.id]
                       ) : (
@@ -732,19 +742,19 @@ export default function AdminExamsPage() {
               </div>
 
               {/* Grading Form */}
-              <div className="bg-[#090f1d] border border-[var(--border-subtle)] rounded-lg p-5 space-y-4">
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1">
+              <div className="card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <h4 style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#fff", textTransform: "uppercase", letterSpacing: "1px", display: "flex", alignItems: "center", gap: "4px" }}>
                   <Award size={14} className="text-[var(--accent)]" /> ฟอร์มประเมินผลการสอบ
                 </h4>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-[var(--text-secondary)]">คะแนนที่ได้ (เต็ม 100):</label>
+                <div className="exam-grid-2-col">
+                  <div className="exam-flex-col exam-gap-1">
+                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)" }}>คะแนนที่ได้ (เต็ม 100):</label>
                     <input
                       type="number"
                       min={0}
                       max={100}
-                      className="bg-[#030712] border border-[var(--border-subtle)] focus:border-[var(--accent)] rounded p-2.5 text-sm text-white font-mono outline-none"
+                      style={{ width: "100%", padding: "10px 14px", fontSize: "0.85rem", borderRadius: "6px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", outline: "none", fontFamily: "var(--font-mono)" }}
                       placeholder="กรอกคะแนน เช่น 85"
                       value={gradeScore}
                       onChange={(e) => setGradeScore(e.target.value)}
@@ -752,9 +762,9 @@ export default function AdminExamsPage() {
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-[var(--text-secondary)]">สถานะการส่งผลสอบ:</label>
-                    <div className="text-xs font-bold py-3 text-white">
+                  <div className="exam-flex-col exam-gap-1">
+                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)" }}>สถานะการส่งผลสอบ:</label>
+                    <div style={{ fontSize: "0.82rem", fontWeight: "bold", padding: "12px 0", color: "#fff" }}>
                       {selectedAttempt.status === "passed" ? "✅ ผ่านการสอบแพทย์" :
                        selectedAttempt.status === "failed" ? "❌ ตกเกณฑ์การสอบ" :
                        selectedAttempt.status === "submitted" ? "⏳ รอประเมินตัดสิน" : "ยังออนเวรสอบอยู่"}
@@ -762,11 +772,11 @@ export default function AdminExamsPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[var(--text-secondary)]">ข้อคิดเห็น / คำอธิบายประกอบผลสอบ:</label>
+                <div className="exam-flex-col exam-gap-1">
+                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)" }}>ข้อคิดเห็น / คำอธิบายประกอบผลสอบ:</label>
                   <textarea
                     placeholder="เช่น ตอบข้อ 2 ได้ดีมาก แต่กรุณาระมัดระวังเรื่องกฎระเบียบ..."
-                    className="w-full bg-[#030712] border border-[var(--border-subtle)] focus:border-[var(--accent)] rounded p-2.5 text-sm text-white outline-none resize-none min-h-[90px]"
+                    style={{ width: "100%", padding: "10px 14px", fontSize: "0.85rem", borderRadius: "6px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", outline: "none", resize: "none", minHeight: "90px" }}
                     value={gradeFeedback}
                     onChange={(e) => setGradeFeedback(e.target.value)}
                     disabled={selectedAttempt.status !== "submitted" && selectedAttempt.status !== "passed" && selectedAttempt.status !== "failed"}
@@ -778,16 +788,18 @@ export default function AdminExamsPage() {
 
             {/* Drawer Footer Actions */}
             {(selectedAttempt.status === "submitted" || selectedAttempt.status === "passed" || selectedAttempt.status === "failed") && (
-              <div className="p-6 bg-[#090f1d] border-t border-[var(--border-subtle)] flex gap-3 flex-shrink-0">
+              <div style={{ padding: "24px", background: "#090f1d", borderTop: "1px solid var(--border-subtle)", display: "flex", gap: "12px", flexShrink: 0 }}>
                 <button
-                  className="flex-1 btn p-3 rounded font-bold text-xs bg-red-950 text-red-400 border border-red-800 hover:bg-red-900 transition-all flex items-center justify-center gap-1.5"
+                  className="flex-1 btn btn-danger"
+                  style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", fontWeight: "bold" }}
                   onClick={() => handleGradeAttempt("failed")}
                   disabled={gradingProgress}
                 >
                   <XCircle size={15} /> ตัดสินใจสอบไม่ผ่าน (Failed)
                 </button>
                 <button
-                  className="flex-1 btn p-3 rounded font-bold text-xs bg-green-950 text-green-400 border border-green-800 hover:bg-green-900 transition-all flex items-center justify-center gap-1.5"
+                  className="flex-1 btn btn-primary"
+                  style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", fontWeight: "bold", background: "#10b981" }}
                   onClick={() => handleGradeAttempt("passed")}
                   disabled={gradingProgress}
                 >

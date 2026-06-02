@@ -152,9 +152,9 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
       <div className="inbox-drawer" onClick={(e) => e.stopPropagation()}>
         {/* Drawer Header */}
         <div className="inbox-drawer-header">
-          <div className="flex items-center gap-2">
+          <div className="exam-flex-row-center" style={{ gap: "8px" }}>
             <Mail className="text-[var(--accent)]" size={20} />
-            <h2 className="text-lg font-bold text-white">กล่องจดหมาย (Inbox)</h2>
+            <h2 style={{ fontSize: "1.125rem", fontWeight: "bold", color: "#fff", margin: 0 }}>กล่องจดหมาย (Inbox)</h2>
           </div>
           <button className="inbox-close-btn" onClick={onClose}>
             <X size={18} />
@@ -182,7 +182,7 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
 
               <div className="inbox-detail-card">
                 <div className="inbox-detail-meta">
-                  <span className="inbox-detail-sender">
+                  <span style={{ fontWeight: "bold", color: "var(--text-secondary)" }}>
                     👤 ผู้ส่ง: {selectedMessage.sender_name}
                   </span>
                   <span className="inbox-detail-date">
@@ -193,20 +193,20 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
                 
                 <div className="inbox-detail-content">
                   {selectedMessage.content.split("\n").map((line, idx) => (
-                    <p key={idx} className="mb-2 text-[var(--text-secondary)]">{line}</p>
+                    <p key={idx} style={{ marginBottom: "8px", color: "var(--text-secondary)" }}>{line}</p>
                   ))}
                 </div>
 
                 {/* If type is Exam, show Exam control card */}
                 {selectedMessage.type === "exam" && (
                   <div className="inbox-exam-action-card">
-                    <div className="flex items-center gap-2 mb-3 text-[var(--accent)]">
+                    <div className="exam-flex-row-center" style={{ color: "var(--accent)", marginBottom: "12px", gap: "8px" }}>
                       <FileText size={18} />
-                      <span className="font-semibold text-sm">ข้อมูลการทดสอบวัดผล</span>
+                      <span style={{ fontWeight: 600, fontSize: "0.88rem" }}>ข้อมูลการทดสอบวัดผล</span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 mb-4 text-xs text-[var(--text-secondary)]">
-                      <div className="bg-[rgba(255,255,255,0.02)] p-2 rounded">
+                    <div className="exam-grid-2-col" style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "16px", gap: "12px" }}>
+                      <div style={{ background: "rgba(255,255,255,0.02)", padding: "8px", borderRadius: "4px" }}>
                         ประเภท: <strong className="text-white">
                           {selectedMessage.exam_type === "general_doctor" ? "แพทย์ทั่วไป (Doctor)" : "แพทย์ชำนาญการ (Specialist)"}
                         </strong>
@@ -222,13 +222,14 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
                         {selectedMessage.exam_attempts.status === "in_progress" ? (
                           <button
                             className="inbox-btn-exam btn-primary"
+                            style={{ width: "100%" }}
                             onClick={() => handleStartExam(selectedMessage)}
                             disabled={startingExam}
                           >
                             <Play size={14} /> {startingExam ? "กำลังเข้าสู่ห้องสอบ..." : "ทำข้อสอบต่อที่ค้างไว้"}
                           </button>
                         ) : (
-                          <div className="flex items-center gap-2 text-green-400 p-2 bg-[rgba(34,197,94,0.05)] rounded border border-[rgba(34,197,94,0.15)] text-sm">
+                          <div className="exam-flex-row-center" style={{ color: "#4ade80", padding: "8px", background: "rgba(34,197,94,0.05)", borderRadius: "4px", border: "1px solid rgba(34,197,94,0.15)", fontSize: "0.88rem", gap: "8px" }}>
                             <CheckCircle size={16} />
                             <span>
                               ส่งข้อสอบเรียบร้อยแล้ว ({selectedMessage.exam_attempts.status === "passed" ? "สอบผ่าน ✅" : 
@@ -240,11 +241,11 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
                     ) : (
                       /* If new attempt */
                       <div className="inbox-exam-rules-confirm">
-                        <div className="text-xs text-[var(--text-secondary)] bg-[rgba(245,158,11,0.03)] border border-[rgba(245,158,11,0.15)] p-3 rounded mb-4">
-                          <h4 className="font-semibold text-[var(--warning)] mb-1 flex items-center gap-1">
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", background: "rgba(245,158,11,0.03)", border: "1px solid rgba(245, 158, 11, 0.15)", padding: "12px", borderRadius: "6px", marginBottom: "16px" }}>
+                          <h4 className="exam-flex-row-center" style={{ fontWeight: 600, color: "var(--warning)", marginBottom: "4px", gap: "4px" }}>
                             ⚠️ กฎระเบียบและข้อควรระวังขณะสอบ:
                           </h4>
-                          <ul className="list-disc pl-4 space-y-1">
+                          <ul style={{ listStyleType: "disc", paddingLeft: "16px", display: "flex", flexDirection: "column", gap: "4px" }}>
                             <li>การสอบจะจับเวลาถอยหลัง หากหมดเวลาจะส่งคำตอบอัตโนมัติ</li>
                             <li><strong>ห้ามสลับหน้าจอนอกหน้าต่างสอบ (Alt-Tab) เด็ดขาด</strong> ระบบจะตรวจจับและรายงานแอดมินทันทีหากมีการหลุดโฟกัส</li>
                             <li><strong>ระบบบล็อกการคัดลอก คัดลอกข้อความ หรือคลิกขวา</strong></li>
@@ -253,7 +254,8 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
                         </div>
 
                         <button
-                          className="inbox-btn-exam btn-primary w-full"
+                          className="inbox-btn-exam btn-primary"
+                          style={{ width: "100%" }}
                           onClick={() => handleStartExam(selectedMessage)}
                           disabled={startingExam}
                         >
@@ -278,8 +280,8 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
                   <div className="inbox-empty-icon-wrapper">
                     <MailOpen size={48} className="text-[var(--text-secondary)] opacity-30" />
                   </div>
-                  <h3 className="text-sm font-semibold text-white">กล่องจดหมายของคุณว่างเปล่า</h3>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">
+                  <h3 style={{ fontSize: "0.88rem", fontWeight: 600, color: "#fff" }}>กล่องจดหมายของคุณว่างเปล่า</h3>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "4px" }}>
                     เมื่อได้รับการอนุมัติสิทธิ์สอบเลื่อนขั้นหรือแจ้งผลสอบ จดหมายจะปรากฏที่นี่ค่ะ
                   </p>
                 </div>

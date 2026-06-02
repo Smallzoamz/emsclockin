@@ -343,22 +343,23 @@ export default function ExamPage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-[#030712] flex flex-col items-center justify-center text-white z-[99999]">
-        <div className="inbox-spinner mb-4"></div>
-        <p className="text-sm text-[var(--text-secondary)] font-mono">กำลังเข้าสู่ระบบคุมสอบแพทย์...</p>
+      <div style={{ position: "fixed", inset: 0, background: "#030712", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#fff", zIndex: 99999 }}>
+        <div className="inbox-spinner" style={{ marginBottom: "16px" }}></div>
+        <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>กำลังเข้าสู่ระบบคุมสอบแพทย์...</p>
       </div>
     );
   }
 
   if (errorMsg) {
     return (
-      <div className="fixed inset-0 bg-[#030712] flex flex-col items-center justify-center text-white z-[99999] px-6">
-        <div className="bg-[#090f1d] border border-[var(--border-subtle)] rounded-lg p-8 max-width-md text-center max-w-md">
-          <AlertTriangle className="text-[var(--warning)] mx-auto mb-4" size={48} />
-          <h2 className="text-xl font-bold mb-3">พบข้อผิดพลาดในระบบคุมสอบ</h2>
-          <p className="text-sm text-[var(--text-secondary)] mb-6">{errorMsg}</p>
+      <div style={{ position: "fixed", inset: 0, background: "#030712", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#fff", zIndex: 99999, padding: "24px" }}>
+        <div className="card" style={{ maxWidth: "448px", width: "100%", textAlign: "center", padding: "32px" }}>
+          <AlertTriangle style={{ color: "var(--warning)", margin: "0 auto 16px auto" }} size={48} />
+          <h2 style={{ fontSize: "1.25rem", fontWeight: "bold", marginBottom: "12px", color: "#fff" }}>พบข้อผิดพลาดในระบบคุมสอบ</h2>
+          <p style={{ fontSize: "0.88rem", color: "var(--text-secondary)", marginBottom: "24px" }}>{errorMsg}</p>
           <button 
-            className="btn btn-primary px-6 py-2 w-full rounded" 
+            className="btn btn-primary" 
+            style={{ width: "100%", justifyContent: "center", padding: "10px 20px" }}
             onClick={() => router.push("/dashboard")}
           >
             กลับสู่แดชบอร์ดหลัก
@@ -369,7 +370,7 @@ export default function ExamPage({ params }: PageProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-[#030712] z-[99999] flex flex-col text-white select-none overflow-hidden">
+    <div style={{ position: "fixed", inset: 0, background: "#030712", zIndex: 99999, display: "flex", flexDirection: "column", color: "#fff", userSelect: "none", overflow: "hidden" }}>
       
       {/* 1. Fullscreen Semi-transparent Watermark Layer */}
       <div className="exam-watermark-layer">
@@ -381,21 +382,22 @@ export default function ExamPage({ params }: PageProps) {
       </div>
 
       {/* 2. Top Navigation (Exam Header) */}
-      <header className="exam-header flex items-center justify-between px-8 py-4 bg-[#090f1d] border-b border-[var(--border-subtle)] z-10">
-        <div className="flex items-center gap-3">
+      <header className="exam-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 32px", background: "#090f1d", borderBottom: "1px solid var(--border-subtle)", zIndex: 10 }}>
+        <div className="exam-flex-row-center" style={{ gap: "12px" }}>
           <ShieldAlert className="text-[var(--accent)]" size={24} />
           <div>
-            <h1 className="text-base font-bold text-white leading-tight">
+            <h1 style={{ fontSize: "1rem", fontWeight: "bold", color: "#fff", lineHeight: 1.25 }}>
               ห้องสอบเลื่อนระดับ: {attempt?.exam_type === "general_doctor" ? "แพทย์ทั่วไป (Doctor)" : "แพทย์ชำนาญการ (Specialist)"}
             </h1>
-            <span className="text-xs text-[var(--text-secondary)] font-mono">Exam Session: {attemptId}</span>
+            <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>Exam Session: {attemptId}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           {renderTimer()}
           <button 
-            className="btn btn-primary px-5 py-2 font-bold flex items-center gap-2 rounded text-sm bg-[var(--accent)] hover:bg-[var(--accent-light)]"
+            className="btn btn-primary"
+            style={{ padding: "8px 20px", fontWeight: "bold", display: "flex", alignItems: "center", gap: "8px", borderRadius: "6px", fontSize: "0.85rem" }}
             onClick={handleSubmitClick}
           >
             <Send size={14} /> ส่งข้อสอบ
@@ -404,34 +406,34 @@ export default function ExamPage({ params }: PageProps) {
       </header>
 
       {/* 3. Main Scrollable Question Content */}
-      <main className="flex-1 overflow-y-auto px-8 py-8 z-10">
-        <div className="max-w-4xl mx-auto space-y-6 pb-20">
+      <main style={{ flex: 1, overflowY: "auto", padding: "32px" }}>
+        <div style={{ maxWidth: "896px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px", paddingBottom: "80px" }}>
           
-          <div className="bg-[rgba(245,158,11,0.02)] border border-[rgba(245,158,11,0.15)] rounded-lg p-5 flex gap-4">
-            <AlertTriangle className="text-[var(--warning)] flex-shrink-0 mt-1" size={20} />
-            <div className="text-sm text-[var(--text-secondary)] leading-relaxed">
-              <h4 className="font-bold text-white mb-1">โปรดทราบก่อนเริ่มพิมพ์คำตอบ:</h4>
-              <p className="mb-1">
+          <div style={{ background: "rgba(245, 158, 11, 0.02)", border: "1px solid rgba(245, 158, 11, 0.15)", borderRadius: "8px", padding: "20px", display: "flex", gap: "16px" }}>
+            <AlertTriangle style={{ color: "var(--warning)", flexShrink: 0, marginTop: "4px" }} size={20} />
+            <div style={{ fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
+              <h4 style={{ fontWeight: "bold", color: "#fff", marginBottom: "4px" }}>โปรดทราบก่อนเริ่มพิมพ์คำตอบ:</h4>
+              <p style={{ marginBottom: "4px" }}>
                 การสอบเลื่อนขั้นนี้เป็นระบบสอบเขียนบรรยายอัตนัย กรุณาอธิบายคำตอบให้ละเอียด ชัดเจน และตรงไปตรงมา 
                 ระบบจะคอยบันทึกคำตอบของคุณอัตโนมัติสำรองข้อมูลทุกๆ 30 วินาที
               </p>
-              <p className="text-[var(--warning)] font-semibold">
+              <p style={{ color: "var(--warning)", fontWeight: 600 }}>
                 * คำเตือน: ระบบปิดกั้นการ Alt-Tab สลับแท็บหน้าต่าง และห้ามกดคัดลอกคำถามใดๆ ไปยังภายนอกเด็ดขาด!
               </p>
             </div>
           </div>
 
           {attempt?.randomized_questions.map((q, index) => (
-            <div key={q.id} className="bg-[#090f1d] border border-[var(--border-subtle)] rounded-lg p-6 space-y-4">
-              <div className="flex items-start gap-3">
-                <span className="bg-[rgba(255,255,255,0.03)] border border-[var(--border-subtle)] rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold text-[var(--accent-light)] flex-shrink-0 mt-0.5">
+            <div key={q.id} className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                <span style={{ background: "rgba(255, 255, 255, 0.03)", border: "1px solid var(--border-subtle)", borderRadius: "50%", width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: "bold", color: "var(--accent-light)", flexShrink: 0, marginTop: "2px" }}>
                   {index + 1}
                 </span>
-                <h3 className="text-base font-bold text-white leading-snug">{q.question_text}</h3>
+                <h3 style={{ fontSize: "1rem", fontWeight: "bold", color: "#fff", lineHeight: 1.4 }}>{q.question_text}</h3>
               </div>
 
               <textarea
-                className="w-full bg-[#030712] border border-[var(--border-subtle)] focus:border-[var(--accent)] rounded p-4 text-sm text-white outline-none select-text resize-y min-h-[140px] focus:shadow-[0_0_10px_rgba(59,130,246,0.1)] transition-all"
+                style={{ width: "100%", padding: "16px", fontSize: "0.88rem", borderRadius: "6px", background: "#030712", border: "1px solid var(--border-subtle)", color: "#fff", outline: "none", resize: "vertical", minHeight: "140px", transition: "all 0.2s" }}
                 placeholder="กรอกคำอธิบายคำตอบของคุณที่นี่..."
                 value={answers[q.id] || ""}
                 onChange={(e) => handleAnswerChange(q.id, e.target.value)}
@@ -444,18 +446,19 @@ export default function ExamPage({ params }: PageProps) {
 
       {/* 4. Focus Loss Blocking Overlay Warning */}
       {showFocusWarning && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 z-[100000] flex items-center justify-center p-6">
-          <div className="bg-[#090f1d] border-2 border-red-500 rounded-lg p-8 max-w-md text-center shadow-[0_0_50px_rgba(239,68,68,0.3)]">
-            <AlertTriangle className="text-red-500 mx-auto mb-4 animate-bounce" size={56} />
-            <h2 className="text-xl font-extrabold text-red-500 mb-3 uppercase tracking-wider">ตรวจพบการสลับหน้าจอ!</h2>
-            <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-6">
+        <div className="exam-popup-backdrop">
+          <div className="exam-popup-card" style={{ border: "2px solid #ef4444", maxWidth: "448px", width: "100%", textAlign: "center", boxShadow: "0 0 50px rgba(239, 68, 68, 0.3)", padding: "32px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <AlertTriangle style={{ color: "#ef4444", margin: "0 auto" }} size={56} className="animate-bounce" />
+            <h2 style={{ fontSize: "1.25rem", fontWeight: "extrabold", color: "#ef4444", letterSpacing: "1px", textTransform: "uppercase" }}>ตรวจพบการสลับหน้าจอ!</h2>
+            <p style={{ fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
               ห้ามเปิดโปรแกรมภายนอก สลับแท็บ หรือย่อเว็บเบราว์เซอร์ระหว่างทำข้อสอบเด็ดขาด ระบบได้ส่งประวัติการหลุดโฟกัสครั้งนี้ไปยังแอดมินผู้คุมสอบเรียบร้อยแล้วค่ะ
             </p>
-            <div className="bg-red-950 bg-opacity-20 border border-red-900 rounded p-3 text-red-400 font-bold text-sm mb-6">
+            <div style={{ background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "6px", padding: "12px", color: "#fca5a5", fontWeight: "bold", fontSize: "0.88rem" }}>
               จำนวนครั้งที่หลุดโฟกัสสะสม: {focusLostCount} ครั้ง
             </div>
             <button
-              className="btn bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded w-full transition-all"
+              className="btn btn-danger"
+              style={{ width: "100%", justifyContent: "center", padding: "10px 20px", fontWeight: "bold" }}
               onClick={() => setShowFocusWarning(false)}
             >
               เข้าใจแล้วและกลับไปทำข้อสอบ
@@ -466,10 +469,10 @@ export default function ExamPage({ params }: PageProps) {
 
       {/* 5. Browser Screen Share Blackout Cover */}
       {screenShareDetected && (
-        <div className="fixed inset-0 bg-black z-[100001] flex flex-col items-center justify-center p-6 select-none pointer-events-none">
-          <EyeOff className="text-red-500 mb-4" size={64} />
-          <h2 className="text-2xl font-black text-red-500 uppercase tracking-widest">ตรวจพบความพยายามแชร์หน้าจอ!</h2>
-          <p className="text-sm text-gray-500 text-center max-w-sm mt-2">
+        <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 100001, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", userSelect: "none", pointerEvents: "none" }}>
+          <EyeOff style={{ color: "#ef4444", marginBottom: "16px" }} size={64} />
+          <h2 style={{ fontSize: "1.5rem", fontWeight: "black", color: "#ef4444", textTransform: "uppercase", letterSpacing: "2px" }}>ตรวจพบความพยายามแชร์หน้าจอ!</h2>
+          <p style={{ fontSize: "0.88rem", color: "#6b7280", textAlign: "center", maxWidth: "384px", marginTop: "8px" }}>
             หน้าจอข้อสอบได้รับการบดบังเพื่อความปลอดภัยของคลังข้อสอบ กรุณาหยุดการบันทึกภาพ/แชร์หน้าจอเพื่อดำเนินรายการต่อค่ะ
           </p>
         </div>
