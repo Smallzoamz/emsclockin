@@ -380,3 +380,5 @@
 ## [2026-06-02 14:15] | File: multiple | Line: 1 | Keyword: Favicon Emblem Update | Status: ✅ Complete | Change: Resized the user's uploaded medical service emblem PNG to 48x48 pixels and replaced the existing favicon.ico in both `src/app/favicon.ico` and `public/favicon.ico` to keep branding consistent and optimize performance.
 
 ## [2026-06-02 19:30] | File: public/images/leave_banner.jpg | Line: 1 | Keyword: Leave Banner Asset | Status: ✅ Complete | Change: Added the newly uploaded leaves system banner image to `public/images/leave_banner.jpg` to host it for the Discord Bot's leave request embed and private ticket welcome messages.
+
+## [2026-06-02 22:00] | File: public/images/welcome_banner.jpg | Line: 1 | Keyword: Welcome Banner Asset | Status: ✅ Complete | Change: Added the newly uploaded welcome banner image for new student doctors to `public/images/welcome_banner.jpg` to host it for the Discord Bot's server join welcome embed messages.
