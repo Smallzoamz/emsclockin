@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
 
-// 1. GET: Fetch all active blacklist records
+// 1. GET: Fetch all blacklist records (both active and released)
 export async function GET() {
   const session = await auth();
   if (!session?.user) {
@@ -13,7 +13,6 @@ export async function GET() {
     const { data, error } = await supabase
       .from("blacklist_records")
       .select("*")
-      .eq("status", "active")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -125,7 +124,7 @@ export async function PUT(req: Request) {
 
   try {
     const body = await req.json();
-    const { id } = body;
+    const { id, reason } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Record ID is required" }, { status: 400 });
@@ -138,7 +137,8 @@ export async function PUT(req: Request) {
       .update({
         status: "released",
         released_at: new Date().toISOString(),
-        released_by: email
+        released_by: email,
+        release_reason: reason || ""
       })
       .eq("id", id)
       .select();

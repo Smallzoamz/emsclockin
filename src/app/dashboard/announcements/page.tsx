@@ -133,6 +133,11 @@ export default function AnnouncementsPage() {
   const [isSendingDiscord, setIsSendingDiscord] = useState(false);
   const [discordStatus, setDiscordStatus] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
+  // Release reason modal states
+  const [showReleaseModal, setShowReleaseModal] = useState(false);
+  const [releasingRecord, setReleasingRecord] = useState<any>(null);
+  const [releaseReason, setReleaseReason] = useState("");
+
   // Cooldown states
   const [cooldownMinutes, setCooldownMinutes] = useState(10);
   const [fixedStartTime, setFixedStartTime] = useState<string | null>(null);
@@ -606,15 +611,13 @@ export default function AnnouncementsPage() {
     }
   };
 
-  const handleReleaseBlacklist = async (record: any) => {
-    if (!await confirm({
-      title: "🕊️ ปลดสิทธิ์แบล็คลิสต์",
-      message: `ยืนยันการปลด Blacklist ของ "${record.name}" หรือไม่?`,
-      confirmText: "ปลดแบล็คลิสต์",
-      cancelText: "ยกเลิก",
-      variant: "warning"
-    })) return;
+  const openReleaseModal = (record: any) => {
+    setReleasingRecord(record);
+    setReleaseReason("");
+    setShowReleaseModal(true);
+  };
 
+  const handleReleaseBlacklist = async (record: any, reason: string) => {
     setReleasingId(record.id);
     try {
       let text = blacklistReleaseTemplate || "**[ปลด Blacklist บุคคล]**\nชื่อ-นามสกุล: [ชื่อคน]\nเบอร์โทรศัพท์: [เบอร์โทร]\nชื่อกลุ่ม/แก๊ง: [ชื่อแก๊ง]\nสถานะ: ปลดแบล็คลิสต์ เรียบร้อยแล้วค่ะ";
@@ -625,6 +628,11 @@ export default function AnnouncementsPage() {
       text = text.replaceAll("[ค่าปรับ]", record.fine ? `${Number(record.fine).toLocaleString()} IC` : "0 IC");
       text = text.replaceAll("[ตัวคูณ]", record.multiplier ? `${record.multiplier}` : "1");
       text = text.replaceAll("[ประเภท]", record.target_type || "ประชาชน");
+
+      text = text.replaceAll("[สาเหตุ]", reason);
+      if (!text.includes(reason) && !blacklistReleaseTemplate?.includes("[สาเหตุ]")) {
+        text += `\nสาเหตุการปลด: ${reason}`;
+      }
 
       const clipboardText = commandPrefix.trim() ? `${commandPrefix.trim()} ${text}` : text;
       await navigator.clipboard.writeText(clipboardText);
@@ -639,7 +647,7 @@ export default function AnnouncementsPage() {
       const dbRes = await fetch("/api/announcements/blacklist", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: record.id })
+        body: JSON.stringify({ id: record.id, reason })
       });
 
       if (dbRes.ok) {
@@ -648,6 +656,7 @@ export default function AnnouncementsPage() {
           type: "success"
         });
         setTimeout(() => setDiscordStatus(null), 5000);
+        setShowReleaseModal(false);
         await fetchBlacklistHistory();
       } else {
         const errData = await dbRes.json();
@@ -1527,7 +1536,6 @@ export default function AnnouncementsPage() {
 
                       return paginatedHistory.map((record) => (
                         <tr key={record.id} style={{ borderBottom: "1px solid var(--border-subtle)", color: "var(--text-primary)" }}>
-                          {/* Title / Details */}
                           <td style={{ padding: "14px 16px" }}>
                             <div style={{ fontWeight: "bold", fontSize: "0.9rem", color: "var(--text-primary)" }}>
                               {record.penalty || "ข้อหาแบล็คลิสต์"} : {record.name}
@@ -1535,6 +1543,20 @@ export default function AnnouncementsPage() {
                             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
                               เบอร์โทร: {record.phone || "-"} | สังกัด: {record.gang || "-"} {record.target_type && `(${record.target_type})`}
                             </div>
+                            {record.status === "released" && record.release_reason && (
+                              <div style={{
+                                fontSize: "0.72rem",
+                                color: "var(--success)",
+                                marginTop: "6px",
+                                padding: "4px 8px",
+                                background: "rgba(16, 185, 129, 0.05)",
+                                borderRadius: "4px",
+                                border: "1px solid rgba(16, 185, 129, 0.15)",
+                                display: "inline-block"
+                              }}>
+                                🔓 สาเหตุการปลด: {record.release_reason}
+                              </div>
+                            )}
                           </td>
 
                           {/* Category badge */}
@@ -1593,7 +1615,7 @@ export default function AnnouncementsPage() {
                             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", alignItems: "center" }}>
                               {record.status !== "released" && (
                                 <button
-                                  onClick={() => handleReleaseBlacklist(record)}
+                                  onClick={() => openReleaseModal(record)}
                                   disabled={releasingId === record.id}
                                   className="btn btn-primary"
                                   style={{ padding: "4px 10px", fontSize: "0.72rem", borderRadius: "6px" }}
@@ -1913,6 +1935,53 @@ export default function AnnouncementsPage() {
             </div>
           )}
 
+        </div>
+      )}
+
+      {/* ─── Release Blacklist Modal ─── */}
+      {showReleaseModal && releasingRecord && (
+        <div className="confirm-backdrop" onClick={() => setShowReleaseModal(false)} style={{ zIndex: 9999 }}>
+          <div className="confirm-modal variant-warning" onClick={(e) => e.stopPropagation()} style={{ width: "420px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="confirm-header">
+              <span className="confirm-icon">🔓</span>
+              <h3 className="confirm-title" style={{ fontSize: "1.15rem", color: "var(--text-primary)" }}>🕊️ ยืนยันปลดสิทธิ์แบล็คลิสต์</h3>
+            </div>
+            <div className="confirm-message" style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "4px" }}>
+              ต้องการปลด Blacklist ของคุณ <strong>{releasingRecord.name}</strong> ใช่หรือไม่?
+            </div>
+            
+            {/* Details Box */}
+            <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", borderRadius: "6px", padding: "10px 12px", fontSize: "0.8rem", display: "flex", flexDirection: "column", gap: "4px" }}>
+              <div>ข้อหา: <span style={{ color: "var(--text-primary)", fontWeight: "600" }}>{releasingRecord.penalty || "ไม่ระบุ"}</span></div>
+              <div>ค่าปรับ: <span style={{ color: "var(--accent-light)", fontWeight: "bold" }}>{releasingRecord.fine ? `${Number(releasingRecord.fine).toLocaleString()} IC` : "0 IC"}</span></div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: "bold" }}>📝 ระบุสาเหตุการปลดแบล็คลิสต์ <span style={{ color: "var(--danger)" }}>*</span></label>
+              <input 
+                type="text" 
+                placeholder="เช่น ชำระค่าปรับแล้ว, พ้นโทษตามกำหนดเวลา..."
+                value={releaseReason} 
+                onChange={(e) => setReleaseReason(e.target.value)} 
+                style={{ ...inputStyle, width: "100%" }}
+                required
+              />
+            </div>
+
+            <div className="confirm-actions" style={{ marginTop: "8px" }}>
+              <button className="confirm-btn-cancel btn" onClick={() => setShowReleaseModal(false)}>
+                ยกเลิก
+              </button>
+              <button 
+                className="confirm-btn-submit btn variant-warning" 
+                onClick={() => handleReleaseBlacklist(releasingRecord, releaseReason)}
+                disabled={!releaseReason.trim() || releasingId === releasingRecord.id}
+                style={{ padding: "8px 16px", fontWeight: "bold" }}
+              >
+                {releasingId === releasingRecord.id ? "กำลังปลด..." : "ปลดแบล็คลิสต์"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
