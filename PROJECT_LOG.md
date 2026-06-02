@@ -367,5 +367,6 @@
 
 ## [2026-06-02 13:09] | File: src/app/api/admin/leaves/route.ts | Line: 65 | Keyword: Leave Webhook Notification | Status: ✅ Complete | Change: Implemented sendLeaveStatusWebhook function to notify Discord log channel whenever a leave request is approved or rejected by an admin, including user mentions and embeds with Thai timezone dates.
 
-## [2026-06-02 13:16] | File: multiple | Line: 1 | Keyword: Leave Ticket Thread Status Notification | Status: ✅ Complete | Change: Modified the leave status notifications to deliver directly into the private ticket thread channel on Discord using Supabase Realtime subscriptions in EMSBot. Created a SQL migration to add 'discord_thread_id' to 'leave_requests'. Disabled the generic clock-in/out log channel webhook notification in Clockin leaves API route.
+## [2026-06-02 13:16] | File: multiple | Line: 1 | Keyword: Leave Ticket Thread Status Notification | Status: ✅ Complete | Change: Modified the leave status notifications to deliver directly into the private ticket thread channel on Discord using Supabase Realtime subscriptions in EMSBot. Created a SQL migration to add 'discord_thread_id' to 'leave_requests'. Disabled the generic clock-in/out log channel webhook notification in Clockin leaves API route. Added a self-healing duplicate-check check looking at thread message history to bypass database replica identity limitations, and provided sql/2026-06-02-set-replica-identity-full.sql migration.
+
 
