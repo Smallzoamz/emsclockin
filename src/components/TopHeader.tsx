@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Bell, Mail, Moon, Calendar, Clock } from "lucide-react";
+import { InboxModal } from "./InboxModal";
 
 export function TopHeader() {
   const pathname = usePathname();
@@ -38,6 +39,29 @@ export function TopHeader() {
         return "หน้าหลัก";
     }
   };
+
+  const [isInboxOpen, setIsInboxOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await fetch("/api/inbox");
+      if (res.ok) {
+        const data = await res.json();
+        const msgs = data.messages || [];
+        const count = msgs.filter((m: any) => !m.is_read).length;
+        setUnreadCount(count);
+      }
+    } catch (err) {
+      console.error("Failed to fetch unread count:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const updateTime = () => {
@@ -86,8 +110,9 @@ export function TopHeader() {
         </div>
 
         {/* Mails icon */}
-        <button className="header-icon-badge-btn">
+        <button className="header-icon-badge-btn" onClick={() => setIsInboxOpen(true)} title="กล่องจดหมาย">
           <Mail size={18} />
+          {unreadCount > 0 && <span className="header-icon-badge"></span>}
         </button>
 
         {/* Notifications icon */}
@@ -101,6 +126,8 @@ export function TopHeader() {
           <Moon size={18} />
         </button>
       </div>
+
+      <InboxModal isOpen={isInboxOpen} onClose={() => { setIsInboxOpen(false); fetchUnreadCount(); }} />
     </header>
   );
 }

@@ -236,6 +236,14 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
               </Link>
 
               <Link
+                href="/dashboard/admin/exams"
+                className={`nav-link ${pathname === "/dashboard/admin/exams" ? "active" : ""}`}
+              >
+                <FileTextIcon size={18} />
+                จัดการระบบสอบ
+              </Link>
+
+              <Link
                 href="/dashboard/bonus"
                 className={`nav-link ${pathname === "/dashboard/bonus" ? "active" : ""}`}
               >
