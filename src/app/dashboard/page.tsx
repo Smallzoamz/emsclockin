@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ClockButton } from "@/components/ClockButton";
 import { LiveTimer } from "@/components/LiveTimer";
 import { formatHoursToHHMMSS } from "@/lib/utils";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { 
   ClockIcon, 
   CheckIcon, 
@@ -54,10 +55,80 @@ export default function DashboardPage() {
   const [totalShiftsCount, setTotalShiftsCount] = useState(0);
   const [currentMonthFilter, setCurrentMonthFilter] = useState("");
 
+  // Mentorship System State
+  const confirm = useConfirm();
+  const [mentorshipData, setMentorshipData] = useState<{
+    isEligible: boolean;
+    accumulatedHours: number;
+    requiredHours: number;
+    activeMentees: any[];
+    availableStudents: any[];
+    settings: any;
+  } | null>(null);
+
   const showToast = useCallback((message: string, type: "success" | "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   }, []);
+
+  const fetchMentorshipData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/mentor/status");
+      const data = await res.json();
+      setMentorshipData(data);
+    } catch (err) {
+      console.error("Failed to fetch mentorship status:", err);
+    }
+  }, []);
+
+  const handleRequestMentor = async (studentEmail: string, studentName: string) => {
+    try {
+      const res = await fetch("/api/mentor/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentEmail })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, "success");
+        fetchMentorshipData();
+        fetchWeekly();
+      } else {
+        showToast(data.error || "เกิดข้อผิดพลาด", "error");
+      }
+    } catch {
+      showToast("เกิดข้อผิดพลาดในการส่งคำขอพี่เลี้ยง", "error");
+    }
+  };
+
+  const handleCancelMentor = async (relationId: string, studentName: string) => {
+    const isConfirmed = await confirm({
+      title: "❌ ยกเลิกการเป็นพี่เลี้ยง",
+      message: `คุณต้องการยกเลิกการเป็นพี่เลี้ยงให้ ${studentName} ใช่หรือไม่?\n(โบนัสเริ่มรับจะถูกหักออกทันที และสามารถกดยกเลิกได้ภายใน 24 ชม. แรกเท่านั้น)`,
+      confirmText: "ยืนยันยกเลิก",
+      cancelText: "ปิดหน้าต่าง",
+      variant: "danger"
+    });
+    if (!isConfirmed) return;
+
+    try {
+      const res = await fetch("/api/mentor/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ relationId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, "success");
+        fetchMentorshipData();
+        fetchWeekly();
+      } else {
+        showToast(data.error || "เกิดข้อผิดพลาด", "error");
+      }
+    } catch {
+      showToast("เกิดข้อผิดพลาดในการยกเลิกพี่เลี้ยง", "error");
+    }
+  };
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -69,12 +140,17 @@ export default function DashboardPage() {
       if (data.activeDoctors) {
         setActiveDoctors(data.activeDoctors);
       }
+      
+      // If currently clocked in, fetch mentorship state
+      if (data.isOnDuty) {
+        fetchMentorshipData();
+      }
     } catch {
       console.error("Failed to fetch status");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchMentorshipData]);
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -321,61 +397,195 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Shift proof upload column */}
-            <div style={{ borderLeft: "1px solid rgba(255, 255, 255, 0.04)", paddingLeft: "24px" }}>
-              {pendingProofShift ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  <label 
-                    htmlFor="page-proof-upload" 
-                    style={{ 
-                      display: "block", 
-                      padding: previewUrl ? "8px" : "24px", 
-                      border: "2px dashed var(--border-subtle)", 
-                      borderRadius: "8px", 
-                      textAlign: "center",
-                      cursor: "pointer",
-                      background: "rgba(255,255,255,0.01)",
-                      transition: "all 0.2s"
-                    }}
-                  >
-                    {previewUrl ? (
-                      <img src={previewUrl} alt="Preview" style={{ maxWidth: "100%", maxHeight: "100px", borderRadius: "4px", objectFit: "contain", margin: "0 auto" }} />
-                    ) : (
-                      <div style={{ color: "var(--text-muted)", fontSize: "0.7rem", display: "flex", flexDirection: "column", gap: "4px", alignItems: "center" }}>
-                        <span>📸</span>
-                        <span>อัปโหลดรูปหลักฐานการลงเวร</span>
-                      </div>
-                    )}
-                  </label>
-                  <input 
-                    id="page-proof-upload" 
-                    type="file" 
-                    accept="image/*" 
-                    style={{ display: "none" }} 
-                    onChange={handleFileChange}
-                  />
-                  <button 
-                    onClick={handleConfirmPendingClockOut}
-                    disabled={!proofFile || pressing}
-                    className="btn btn-primary"
-                    style={{ 
-                      width: "100%",
-                      padding: "8px", 
-                      background: "var(--danger)",
-                      fontSize: "0.78rem",
-                      opacity: (!proofFile || pressing) ? 0.5 : 1
-                    }}
-                  >
-                    {pressing ? "กำลังอัปโหลด..." : "ส่งรูป & บันทึกเวลาลงเวร"}
-                  </button>
+            {/* Shift proof upload / Mentorship column */}
+            <div style={{ borderLeft: "1px solid rgba(255, 255, 255, 0.04)", paddingLeft: "24px", minWidth: "300px" }}>
+              {isOnDuty ? (
+                // Mentorship System View
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", height: "100%", justifyContent: "flex-start" }}>
+                  {mentorshipData ? (
+                    (() => {
+                      const activeMentees = mentorshipData.activeMentees || [];
+                      const availableStudents = mentorshipData.availableStudents || [];
+                      const settings = mentorshipData.settings || {};
+                      const maxMentees = settings.max_mentees || 2;
+                      const isFull = activeMentees.length >= maxMentees;
+
+                      if (isFull) {
+                        // Display active mentees with countdown
+                        return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: "6px" }}>
+                              <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--accent-light)" }}>📋 น้องเลี้ยงที่กำลังดูแล ({activeMentees.length}/{maxMentees})</span>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                              {activeMentees.map((rel: any) => {
+                                const start = new Date(rel.started_at).getTime();
+                                const isCancelable = (Date.now() - start) <= 24 * 60 * 60 * 1000;
+                                return (
+                                  <div key={rel.id} style={{ background: "rgba(255,255,255,0.01)", border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "10px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                      <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#fff" }}>{rel.student_name}</span>
+                                      <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>@{rel.student_email.split('@')[0]}</span>
+                                    </div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2px" }}>
+                                      <MentorshipCountdown startedAt={rel.started_at} />
+                                      {isCancelable ? (
+                                        <button
+                                          onClick={() => handleCancelMentor(rel.id, rel.student_name)}
+                                          className="btn btn-ghost"
+                                          style={{ padding: "2px 8px", background: "rgba(239, 68, 68, 0.1)", color: "#fca5a5", fontSize: "0.68rem", borderRadius: "4px", border: "1px solid rgba(239,68,68,0.2)" }}
+                                        >
+                                          ยกเลิกดูแล
+                                        </button>
+                                      ) : (
+                                        <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>🔒 เลยเวลานำส่งยกเลิก</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: "6px", padding: "8px", fontSize: "0.72rem", color: "#a7f3d0", textAlign: "center", marginTop: "4px" }}>
+                              คุณได้รับเป็นพี่เลี้ยงครบตามจำนวนที่กำหนดแล้ว
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Not full: show available interns + any active mentees at the top if exists
+                      const availableOnly = availableStudents.filter((s: any) => s.status === "available");
+
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "250px", overflowY: "auto" }}>
+                          {activeMentees.length > 0 && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "8px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: "4px" }}>
+                                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--accent-light)" }}>📋 น้องเลี้ยงในการดูแล ({activeMentees.length}/{maxMentees})</span>
+                              </div>
+                              {activeMentees.map((rel: any) => {
+                                const start = new Date(rel.started_at).getTime();
+                                const isCancelable = (Date.now() - start) <= 24 * 60 * 60 * 1000;
+                                return (
+                                  <div key={rel.id} style={{ background: "rgba(255,255,255,0.01)", border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <div style={{ display: "flex", flexDirection: "column" }}>
+                                      <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "#fff" }}>{rel.student_name}</span>
+                                      <MentorshipCountdown startedAt={rel.started_at} />
+                                    </div>
+                                    {isCancelable && (
+                                      <button
+                                        onClick={() => handleCancelMentor(rel.id, rel.student_name)}
+                                        className="btn btn-ghost"
+                                        style={{ padding: "2px 6px", background: "rgba(239, 68, 68, 0.1)", color: "#fca5a5", fontSize: "0.65rem", borderRadius: "4px", border: "1px solid rgba(239,68,68,0.2)" }}
+                                      >
+                                        ยกเลิก
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: "4px" }}>
+                            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#fff" }}>🤝 นร.แพทย์เข้าใหม่ (ไม่เกิน 48 ชม.)</span>
+                          </div>
+
+                          {!mentorshipData.isEligible && (
+                            <div style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: "6px", padding: "8px", fontSize: "0.72rem", color: "#fef3c7", display: "flex", gap: "6px" }}>
+                              <span>⚠️</span>
+                              <span>ต้องเข้าเวรสะสม ≥ {mentorshipData.requiredHours} ชม. (มี {mentorshipData.accumulatedHours.toFixed(1)} ชม.) จึงจะเป็นพี่เลี้ยงได้</span>
+                            </div>
+                          )}
+
+                          {availableOnly.length === 0 ? (
+                            <div style={{ color: "var(--text-muted)", fontSize: "0.72rem", padding: "16px 0", textAlign: "center", fontStyle: "italic" }}>
+                              ไม่มีนักเรียนแพทย์ใหม่เข้าเวรในขณะนี้
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                              {availableOnly.map((student: any) => (
+                                <div key={student.email} style={{ background: "rgba(255,255,255,0.01)", border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                  <div style={{ display: "flex", flexDirection: "column" }}>
+                                    <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "#fff" }}>{student.name}</span>
+                                    <span style={{ fontSize: "0.62rem", color: "var(--text-muted)" }}>@{student.discordUsername}</span>
+                                  </div>
+                                  <button
+                                    onClick={() => handleRequestMentor(student.email, student.name)}
+                                    disabled={!mentorshipData.isEligible}
+                                    className="btn btn-primary"
+                                    style={{ padding: "4px 8px", fontSize: "0.68rem", borderRadius: "6px", opacity: !mentorshipData.isEligible ? 0.4 : 1 }}
+                                  >
+                                    ขอเป็นพี่เลี้ยง
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div style={{ color: "var(--text-muted)", fontSize: "0.72rem", textAlign: "center" }}>กำลังดึงข้อมูลพี่เลี้ยง...</div>
+                  )}
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px", justifyContent: "center", minHeight: "130px", opacity: 0.4, textAlign: "center" }}>
-                  <div style={{ fontSize: "1.5rem" }}>📁</div>
-                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                    ฟอร์มแนบหลักฐานอัปโหลดรูปภาพเวร<br/>จะแสดงที่นี่เมื่อตรวจพบการลงเวรในเกม
-                  </span>
-                </div>
+                // Off Duty: standard proof uploader
+                <>
+                  {pendingProofShift ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      <label 
+                        htmlFor="page-proof-upload" 
+                        style={{ 
+                          display: "block", 
+                          padding: previewUrl ? "8px" : "24px", 
+                          border: "2px dashed var(--border-subtle)", 
+                          borderRadius: "8px", 
+                          textAlign: "center",
+                          cursor: "pointer",
+                          background: "rgba(255,255,255,0.01)",
+                          transition: "all 0.2s"
+                        }}
+                      >
+                        {previewUrl ? (
+                          <img src={previewUrl} alt="Preview" style={{ maxWidth: "100%", maxHeight: "100px", borderRadius: "4px", objectFit: "contain", margin: "0 auto" }} />
+                        ) : (
+                          <div style={{ color: "var(--text-muted)", fontSize: "0.7rem", display: "flex", flexDirection: "column", gap: "4px", alignItems: "center" }}>
+                            <span>📸</span>
+                            <span>อัปโหลดรูปหลักฐานการลงเวร</span>
+                          </div>
+                        )}
+                      </label>
+                      <input 
+                        id="page-proof-upload" 
+                        type="file" 
+                        accept="image/*" 
+                        style={{ display: "none" }} 
+                        onChange={handleFileChange}
+                      />
+                      <button 
+                        onClick={handleConfirmPendingClockOut}
+                        disabled={!proofFile || pressing}
+                        className="btn btn-primary"
+                        style={{ 
+                          width: "100%",
+                          padding: "8px", 
+                          background: "var(--danger)",
+                          fontSize: "0.78rem",
+                          opacity: (!proofFile || pressing) ? 0.5 : 1
+                        }}
+                      >
+                        {pressing ? "กำลังอัปโหลด..." : "ส่งรูป & บันทึกเวลาลงเวร"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", justifyContent: "center", minHeight: "130px", opacity: 0.4, textAlign: "center" }}>
+                      <div style={{ fontSize: "1.5rem" }}>📁</div>
+                      <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                        ฟอร์มแนบหลักฐานอัปโหลดรูปภาพเวร<br/>จะแสดงที่นี่เมื่อตรวจพบการลงเวรในเกม
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -626,5 +836,38 @@ export default function DashboardPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ========== Mentorship Countdown Component ==========
+function MentorshipCountdown({ startedAt }: { startedAt: string }) {
+  const [timeLeft, setTimeLeft] = useState("");
+  
+  useEffect(() => {
+    const calculateTime = () => {
+      const start = new Date(startedAt).getTime();
+      const end = start + (48 * 60 * 60 * 1000);
+      const remaining = end - Date.now();
+      
+      if (remaining <= 0) {
+        setTimeLeft("ครบกำหนดดูแลแล้ว");
+        return;
+      }
+      
+      const hours = Math.floor(remaining / (1000 * 60 * 60));
+      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+      
+      setTimeLeft(`${hours} ชม. ${minutes} นาที`);
+    };
+    
+    calculateTime();
+    const interval = setInterval(calculateTime, 60000); // update every minute
+    return () => clearInterval(interval);
+  }, [startedAt]);
+  
+  return (
+    <span style={{ fontSize: "0.72rem", color: "var(--accent-light)", fontWeight: 600 }} title="นับถอยหลังระยะเวลาดูแลนักเรียนแพทย์ 48 ชม.">
+      ⏳ เหลือเวลา: {timeLeft}
+    </span>
   );
 }

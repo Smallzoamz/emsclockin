@@ -62,10 +62,12 @@ export async function GET() {
       const appliedRate = myData?.appliedRate || record.bonus_rate || 0;
       const baseBonus = Math.floor(totalHours) * appliedRate;
       const carriedOverBonus = myData?.carriedOverBonus || 0;
+      const mentorBonus = myData?.mentorBonus || 0;
       
       // If below threshold, they don't actually "receive" it this week, it gets carried over.
       // We still show the calculated value, but UI flags it in red.
-      const myBonus = baseBonus + carriedOverBonus;
+      // Note: mentorBonus is always paid, it does not get carried over.
+      const myBonus = baseBonus + carriedOverBonus + mentorBonus;
 
       // Check payout status
       const payoutInfo = payoutsMap.get(record.id);
@@ -77,6 +79,7 @@ export async function GET() {
         bonus_rate: appliedRate,
         my_hours: totalHours,
         my_bonus: myBonus,
+        mentor_bonus: mentorBonus,
         rank_name: myData?.rankName || "ไม่ได้กำหนดยศ",
         custom_name: myData?.customName || myData?.name || session.user?.name || "N/A",
         is_below_threshold: isBelowThreshold,

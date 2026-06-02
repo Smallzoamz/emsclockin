@@ -64,6 +64,18 @@ export async function GET() {
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const currentDay = dayNames[thaiTime.getUTCDay()];
 
+    // 5. Fetch active mentorship relations to show pairs in OP queue
+    let activeMentors: any[] = [];
+    try {
+      const { data: rels } = await supabase
+        .from("mentorship_relations")
+        .select("*")
+        .eq("status", "active");
+      activeMentors = rels || [];
+    } catch (err) {
+      console.error("[OP Status API] Failed to load active mentors:", err);
+    }
+
     return NextResponse.json({
       activeShifts: activeShifts || [],
       recentShifts: recentShifts || [],
@@ -76,6 +88,7 @@ export async function GET() {
       opActive,
       opNotice,
       opOpenedBy,
+      activeMentors
     });
   } catch (error: any) {
     console.error("[OP Status API] Error:", error);

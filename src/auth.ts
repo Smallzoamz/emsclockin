@@ -182,6 +182,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             avatarUrl?: string;
             discordId?: string;
             updatedAt?: string;
+            createdAt?: string;
           }>;
           if (!Array.isArray(registeredDoctors)) {
             registeredDoctors = [];
@@ -237,11 +238,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           if (existingIdx > -1) {
             registeredDoctors[existingIdx] = {
+              createdAt: registeredDoctors[existingIdx].createdAt || registeredDoctors[existingIdx].updatedAt || new Date().toISOString(),
               ...registeredDoctors[existingIdx],
               ...doctorInfo
             };
           } else {
-            registeredDoctors.push(doctorInfo);
+            registeredDoctors.push({
+              ...doctorInfo,
+              createdAt: new Date().toISOString()
+            });
           }
 
           await supabase

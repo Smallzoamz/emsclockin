@@ -48,8 +48,8 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
   try {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    // 1. Fetch system settings, active shifts, and recent shifts in parallel
-    const [settingsRes, activeShiftsRes, recentShiftsRes] = await Promise.all([
+    // 1. Fetch system settings, active shifts, recent shifts, and mentorship relationships in parallel
+    const [settingsRes, activeShiftsRes, recentShiftsRes, mentorshipsRes] = await Promise.all([
       supabase.from("system_settings").select("key, value"),
       supabase
         .from("shifts")
@@ -61,7 +61,16 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
         .select("user_email, user_name, discord_username, clock_out")
         .not("clock_out", "is", null)
         .gte("clock_out", oneDayAgo)
-        .order("clock_out", { ascending: false })
+        .order("clock_out", { ascending: false }),
+      Promise.resolve(
+        supabase
+          .from("mentorship_relations")
+          .select("*")
+          .eq("status", "active")
+      ).catch((err: any) => {
+        console.error("[OP Sync Discord] Failed to fetch mentorships:", err);
+        return { data: [] };
+      })
     ]);
 
     const settings = (settingsRes.data || []).reduce((acc: any, curr: any) => {
@@ -103,6 +112,16 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
     // 4. Group doctors
     const doctors: Array<{ email: string; name: string; discordUsername: string; status: string; queueCategory: string; cases?: number; recases?: number }> = [];
     const addedEmails = new Set<string>();
+    const activeMentorships = mentorshipsRes?.data || [];
+    const activeEmails = new Set<string>(activeShifts?.map((s: any) => s.user_email).filter(Boolean) || []);
+
+    const getActiveMentorOf = (studentEmail: string) => {
+      return activeMentorships.find((r: any) => r.student_email === studentEmail && activeEmails.has(r.mentor_email));
+    };
+
+    const getActiveStudentsOf = (mentorEmail: string) => {
+      return activeMentorships.filter((r: any) => r.mentor_email === mentorEmail && activeEmails.has(r.student_email));
+    };
 
     if (activeShifts) {
       activeShifts.forEach((shift: any) => {
@@ -110,15 +129,31 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
         if (!email || addedEmails.has(email)) return;
 
         const registered = registeredDoctors.find((d: any) => d.email === email);
-        const name = registered?.name || shift.user_name || "Unknown Doctor";
+        const baseName = registered?.name || shift.user_name || "Unknown Doctor";
         const discordUsername = registered?.discordUsername || shift.discord_username || "";
         const rawCat = opQueueState[email] || "active";
         const qCategory = rawCat.startsWith("skipped:") ? "skipped" : rawCat;
         const counts = opCaseCounts[email] || { cases: 0, recases: 0 };
 
+        const relationAsStudent = getActiveMentorOf(email);
+        const activeStudents = getActiveStudentsOf(email);
+        const generalRelationAsStudent = activeMentorships.find((r: any) => r.student_email === email);
+
+        if (activeStudents.length > 0) {
+          // Mentor has active clocked-in students, so we skip adding them as a standalone card.
+          return;
+        }
+
+        let displayName = baseName;
+        if (relationAsStudent) {
+          displayName = `${relationAsStudent.mentor_name} + ${baseName}`;
+        } else if (generalRelationAsStudent) {
+          displayName = `${baseName} (พี่เลี้ยง: ${generalRelationAsStudent.mentor_name} - นอกเวร)`;
+        }
+
         doctors.push({
           email,
-          name,
+          name: displayName,
           discordUsername,
           status: "active",
           queueCategory: qCategory,
@@ -135,12 +170,28 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
         if (!email || addedEmails.has(email)) return;
 
         const registered = registeredDoctors.find((d: any) => d.email === email);
-        const name = registered?.name || shift.user_name || "Unknown Doctor";
+        const baseName = registered?.name || shift.user_name || "Unknown Doctor";
         const discordUsername = registered?.discordUsername || shift.discord_username || "";
+
+        const relationAsStudent = getActiveMentorOf(email);
+        const activeStudents = getActiveStudentsOf(email);
+        const generalRelationAsStudent = activeMentorships.find((r: any) => r.student_email === email);
+
+        if (activeStudents.length > 0) {
+          // Skip standalone mentor card if they have clocked-in students
+          return;
+        }
+
+        let displayName = baseName;
+        if (relationAsStudent) {
+          displayName = `${relationAsStudent.mentor_name} + ${baseName}`;
+        } else if (generalRelationAsStudent) {
+          displayName = `${baseName} (พี่เลี้ยง: ${generalRelationAsStudent.mentor_name} - นอกเวร)`;
+        }
 
         doctors.push({
           email,
-          name,
+          name: displayName,
           discordUsername,
           status: "completed",
           queueCategory: "inactive"
@@ -308,8 +359,8 @@ export async function teardownOpQueue() {
   try {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    // 1. Fetch system settings, active shifts, and recent shifts in parallel
-    const [settingsRes, activeShiftsRes, recentShiftsRes] = await Promise.all([
+    // 1. Fetch system settings, active shifts, recent shifts, and mentorship relationships in parallel
+    const [settingsRes, activeShiftsRes, recentShiftsRes, mentorshipsRes] = await Promise.all([
       supabase.from("system_settings").select("key, value"),
       supabase
         .from("shifts")
@@ -321,7 +372,16 @@ export async function teardownOpQueue() {
         .select("user_email, user_name, discord_username, clock_in, clock_out, duration_minutes")
         .not("clock_out", "is", null)
         .gte("clock_out", oneDayAgo)
-        .order("clock_out", { ascending: false })
+        .order("clock_out", { ascending: false }),
+      Promise.resolve(
+        supabase
+          .from("mentorship_relations")
+          .select("*")
+          .eq("status", "active")
+      ).catch((err: any) => {
+        console.error("[OP Teardown Discord] Failed to fetch mentorships:", err);
+        return { data: [] };
+      })
     ]);
 
     const settings = (settingsRes.data || []).reduce((acc: any, curr: any) => {
@@ -372,23 +432,83 @@ export async function teardownOpQueue() {
 
     const opDisplayNames = opOpenerName !== "ไม่ระบุ" ? opOpenerName : fallbackOpNames;
 
+    const activeMentorships = mentorshipsRes?.data || [];
+
     // Format lists of doctors
+    const activeEmails = new Set<string>(activeShifts?.map((s: any) => s.user_email).filter(Boolean) || []);
+
+    const getActiveMentorOf = (studentEmail: string) => {
+      return activeMentorships.find((r: any) => r.student_email === studentEmail && activeEmails.has(r.mentor_email));
+    };
+
+    const getActiveStudentsOf = (mentorEmail: string) => {
+      return activeMentorships.filter((r: any) => r.mentor_email === mentorEmail && activeEmails.has(r.student_email));
+    };
+
     const formatActiveList = () => {
       if (!activeShifts || activeShifts.length === 0) return "ไม่มีแพทย์เข้าเวรขณะนี้";
-      return activeShifts.map((shift: any) => {
-        const registered = registeredDoctors.find((d: any) => d.email === shift.user_email);
-        const name = registered?.name || shift.user_name || "Unknown Doctor";
-        return `• ${name}`;
-      }).join("\n");
+      
+      const list: string[] = [];
+      const seen = new Set<string>();
+      activeShifts.forEach((shift: any) => {
+        const email = shift.user_email;
+        if (!email || seen.has(email)) return;
+        seen.add(email);
+
+        const registered = registeredDoctors.find((d: any) => d.email === email);
+        const baseName = registered?.name || shift.user_name || "Unknown Doctor";
+        
+        const relationAsStudent = getActiveMentorOf(email);
+        const activeStudents = getActiveStudentsOf(email);
+        const generalRelationAsStudent = activeMentorships.find((r: any) => r.student_email === email);
+
+        if (activeStudents.length > 0) {
+          // Mentor has active clocked-in students, so we skip adding them as a standalone card.
+          return;
+        }
+
+        let name = baseName;
+        if (relationAsStudent) {
+          name = `${relationAsStudent.mentor_name} + ${baseName}`;
+        } else if (generalRelationAsStudent) {
+          name = `${baseName} (พี่เลี้ยง: ${generalRelationAsStudent.mentor_name} - นอกเวร)`;
+        }
+        list.push(`• ${name}`);
+      });
+      return list.length > 0 ? list.join("\n") : "ไม่มีแพทย์เข้าเวรขณะนี้";
     };
 
     const formatRecentList = () => {
       if (!recentShifts || recentShifts.length === 0) return "ไม่มีแพทย์ออกเวรในรอบนี้";
-      return recentShifts.map((shift: any) => {
-        const registered = registeredDoctors.find((d: any) => d.email === shift.user_email);
-        const name = registered?.name || shift.user_name || "Unknown Doctor";
-        return `• ${name}`;
-      }).join("\n");
+      
+      const list: string[] = [];
+      const seen = new Set<string>();
+      recentShifts.forEach((shift: any) => {
+        const email = shift.user_email;
+        if (!email || seen.has(email)) return;
+        seen.add(email);
+
+        const registered = registeredDoctors.find((d: any) => d.email === email);
+        const baseName = registered?.name || shift.user_name || "Unknown Doctor";
+        
+        const relationAsStudent = getActiveMentorOf(email);
+        const activeStudents = getActiveStudentsOf(email);
+        const generalRelationAsStudent = activeMentorships.find((r: any) => r.student_email === email);
+
+        if (activeStudents.length > 0) {
+          // Skip standalone mentor card if they have clocked-in students
+          return;
+        }
+
+        let name = baseName;
+        if (relationAsStudent) {
+          name = `${relationAsStudent.mentor_name} + ${baseName}`;
+        } else if (generalRelationAsStudent) {
+          name = `${baseName} (พี่เลี้ยง: ${generalRelationAsStudent.mentor_name} - นอกเวร)`;
+        }
+        list.push(`• ${name}`);
+      });
+      return list.length > 0 ? list.join("\n") : "ไม่มีแพทย์ออกเวรในรอบนี้";
     };
 
     // 4. Build summary embed

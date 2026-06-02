@@ -243,6 +243,14 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
                 ตารางโบนัส
               </Link>
 
+              <Link
+                href="/dashboard/admin/mentor"
+                className={`nav-link ${pathname === "/dashboard/admin/mentor" ? "active" : ""}`}
+              >
+                <CrownIcon size={18} />
+                ระบบพี่เลี้ยง
+              </Link>
+
               {!user.discordId && (
                 <Link
                   href="/dashboard/admin/settings"

@@ -80,6 +80,18 @@ export default function OpQueuePage() {
       const allDocs: DoctorEntry[] = [];
       const addedEmails = new Set<string>();
 
+      // Pre-process active shifts to find active mentors and students
+      const activeEmails = new Set<string>(data.activeShifts?.map((s: any) => s.user_email).filter(Boolean) || []);
+      const activeMentors = data.activeMentors || []; // status = 'active'
+      
+      const getActiveMentorOf = (studentEmail: string) => {
+        return activeMentors.find((r: any) => r.student_email === studentEmail && activeEmails.has(r.mentor_email));
+      };
+
+      const getActiveStudentsOf = (mentorEmail: string) => {
+        return activeMentors.filter((r: any) => r.mentor_email === mentorEmail && activeEmails.has(r.student_email));
+      };
+
       // 1. Active doctors (clocked in)
       if (data.activeShifts) {
         data.activeShifts.forEach((shift: any) => {
@@ -87,7 +99,24 @@ export default function OpQueuePage() {
           if (!email || addedEmails.has(email)) return;
           
           const registered = data.registeredDoctors?.find((d: any) => d.email === email);
-          const name = registered?.name || shift.user_name || "Unknown Doctor";
+          const baseName = registered?.name || shift.user_name || "Unknown Doctor";
+          
+          const relationAsStudent = getActiveMentorOf(email);
+          const activeStudents = getActiveStudentsOf(email);
+          const generalRelationAsStudent = activeMentors.find((r: any) => r.student_email === email);
+
+          if (activeStudents.length > 0) {
+            // Mentor has active clocked-in students, so we skip adding them as a standalone card.
+            return;
+          }
+
+          let name = baseName;
+          if (relationAsStudent) {
+            name = `${relationAsStudent.mentor_name} + ${baseName}`;
+          } else if (generalRelationAsStudent) {
+            name = `${baseName} (พี่เลี้ยง: ${generalRelationAsStudent.mentor_name} - นอกเวร)`;
+          }
+
           const discordUsername = registered?.discordUsername || shift.discord_username || "";
           const avatarUrl = registered?.avatarUrl;
           const rawCategory = data.opQueueState?.[email] || "active";
@@ -119,7 +148,24 @@ export default function OpQueuePage() {
           if (!email || addedEmails.has(email)) return;
           
           const registered = data.registeredDoctors?.find((d: any) => d.email === email);
-          const name = registered?.name || shift.user_name || "Unknown Doctor";
+          const baseName = registered?.name || shift.user_name || "Unknown Doctor";
+          
+          const relationAsStudent = getActiveMentorOf(email);
+          const activeStudents = getActiveStudentsOf(email);
+          const generalRelationAsStudent = activeMentors.find((r: any) => r.student_email === email);
+
+          if (activeStudents.length > 0) {
+            // Skip standalone mentor card if they have clocked-in students
+            return;
+          }
+
+          let name = baseName;
+          if (relationAsStudent) {
+            name = `${relationAsStudent.mentor_name} + ${baseName}`;
+          } else if (generalRelationAsStudent) {
+            name = `${baseName} (พี่เลี้ยง: ${generalRelationAsStudent.mentor_name} - นอกเวร)`;
+          }
+
           const discordUsername = registered?.discordUsername || shift.discord_username || "";
           const avatarUrl = registered?.avatarUrl;
 

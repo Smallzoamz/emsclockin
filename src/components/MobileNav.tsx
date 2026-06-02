@@ -72,10 +72,16 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; di
       )}
 
       {user?.role === "admin" && (
-        <Link href="/dashboard/bonus" className={pathname === "/dashboard/bonus" ? "active" : ""}>
-          <CoinsIcon size={20} />
-          โบนัส
-        </Link>
+        <>
+          <Link href="/dashboard/bonus" className={pathname === "/dashboard/bonus" ? "active" : ""}>
+            <CoinsIcon size={20} />
+            โบนัส
+          </Link>
+          <Link href="/dashboard/admin/mentor" className={pathname === "/dashboard/admin/mentor" ? "active" : ""}>
+            <CrownIcon size={20} />
+            พี่เลี้ยง
+          </Link>
+        </>
       )}
     </nav>
   );

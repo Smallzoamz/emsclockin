@@ -49,6 +49,24 @@ export async function GET() {
     const bonusThreshold = bonusThresholdStr ? Number(bonusThresholdStr) : 20;
     const registeredDoctors = settingsData?.find(s => s.key === "registered_doctors")?.value || [];
 
+    const mentorSettings = settingsData?.find(s => s.key === "mentorship_settings")?.value || {
+      acceptance_bonus: 5000,
+      completion_bonus: 10000
+    };
+    const acceptanceBonus = Number(mentorSettings.acceptance_bonus) || 5000;
+    const completionBonus = Number(mentorSettings.completion_bonus) || 10000;
+
+    let mentorRelations: any[] = [];
+    try {
+      const { data: rels } = await supabase
+        .from("mentorship_relations")
+        .select("*")
+        .or(`started_at.gte.${startDate.toISOString()},completed_at.gte.${startDate.toISOString()}`);
+      mentorRelations = rels || [];
+    } catch (err) {
+      console.error("[Ranking API] Mentorship Relations load failed:", err);
+    }
+
     const { data: pastHistory } = await supabase
       .from("bonus_history")
       .select("*")
@@ -126,6 +144,18 @@ export async function GET() {
       const discordId = doc.discordId || null;
       const currentWeekHours = parseFloat((totalMinutes / 60).toFixed(1));
 
+      // Calculate mentor bonus for this week
+      const doctorRels = mentorRelations.filter(r => r.mentor_email === email);
+      let mentorBonus = 0;
+      doctorRels.forEach(r => {
+        if (r.started_at && new Date(r.started_at) >= startDate && r.acceptance_bonus_added !== false) {
+          mentorBonus += acceptanceBonus;
+        }
+        if (r.status === "completed" && r.completed_at && new Date(r.completed_at) >= startDate && r.completion_bonus_added !== false) {
+          mentorBonus += completionBonus;
+        }
+      });
+
       return {
         email: email,
         name: name,
@@ -135,6 +165,7 @@ export async function GET() {
         currentWeekHours: currentWeekHours,
         totalHours: currentWeekHours,
         carriedOverBonus: carriedOverBonus,
+        mentorBonus: mentorBonus,
         entryOrder: idx
       };
     })

@@ -31,6 +31,7 @@ interface RankingEntry {
   carriedOverBonus?: number;
   bonus_rate?: number;
   entryOrder?: number;
+  mentorBonus?: number;
 }
 
 interface DoctorRank {
@@ -168,13 +169,14 @@ export default function BonusCalculatorPage() {
       const grandTotal = snapshotDataWithRanks.reduce((acc, curr) => {
         const baseBonus = Math.floor(curr.totalHours) * (curr.appliedRate || 0);
         const carried = curr.carriedOverBonus || 0;
+        const mentor = curr.mentorBonus || 0;
         if (curr.totalHours < bonusThreshold) {
           if (fiftyPercentMode) {
-            return acc + Math.floor(baseBonus * 0.5) + carried;
+            return acc + Math.floor(baseBonus * 0.5) + carried + mentor;
           }
-          return acc; // Exclude unpaid (carried over to next week)
+          return acc + mentor; // Still pay mentor bonus!
         }
-        return acc + baseBonus + carried;
+        return acc + baseBonus + carried + mentor;
       }, 0);
 
       const res = await fetch("/api/admin/bonus-history", {
@@ -370,14 +372,15 @@ export default function BonusCalculatorPage() {
     }
     const baseBonus = Math.floor(curr.totalHours) * rate;
     const carried = curr.carriedOverBonus || 0;
+    const mentor = curr.mentorBonus || 0;
 
     if (curr.totalHours < bonusThreshold) {
       if (fiftyPercentMode) {
-        return acc + Math.floor(baseBonus * 0.5) + carried;
+        return acc + Math.floor(baseBonus * 0.5) + carried + mentor;
       }
-      return acc; // Exclude from hospital fund deduction
+      return acc + mentor; // Still deduct mentor bonus from hospital fund
     }
-    return acc + baseBonus + carried;
+    return acc + baseBonus + carried + mentor;
   }, 0);
   
   const remainingFund = activeFund - totalBonusAll;
@@ -552,9 +555,11 @@ export default function BonusCalculatorPage() {
 
                 const baseBonus = Math.floor(entry.totalHours) * appliedRate;
                 const carriedOverBonus = entry.carriedOverBonus || 0;
+                const mentorBonus = entry.mentorBonus || 0;
                 const isBelowThreshold = entry.totalHours < bonusThreshold;
                 const effectiveBaseBonus = (isBelowThreshold && fiftyPercentMode) ? Math.floor(baseBonus * 0.5) : baseBonus;
-                const bonusAmount = isBelowThreshold && !fiftyPercentMode ? 0 : effectiveBaseBonus + carriedOverBonus;
+                const hourlyBonusAmount = isBelowThreshold && !fiftyPercentMode ? 0 : effectiveBaseBonus + carriedOverBonus;
+                const bonusAmount = hourlyBonusAmount + mentorBonus;
                 
                 return (
                   <tr key={idx}>
@@ -614,7 +619,7 @@ export default function BonusCalculatorPage() {
                     <td 
                       className="cell number highlight-cell" 
                       style={{ 
-                        color: isBelowThreshold
+                        color: isBelowThreshold && mentorBonus === 0
                           ? (fiftyPercentMode ? "#f59e0b" : "#ef4444")
                           : "var(--accent)" 
                       }}
@@ -625,19 +630,29 @@ export default function BonusCalculatorPage() {
                       ) : ""}
                     >
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-                        {isBelowThreshold && !fiftyPercentMode ? (
+                        {bonusAmount === 0 ? (
                           <span style={{ color: "#ef4444", fontSize: "0.85rem" }}>(ยกยอด)</span>
                         ) : (
                           <>
                             <span>$ {bonusAmount.toLocaleString("en-US")}</span>
+                            {isBelowThreshold && !fiftyPercentMode && (
+                              <span style={{ fontSize: "0.7rem", color: "#ef4444" }}>
+                                (ยกยอดชั่วโมง)
+                              </span>
+                            )}
                             {isBelowThreshold && fiftyPercentMode && (
                               <span style={{ fontSize: "0.7rem", color: "#f59e0b", fontWeight: 600 }}>
                                 (50% ลดจาก ${(baseBonus + carriedOverBonus).toLocaleString()})
                               </span>
                             )}
+                            {mentorBonus > 0 && (
+                              <span style={{ fontSize: "0.7rem", color: "var(--accent-light)", fontWeight: 600 }} title="ค่าพี่เลี้ยงดูแลนักเรียนแพทย์">
+                                (รวมค่าพี่เลี้ยง $ {mentorBonus.toLocaleString()})
+                              </span>
+                            )}
                           </>
                         )}
-                        {carriedOverBonus > 0 && (
+                        {carriedOverBonus > 0 && hourlyBonusAmount > 0 && (
                           <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                             (ยกยอดมา $ {carriedOverBonus.toLocaleString()})
                           </span>
