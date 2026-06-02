@@ -30,7 +30,7 @@ CREATE POLICY "Allow insert for all authenticated and bot service"
     WITH CHECK (true);
 
 CREATE POLICY "Allow all actions for admin" 
-    ON public.leave_requests ALL 
+    ON public.leave_requests FOR ALL 
     TO authenticated 
     USING (auth.jwt()->>'role' = 'admin')
     WITH CHECK (auth.jwt()->>'role' = 'admin');
