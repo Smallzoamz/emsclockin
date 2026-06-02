@@ -382,3 +382,5 @@
 ## [2026-06-02 19:30] | File: public/images/leave_banner.jpg | Line: 1 | Keyword: Leave Banner Asset | Status: ✅ Complete | Change: Added the newly uploaded leaves system banner image to `public/images/leave_banner.jpg` to host it for the Discord Bot's leave request embed and private ticket welcome messages.
 
 ## [2026-06-02 22:00] | File: public/images/welcome_banner.jpg | Line: 1 | Keyword: Welcome Banner Asset | Status: ✅ Complete | Change: Added the newly uploaded welcome banner image for new student doctors to `public/images/welcome_banner.jpg` to host it for the Discord Bot's server join welcome embed messages.
+
+## [2026-06-03 02:35] | File: multiple | Line: 1 | Keyword: Resignation Web System Integration | Status: ✅ Complete | Change: Refactored the leaves dashboard page to support resignation requests tabs, calculated working hours and reset thresholds dynamically. Implemented a high-fidelity HTML5 Canvas rendering engine to draw medical discharge announcements with customizable template strings and emblem watermarks, and enabled download as PNG. Renamed sidebar and mobile navigation menus to จัดการใบลาพักงาน/ลาออก and ใบลา/ออก.

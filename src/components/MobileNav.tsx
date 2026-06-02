@@ -79,7 +79,7 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; di
           </Link>
           <Link href="/dashboard/admin/leaves" className={pathname === "/dashboard/admin/leaves" ? "active" : ""}>
             <FileTextIcon size={20} />
-            ใบลา
+            ใบลา/ออก
           </Link>
           <Link href="/dashboard/admin/mentor" className={pathname === "/dashboard/admin/mentor" ? "active" : ""}>
             <CrownIcon size={20} />

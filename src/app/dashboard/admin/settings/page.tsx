@@ -87,6 +87,14 @@ export default function AdminSettingsPage() {
   // News Upload state (to track which news image is uploading)
   const [isUploadingNewsIndex, setIsUploadingNewsIndex] = useState<number | null>(null);
 
+  // Resignation System State
+  const [resignationCriteriaHours, setResignationCriteriaHours] = useState(40);
+  const [resignationDocTemplate, setResignationDocTemplate] = useState("");
+  const [resignationDmTemplate, setResignationDmTemplate] = useState("");
+  const [resignationCooldownText, setResignationCooldownText] = useState("7 วัน");
+  const [isSavingResignationSettings, setIsSavingResignationSettings] = useState(false);
+  const [resignationSettingsStatus, setResignationSettingsStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
+
   const moveSlide = (index: number, direction: "up" | "down") => {
     const updated = [...landingSlides];
     const targetIndex = direction === "up" ? index - 1 : index + 1;
@@ -239,8 +247,54 @@ export default function AdminSettingsPage() {
     } catch {
       setLandingStatus({ message: "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ", type: "error" });
     } finally {
-      setIsUploadingNewsIndex(null);
-      setTimeout(() => setLandingStatus(null), 4000);
+      setIsUploadingLogo(false);
+      setTimeout(() => setThemeStatus(null), 4000);
+    }
+  };
+
+  const handleSaveResignationSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isMasterAdmin) return;
+    setIsSavingResignationSettings(true);
+    setResignationSettingsStatus(null);
+
+    try {
+      const res1 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "resignation_criteria_hours", value: resignationCriteriaHours }),
+      });
+      const res2 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "resignation_doc_template", value: resignationDocTemplate }),
+      });
+      const res3 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "resignation_dm_template", value: resignationDmTemplate }),
+      });
+      const res4 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "resignation_cooldown_text", value: resignationCooldownText }),
+      });
+
+      if (res1.ok && res2.ok && res3.ok && res4.ok) {
+        setResignationSettingsStatus({ message: "บันทึกการตั้งค่าระบบลาออกเรียบร้อยแล้วค่ะ", type: "success" });
+        router.refresh();
+      } else {
+        const d1 = await res1.json();
+        const d2 = await res2.json();
+        const d3 = await res3.json();
+        const d4 = await res4.json();
+        setResignationSettingsStatus({ message: d1.error || d2.error || d3.error || d4.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
+      }
+    } catch {
+      setResignationSettingsStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
+    } finally {
+      setIsSavingResignationSettings(false);
+      setTimeout(() => setResignationSettingsStatus(null), 4000);
     }
   };
 
@@ -332,6 +386,18 @@ export default function AdminSettingsPage() {
         }
         if (data.settings?.server_sync_api_key) {
           setServerSyncApiKey(data.settings.server_sync_api_key);
+        }
+        if (data.settings?.resignation_criteria_hours !== undefined) {
+          setResignationCriteriaHours(Number(data.settings.resignation_criteria_hours));
+        }
+        if (data.settings?.resignation_doc_template) {
+          setResignationDocTemplate(data.settings.resignation_doc_template);
+        }
+        if (data.settings?.resignation_dm_template) {
+          setResignationDmTemplate(data.settings.resignation_dm_template);
+        }
+        if (data.settings?.resignation_cooldown_text) {
+          setResignationCooldownText(data.settings.resignation_cooldown_text);
         }
         if (data.settings?.landing_page_data) {
           const lpd = typeof data.settings.landing_page_data === 'string'
@@ -1233,6 +1299,141 @@ export default function AdminSettingsPage() {
             <span style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
               <SaveIcon size={14} />
               {isSavingWebhooks ? "กำลังบันทึก..." : "บันทึกการตั้งค่า Webhook"}
+            </span>
+          </button>
+        </form>
+      </section>
+
+      {/* Resignation Settings Configuration */}
+      <section className="card" style={{ padding: "24px" }}>
+        <div style={{ borderBottom: "1px solid var(--border-subtle)", paddingBottom: "16px", marginBottom: "20px" }}>
+          <h2 style={{ fontSize: "1.25rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+            <SettingsIcon size={20} style={{ color: "var(--accent)" }} />
+            ตั้งค่าระบบการแจ้งลาออก (Resignation System Settings)
+          </h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
+            จัดการเกณฑ์การทำงานสะสมเพื่อไม่ให้ถูกรีตัว ข้อความคูลดาวน์ เทมเพลตใบประกาศพ้นสภาพ และข้อความขอบคุณทาง DM
+          </p>
+        </div>
+
+        <form onSubmit={handleSaveResignationSettings} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px" }}>
+            
+            {/* Input 1: Criteria Hours */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                ⏱️ เกณฑ์ชั่วโมงที่ไม่ถูกรีตัว (ชั่วโมงสะสมขั้นต่ำ)
+              </label>
+              <input 
+                type="number" 
+                min="0"
+                value={resignationCriteriaHours}
+                onChange={e => setResignationCriteriaHours(Number(e.target.value))}
+                style={{ width: "100%", padding: "10px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem" }}
+              />
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                ยอดชั่วโมงเข้าเวรรวมที่ต้องผ่านเพื่อไม่ให้โดนรีตัวเมื่อยื่นเรื่องลาออก
+              </span>
+            </div>
+
+            {/* Input 2: Cooldown text */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                ⏳ ระยะเวลาคูลดาวน์ในการเข้าแก๊ง/ครอบครัว/หน่วยงานอื่น
+              </label>
+              <input 
+                type="text" 
+                placeholder="เช่น 7 วัน หรือ 30 วัน" 
+                value={resignationCooldownText}
+                onChange={e => setResignationCooldownText(e.target.value)}
+                style={{ width: "100%", padding: "10px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem" }}
+              />
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                แสดงข้อมูลระยะคูลดาวน์พ้นสภาพเพื่อแนบในเอกสารและ DM แจ้งเตือนผู้เล่น
+              </span>
+            </div>
+
+          </div>
+
+          {/* Textarea 1: Doc Template */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+              📄 ข้อความบนเอกสารประกาศพ้นสภาพแพทย์
+            </label>
+            <textarea
+              value={resignationDocTemplate}
+              onChange={e => setResignationDocTemplate(e.target.value)}
+              rows={5}
+              placeholder="ระบุข้อความประกาศ..."
+              style={{ width: "100%", padding: "12px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem", resize: "vertical", fontFamily: "inherit", lineHeight: "1.5" }}
+            />
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", lineHeight: 1.4 }}>
+              * ตัวแปรที่ระบบจะแปลงข้อมูลให้อัตโนมัติ: 
+              <code style={{ color: "var(--accent-light)", background: "rgba(0,0,0,0.2)", padding: "2px 4px", margin: "0 2px", borderRadius: "3px" }}>[ชื่อแพทย์]</code>, 
+              <code style={{ color: "var(--accent-light)", background: "rgba(0,0,0,0.2)", padding: "2px 4px", margin: "0 2px", borderRadius: "3px" }}>[Discord]</code>, 
+              <code style={{ color: "var(--accent-light)", background: "rgba(0,0,0,0.2)", padding: "2px 4px", margin: "0 2px", borderRadius: "3px" }}>[เหตุผล]</code>, 
+              <code style={{ color: "var(--accent-light)", background: "rgba(0,0,0,0.2)", padding: "2px 4px", margin: "0 2px", borderRadius: "3px" }}>[ชั่วโมงสะสม]</code>, 
+              <code style={{ color: "var(--accent-light)", background: "rgba(0,0,0,0.2)", padding: "2px 4px", margin: "0 2px", borderRadius: "3px" }}>[เกณฑ์ชั่วโมง]</code>, 
+              <code style={{ color: "var(--accent-light)", background: "rgba(0,0,0,0.2)", padding: "2px 4px", margin: "0 2px", borderRadius: "3px" }}>[สถานะรีตัว]</code>, 
+              <code style={{ color: "var(--accent-light)", background: "rgba(0,0,0,0.2)", padding: "2px 4px", margin: "0 2px", borderRadius: "3px" }}>[วันที่]</code>
+            </span>
+          </div>
+
+          {/* Textarea 2: DM Template */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+              ✉️ ข้อความที่จะแจ้งไปยัง Discord DM ขอบคุณ
+            </label>
+            <textarea
+              value={resignationDmTemplate}
+              onChange={e => setResignationDmTemplate(e.target.value)}
+              rows={5}
+              placeholder="ระบุข้อความ DM..."
+              style={{ width: "100%", padding: "12px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem", resize: "vertical", fontFamily: "inherit", lineHeight: "1.5" }}
+            />
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", lineHeight: 1.4 }}>
+              * ตัวแปรที่ซัพพอร์ต: 
+              <code style={{ color: "var(--accent-light)", background: "rgba(0,0,0,0.2)", padding: "2px 4px", margin: "0 2px", borderRadius: "3px" }}>[ชื่อแพทย์]</code>, 
+              <code style={{ color: "var(--accent-light)", background: "rgba(0,0,0,0.2)", padding: "2px 4px", margin: "0 2px", borderRadius: "3px" }}>[ชั่วโมงสะสม]</code>, 
+              <code style={{ color: "var(--accent-light)", background: "rgba(0,0,0,0.2)", padding: "2px 4px", margin: "0 2px", borderRadius: "3px" }}>[คูลดาวน์]</code>, 
+              <code style={{ color: "var(--accent-light)", background: "rgba(0,0,0,0.2)", padding: "2px 4px", margin: "0 2px", borderRadius: "3px" }}>[สถานะรีตัว]</code>
+            </span>
+          </div>
+
+          {/* Status Message */}
+          {resignationSettingsStatus && (
+            <div style={{
+              padding: "10px 14px",
+              borderRadius: "6px",
+              fontSize: "0.85rem",
+              background: resignationSettingsStatus.type === "success" ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "rgba(239, 68, 68, 0.1)",
+              border: `1px solid ${resignationSettingsStatus.type === "success" ? "var(--success)" : "var(--danger)"}`,
+              color: resignationSettingsStatus.type === "success" ? "var(--success)" : "var(--danger)"
+            }}>
+              {resignationSettingsStatus.message}
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <button 
+            type="submit" 
+            disabled={isSavingResignationSettings}
+            style={{
+              alignSelf: "flex-end",
+              padding: "10px 24px",
+              background: "var(--primary)",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              opacity: isSavingResignationSettings ? 0.7 : 1
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
+              <SaveIcon size={14} />
+              {isSavingResignationSettings ? "กำลังบันทึก..." : "บันทึกการตั้งค่าระบบลาออก"}
             </span>
           </button>
         </form>

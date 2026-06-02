@@ -247,7 +247,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
                 className={`nav-link ${pathname === "/dashboard/admin/leaves" ? "active" : ""}`}
               >
                 <FileTextIcon size={18} />
-                จัดการใบลาพักงาน
+                จัดการใบลาพักงาน/ลาออก
               </Link>
 
               <Link
