@@ -62,10 +62,11 @@ export async function PATCH(request: Request) {
 
     if (error) throw error;
 
-    // Send Discord status notification asynchronously
-    sendLeaveStatusWebhook(data).catch((err) =>
-      console.error("[Leave Webhook Async Error] Failed:", err)
-    );
+    // Disabled sending to general clock-in/out log webhook.
+    // The Discord bot handles sending updates directly to the private ticket channel via Supabase Realtime subscription.
+    // sendLeaveStatusWebhook(data).catch((err) =>
+    //   console.error("[Leave Webhook Async Error] Failed:", err)
+    // );
 
     return NextResponse.json({ success: true, leave: data });
   } catch (err: any) {
