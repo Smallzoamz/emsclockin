@@ -11,7 +11,7 @@ import {
   ShieldIcon, 
   RefreshIcon 
 } from "@/components/Icons";
-import { supabase } from "@/lib/supabase";
+import { supabaseClient } from "@/lib/supabase-client";
 
 interface LeaveRequest {
   id: string;
@@ -40,13 +40,10 @@ export default function LeaveManagementPage() {
   const loadLeaves = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("leave_requests")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setLeaves(data || []);
+      const res = await fetch("/api/admin/leaves");
+      if (!res.ok) throw new Error("Failed to fetch leaves");
+      const data = await res.json();
+      setLeaves(data.leaves || []);
     } catch (err: any) {
       console.error("[Leaves Fetch Error] Failed to load leave requests:", err);
       alert("ไม่สามารถโหลดข้อมูลการลาได้: " + err.message);
@@ -79,22 +76,19 @@ export default function LeaveManagementPage() {
     if (!isConfirmed) return;
 
     try {
-      // Get current logged-in user email or display name from next-auth/react?
-      // Since it's client-side, we can fetch active session details if needed, but we can default to "Admin"
-      // or check the local session.
-      const { data: { session } } = await supabase.auth.getSession();
-      const adminName = session?.user?.email || "Admin";
+      const adminName = "Admin"; // Will be updated on server-side automatically from the session
+      const res = await fetch("/api/admin/leaves", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ id, status: newStatus })
+      });
 
-      const { error } = await supabase
-        .from("leave_requests")
-        .update({
-          status: newStatus,
-          approved_by: adminName,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", id);
-
-      if (error) throw error;
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to update status");
+      }
 
       // Update state local
       setLeaves(prev => prev.map(leave => 
@@ -121,16 +115,18 @@ export default function LeaveManagementPage() {
     if (!isConfirmed) return;
 
     try {
-      const { error } = await supabase
-        .from("leave_requests")
-        .update({
-          status: "pending",
-          approved_by: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", id);
+      const res = await fetch("/api/admin/leaves", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ id, status: "pending" })
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to reset status");
+      }
 
       setLeaves(prev => prev.map(leave => 
         leave.id === id ? { ...leave, status: "pending", approved_by: null } : leave

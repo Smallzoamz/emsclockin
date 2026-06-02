@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Bell, Mail, Moon, Calendar, Clock } from "lucide-react";
 import { InboxModal } from "./InboxModal";
-import { supabase } from "@/lib/supabase";
+import { supabaseClient } from "@/lib/supabase-client";
 
 interface TopHeaderProps {
   user?: {
@@ -113,16 +113,18 @@ export function TopHeader({ user }: TopHeaderProps) {
   const handleQuickApprove = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const { error } = await supabase
-        .from("leave_requests")
-        .update({ 
-          status: "approved", 
-          approved_by: user?.email || user?.name || "Admin",
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", id);
+      const res = await fetch("/api/admin/leaves", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ id, status: "approved" })
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to approve");
+      }
       setPendingLeaves(prev => prev.filter(item => item.id !== id));
     } catch (err: any) {
       console.error("[Quick Approve Error] Failed to approve leave request:", err);
@@ -148,14 +150,11 @@ export function TopHeader({ user }: TopHeaderProps) {
   const fetchPendingLeaves = async () => {
     if (user?.role !== "admin") return;
     try {
-      const { data, error } = await supabase
-        .from("leave_requests")
-        .select("*")
-        .eq("status", "pending")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setPendingLeaves(data || []);
+      const res = await fetch("/api/admin/leaves");
+      if (!res.ok) throw new Error("Failed to fetch leaves");
+      const data = await res.json();
+      const pending = (data.leaves || []).filter((l: any) => l.status === "pending");
+      setPendingLeaves(pending);
     } catch (err) {
       console.error("Failed to fetch pending leave requests:", err);
     }
@@ -181,7 +180,7 @@ export function TopHeader({ user }: TopHeaderProps) {
   useEffect(() => {
     if (user?.role !== "admin") return;
 
-    const channel = supabase
+    const channel = supabaseClient
       .channel("realtime-leave-requests")
       .on(
         "postgres_changes",
@@ -222,7 +221,7 @@ export function TopHeader({ user }: TopHeaderProps) {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabaseClient.removeChannel(channel);
     };
   }, [user]);
 

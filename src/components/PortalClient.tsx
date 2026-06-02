@@ -30,7 +30,7 @@ import {
   Eye,
   LogOut
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabaseClient } from "@/lib/supabase-client";
 
 interface PortalClientProps {
   logoUrl: string;
@@ -89,7 +89,7 @@ export function PortalClient({
   async function fetchBlacklist() {
     setBlacklistLoading(true);
     try {
-      const { data } = await supabase
+      const { data } = await supabaseClient
         .from("blacklist_records")
         .select("*")
         .eq("status", "active")

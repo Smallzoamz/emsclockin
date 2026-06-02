@@ -35,5 +35,11 @@ CREATE POLICY "Allow all actions for admin"
     USING (auth.jwt()->>'role' = 'admin')
     WITH CHECK (auth.jwt()->>'role' = 'admin');
 
+CREATE POLICY "Allow select for anon" 
+    ON public.leave_requests FOR SELECT 
+    TO anon 
+    USING (true);
+
 -- Enable Realtime for the table
 ALTER PUBLICATION supabase_realtime ADD TABLE public.leave_requests;
+
