@@ -176,7 +176,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                   ];
                   
                   const targetRoleIds = rolesData
-                    .filter(r => targetRoleNames.some(name => r.name.trim().toLowerCase() === name.toLowerCase()))
+                    .filter(r => targetRoleNames.some(name => r.name.toLowerCase().includes(name.toLowerCase())))
                     .map(r => r.id);
 
                   if (userRoles.some(roleId => targetRoleIds.includes(roleId))) {

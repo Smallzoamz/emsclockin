@@ -407,5 +407,8 @@
 
 ## [2026-06-03 15:50] | File: src/auth.ts | Line: 173 | Keyword: Thai Discord Role Admin Permission Match | Status: ✅ Complete | Change: Added full Thai terms (ผู้อำนวยการ, รองผู้อำนวยการ, รอง ผู้อำนวยการ) to targetRoleNames in auth.ts to allow user accounts with the exact role "ผู้อำนวยการ" (Director) to dynamically receive admin access to the website dashboard.
 
+## [2026-06-03 15:55] | File: src/auth.ts | Line: 179 | Keyword: Partial Discord Role Admin Permission Match | Status: ✅ Complete | Change: Modified the role checking logic in auth.ts from an exact string match to a partial substring match (using .includes()) to correctly handle Discord role names containing emojis and custom formatting prefixes (e.g. "🧑🏻‍⚕️| ผู้อำนวยการ").
+
+
 
 
