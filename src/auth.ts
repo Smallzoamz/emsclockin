@@ -134,27 +134,74 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (user?.email === "lneeobee@gmail.com") {
           token.role = "admin";
         } else {
-          // Check database for registered Discord admins (by email or username)
+          // Check database for registered Discord admins, bot token and guild id
           try {
-            const { data: discAdminsData } = await supabase
+            const { data: settingsRows } = await supabase
               .from("system_settings")
-              .select("value")
-              .eq("key", "admin_discord_accounts")
-              .single();
+              .select("key, value")
+              .in("key", ["admin_discord_accounts", "discord_bot_token", "discord_guild_id"]);
 
-            const discordAdmins = (discAdminsData?.value || []) as Array<{ email?: string; username?: string }>;
-            if (Array.isArray(discordAdmins)) {
+            const settingsMap = (settingsRows || []).reduce((acc: Record<string, any>, curr) => {
+              acc[curr.key] = curr.value;
+              return acc;
+            }, {});
+
+            let botToken = settingsMap["discord_bot_token"] || process.env.DISCORD_BOT_TOKEN;
+            let guildId = settingsMap["discord_guild_id"] || process.env.DISCORD_GUILD_ID;
+            let isGranted = false;
+
+            // 1. Dynamic Check for Director / Deputy Director Discord roles
+            if (botToken && guildId && token.discordId) {
+              const memberRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${token.discordId}`, {
+                headers: {
+                  Authorization: `Bot ${botToken}`
+                }
+              });
+
+              if (memberRes.ok) {
+                const memberData = (await memberRes.json()) as { roles?: string[] };
+                const userRoles = memberData.roles || [];
+
+                const rolesRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/roles`, {
+                  headers: {
+                    Authorization: `Bot ${botToken}`
+                  }
+                });
+
+                if (rolesRes.ok) {
+                  const rolesData = (await rolesRes.json()) as Array<{ id: string; name: string }>;
+                  const targetRoleNames = ["ผอ.", "รองผอ.", "ผอ", "รอง ผอ", "รองผอ", "รอง ผอ.", "director", "deputy director"];
+                  
+                  const targetRoleIds = rolesData
+                    .filter(r => targetRoleNames.some(name => r.name.trim().toLowerCase() === name.toLowerCase()))
+                    .map(r => r.id);
+
+                  if (userRoles.some(roleId => targetRoleIds.includes(roleId))) {
+                    isGranted = true;
+                    console.log(`[Auth Discord Role Check] User ${token.discordUsername} granted admin role via Discord director role.`);
+                  }
+                }
+              }
+            }
+
+            // 2. Check registered Discord admins as fallback
+            const discordAdmins = (settingsMap["admin_discord_accounts"] || []) as Array<{ email?: string; username?: string }>;
+            if (Array.isArray(discordAdmins) && !isGranted) {
               const isDiscordAdmin = discordAdmins.some(
                 (adm) =>
                   (adm.email && typeof user.email === "string" && adm.email.toLowerCase() === user.email.toLowerCase()) ||
                   (adm.username && typeof token.discordUsername === "string" && adm.username.toLowerCase() === (token.discordUsername as string).toLowerCase())
               );
               if (isDiscordAdmin) {
-                token.role = "admin";
+                isGranted = true;
               }
             }
+
+            if (isGranted) {
+              token.role = "admin";
+            }
           } catch (dbErr) {
-            console.error("[Auth Discord Admin Check] Error:", dbErr);
+            console.error("[Auth Discord Admin/Role Check] Error:", dbErr);
           }
         }
         

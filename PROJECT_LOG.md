@@ -403,3 +403,6 @@
 
 ## [2026-06-03 15:15] | File: multiple (src/app/api/admin/settings/route.ts, EMSBot) | Line: 1 | Keyword: Clear Dismissed Doctor Data | Status: ✅ Complete | Change: Implemented complete database cleanup logic for doctors who are dismissed or removed from the system. On the website settings panel, deleting a doctor from registered_doctors automatically wipes all their ranks, schedules, shifts, leave requests, exam attempts, user inbox, mentorship relations, and bonus payouts. On the Discord bot side, a member leaving or being kicked from the server (GuildMemberRemove event) automatically triggers the same comprehensive cleanup in the database and web settings.
 
+## [2026-06-03 15:45] | File: src/auth.ts | Line: 128 | Keyword: Discord Role Admin Permission Grant | Status: ✅ Complete | Change: Modified the JWT authentication callback to check if logging in users possess Director (ผอ.) or Deputy Director (รองผอ.) Discord roles in the guild using the Discord API, and automatically grant them the admin role in the system. Kept the custom admin database accounts list check as a fallback.
+
+
