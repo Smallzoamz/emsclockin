@@ -81,12 +81,16 @@ export default function AdminSettingsPage() {
   const [landingForum, setLandingForum] = useState<Array<{ title: string; author: string; replies: number; time: string }>>([]);
   const [isSavingLanding, setIsSavingLanding] = useState(false);
   const [landingStatus, setLandingStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
-  const [activeLandingTab, setActiveLandingTab] = useState<"slides" | "news" | "forum">("slides");
+  const [activeLandingTab, setActiveLandingTab] = useState<"slides" | "news" | "forum" | "recruitment_slides">("slides");
   
   // Slide Upload state (to track which slide image is uploading)
   const [isUploadingSlideIndex, setIsUploadingSlideIndex] = useState<number | null>(null);
   // News Upload state (to track which news image is uploading)
   const [isUploadingNewsIndex, setIsUploadingNewsIndex] = useState<number | null>(null);
+
+  // Recruitment slides state
+  const [landingRecruitmentSlides, setLandingRecruitmentSlides] = useState<Array<{ image: string }>>([]);
+  const [isUploadingRecruitmentSlideIndex, setIsUploadingRecruitmentSlideIndex] = useState<number | null>(null);
 
   // Resignation System State
   const [resignationCriteriaHours, setResignationCriteriaHours] = useState(40);
@@ -185,6 +189,71 @@ export default function AdminSettingsPage() {
 
     const updated = landingForum.filter((_, idx) => idx !== index);
     setLandingForum(updated);
+  };
+
+  const moveRecruitmentSlide = (index: number, direction: "up" | "down") => {
+    const updated = [...landingRecruitmentSlides];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= updated.length) return;
+    
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    
+    setLandingRecruitmentSlides(updated);
+  };
+
+  const addRecruitmentSlide = () => {
+    setLandingRecruitmentSlides([
+      ...landingRecruitmentSlides,
+      { image: "/images/leave_banner.jpg" }
+    ]);
+  };
+
+  const deleteRecruitmentSlide = async (index: number) => {
+    if (!await confirm({
+      title: "🗑️ ลบรูปภาพสไลด์รับสมัคร",
+      message: `ยืนยันว่าต้องการลบสไลด์รับสมัครลำดับที่ ${index + 1} หรือไม่?`,
+      confirmText: "ลบออก",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    })) return;
+
+    const updated = landingRecruitmentSlides.filter((_, idx) => idx !== index);
+    setLandingRecruitmentSlides(updated);
+  };
+
+  const handleRecruitmentSlideImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file || !isMasterAdmin) return;
+
+    setIsUploadingRecruitmentSlideIndex(index);
+    setLandingStatus(null);
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await fetch("/api/admin/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const updated = [...landingRecruitmentSlides];
+        updated[index].image = data.imageUrl;
+        setLandingRecruitmentSlides(updated);
+        setLandingStatus({ message: `อัปโหลดรูปภาพสไลด์รับสมัครที่ ${index + 1} เรียบร้อยแล้วค่ะ`, type: "success" });
+      } else {
+        setLandingStatus({ message: data.error || "อัปโหลดรูปภาพไม่สำเร็จ", type: "error" });
+      }
+    } catch {
+      setLandingStatus({ message: "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ", type: "error" });
+    } finally {
+      setIsUploadingRecruitmentSlideIndex(null);
+      setTimeout(() => setLandingStatus(null), 4000);
+    }
   };
 
   const handleSlideImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
@@ -308,7 +377,8 @@ export default function AdminSettingsPage() {
     const payload = {
       slides: landingSlides,
       news: landingNews,
-      forum: landingForum
+      forum: landingForum,
+      recruitment_slides: landingRecruitmentSlides
     };
 
     try {
@@ -410,6 +480,14 @@ export default function AdminSettingsPage() {
           if (lpd.slides) setLandingSlides(lpd.slides);
           if (lpd.news) setLandingNews(lpd.news);
           if (lpd.forum) setLandingForum(lpd.forum);
+          if (lpd.recruitment_slides) {
+            setLandingRecruitmentSlides(lpd.recruitment_slides);
+          } else {
+            setLandingRecruitmentSlides([
+              { image: "/images/leave_banner.jpg" },
+              { image: "/images/welcome_banner.jpg" }
+            ]);
+          }
         } else {
           setLandingSlides([
             {
@@ -485,6 +563,10 @@ export default function AdminSettingsPage() {
               replies: 12,
               time: "1 วัน ที่แล้ว"
             }
+          ]);
+          setLandingRecruitmentSlides([
+            { image: "/images/leave_banner.jpg" },
+            { image: "/images/welcome_banner.jpg" }
           ]);
         }
       })
@@ -1946,7 +2028,8 @@ export default function AdminSettingsPage() {
           {([
             { id: "slides", label: "🖼️ สไลด์แบนเนอร์ (Slideshow)" },
             { id: "news", label: "📰 ข่าวสาร & ประกาศ (News)" },
-            { id: "forum", label: "💬 บอร์ดสนทนาล่าสุด (Forum)" }
+            { id: "forum", label: "💬 บอร์ดสนทนาล่าสุด (Forum)" },
+            { id: "recruitment_slides", label: "🩺 สไลด์รับสมัคร (Recruitment)" }
           ] as const).map((tab) => (
             <button
               key={tab.id}
@@ -2420,6 +2503,118 @@ export default function AdminSettingsPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 4: Recruitment Slides */}
+          {activeLandingTab === "recruitment_slides" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ fontSize: "0.95rem", color: "var(--text-primary)", margin: 0 }}>
+                  รายการรูปภาพสไลด์รับสมัคร ({landingRecruitmentSlides.length} สไลด์)
+                </h3>
+                <button
+                  type="button"
+                  onClick={addRecruitmentSlide}
+                  style={{
+                    padding: "6px 12px",
+                    background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                    border: "1px solid var(--border-glow)",
+                    color: "var(--accent-light)",
+                    borderRadius: "6px",
+                    fontSize: "0.8rem",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}
+                >
+                  <PlusIcon size={12} /> เพิ่มสไลด์รับสมัครใหม่
+                </button>
+              </div>
+
+              {landingRecruitmentSlides.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px", background: "var(--bg-secondary)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.85rem", border: "1px dashed var(--border)" }}>
+                  ไม่มีข้อมูลรูปภาพสไลด์รับสมัคร กรุณากดปุ่มเพิ่มเพื่อเริ่มต้นสร้างค่ะ
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {landingRecruitmentSlides.map((slide, idx) => (
+                    <div key={idx} style={{ background: "var(--bg-secondary)", borderRadius: "10px", padding: "16px", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "16px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
+                        
+                        {/* Slide Image Uploader & Preview */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ height: "150px", background: "black", borderRadius: "6px", border: "1px solid var(--border)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <img src={slide.image || "/images/leave_banner.jpg"} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                          </div>
+                          <label style={{
+                            padding: "6px",
+                            background: "rgba(255,255,255,0.03)",
+                            border: "1px solid var(--border)",
+                            color: "var(--text-secondary)",
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            textAlign: "center",
+                            cursor: "pointer",
+                            display: "block"
+                          }}>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleRecruitmentSlideImageUpload(e, idx)}
+                              style={{ display: "none" }}
+                              disabled={isUploadingRecruitmentSlideIndex !== null}
+                            />
+                            {isUploadingRecruitmentSlideIndex === idx ? "กำลังอัปโหลด..." : "📸 อัปโหลดรูปภาพ"}
+                          </label>
+                          <input
+                            type="text"
+                            value={slide.image}
+                            onChange={(e) => {
+                              const updated = [...landingRecruitmentSlides];
+                              updated[idx].image = e.target.value;
+                              setLandingRecruitmentSlides(updated);
+                            }}
+                            placeholder="หรือพิมพ์พาทรูปภาพ (URL)"
+                            style={{ width: "100%", padding: "6px 10px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.75rem", outline: "none" }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Actions row */}
+                      <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button
+                            type="button"
+                            onClick={() => moveRecruitmentSlide(idx, "up")}
+                            disabled={idx === 0}
+                            style={{ padding: "6px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "6px", fontSize: "0.75rem", cursor: idx === 0 ? "not-allowed" : "pointer", opacity: idx === 0 ? 0.4 : 1 }}
+                          >
+                            ▲ เลื่อนขึ้น
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveRecruitmentSlide(idx, "down")}
+                            disabled={idx === landingRecruitmentSlides.length - 1}
+                            style={{ padding: "6px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "6px", fontSize: "0.75rem", cursor: idx === landingRecruitmentSlides.length - 1 ? "not-allowed" : "pointer", opacity: idx === landingRecruitmentSlides.length - 1 ? 0.4 : 1 }}
+                          >
+                            ▼ เลื่อนลง
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => deleteRecruitmentSlide(idx)}
+                          style={{ padding: "6px 12px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid var(--danger)", color: "var(--danger)", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer" }}
+                        >
+                          ลบสไลด์นี้
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

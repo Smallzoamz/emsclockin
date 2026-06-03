@@ -107,6 +107,18 @@ export function PortalClient({
   const [newsItems] = useState<any[]>(landingPageData?.news || []);
   const [forumTopics] = useState<any[]>(landingPageData?.forum || []);
 
+  // Recruitment slides state
+  const [recruitmentSlides] = useState<any[]>(() => {
+    if (landingPageData?.recruitment_slides && landingPageData.recruitment_slides.length > 0) {
+      return landingPageData.recruitment_slides;
+    }
+    return [
+      { image: "/images/leave_banner.jpg" },
+      { image: "/images/welcome_banner.jpg" }
+    ];
+  });
+  const [activeRecruitmentSlide, setActiveRecruitmentSlide] = useState(0);
+
   // Fetch Blacklist data (all records including released)
   async function fetchBlacklist() {
     setBlacklistLoading(true);
@@ -169,6 +181,15 @@ export function PortalClient({
     }, 6000);
     return () => clearInterval(timer);
   }, [slides.length]);
+
+  // Auto-rotate recruitment slides every 6 seconds
+  useEffect(() => {
+    if (recruitmentSlides.length <= 1) return;
+    const timer = setInterval(() => {
+      setActiveRecruitmentSlide((prev) => (prev + 1) % recruitmentSlides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [recruitmentSlides.length]);
 
   // Handle Blacklist Search
   const handleBlacklistSearch = (e: React.FormEvent) => {
@@ -1036,29 +1057,62 @@ export function PortalClient({
                 </div>
               </div>
 
-              {/* Right Column: Citizen/EMS Promo banner card */}
-              <div id="recruitment-section" className="portal-sidebar-promo" style={{
-                background: "linear-gradient(to bottom, rgba(3, 7, 18, 0.8), rgba(3, 7, 18, 0.95)), url('/images/ems_hero_bg.png') center/cover",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                height: "auto",
-                minHeight: "220px",
-                padding: "24px",
-                margin: 0,
-                textAlign: "left"
+              {/* Right Column: Auto-rotating Recruitment image slideshow */}
+              <div id="recruitment-section" className="web-slide-container" style={{
+                height: "100%",
+                minHeight: "340px",
+                position: "relative",
+                overflow: "hidden",
+                borderRadius: "8px",
+                border: "1px solid rgba(255,255,255,0.05)"
               }}>
-                <div>
-                  <h3 style={{ fontSize: "1.2rem", fontWeight: "900", color: "#ffffff", margin: "0 0 4px 0" }}>ชีวิตคือหน้าที่</h3>
-                  <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", lineHeight: "1.4", margin: 0 }}>
-                    เราจะไม่ทอดทิ้งใครไว้ข้างหลัง มาร่วมเป็นหนึ่งในผู้ช่วยเหลือประชาชนชาวลอสซานโตสกับเรา
-                  </p>
-                </div>
-                <div>
-                  <button onClick={() => { setIsAppModalOpen(true); setAppStep(1); }} className="web-news-button" style={{ border: "none", background: "#3b82f6", color: "#ffffff", padding: "10px 20px", width: "100%", justifyContent: "center", cursor: "pointer", fontFamily: "inherit" }}>
-                    ดูรายละเอียดรับสมัคร
-                  </button>
-                </div>
+                {recruitmentSlides.map((slide, idx) => (
+                  <div 
+                    key={idx}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: "100%",
+                      backgroundImage: `url(${slide.image})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      opacity: idx === activeRecruitmentSlide ? 1 : 0,
+                      transition: "opacity 0.6s ease-in-out"
+                    }}
+                  />
+                ))}
+
+                {recruitmentSlides.length > 1 && (
+                  <>
+                    <button 
+                      onClick={() => setActiveRecruitmentSlide((prev) => (prev - 1 + recruitmentSlides.length) % recruitmentSlides.length)}
+                      className="web-slide-chevron left"
+                      style={{ width: "28px", height: "28px", left: "10px", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", zIndex: 10 }}
+                    >
+                      <ArrowLeft size={14} />
+                    </button>
+                    <button 
+                      onClick={() => setActiveRecruitmentSlide((prev) => (prev + 1) % recruitmentSlides.length)}
+                      className="web-slide-chevron right"
+                      style={{ width: "28px", height: "28px", right: "10px", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", zIndex: 10 }}
+                    >
+                      <ArrowRight size={14} />
+                    </button>
+
+                    <div className="web-slide-dots" style={{ bottom: "12px", right: "0", left: "0", display: "flex", justifyContent: "center", gap: "6px", zIndex: 10 }}>
+                      {recruitmentSlides.map((_, idx) => (
+                        <span 
+                          key={idx}
+                          onClick={() => setActiveRecruitmentSlide(idx)}
+                          className={`web-slide-dot ${idx === activeRecruitmentSlide ? 'active' : ''}`}
+                          style={{ cursor: "pointer" }}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
 
             </div>
