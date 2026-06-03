@@ -6,6 +6,24 @@ import { supabase } from "@/lib/supabase";
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
+    const isHistory = searchParams.get("history") === "true";
+
+    if (isHistory) {
+      // Fetch public application history (exclude discord_uid)
+      const { data, error } = await supabase
+        .from("doctor_applications")
+        .select("id, ic_firstname, ic_lastname, age, age_type, previous_experience, reason_to_join, status, queue_number, created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        if (error.code === "42P01" || error.message?.includes("does not exist")) {
+          return NextResponse.json({ applications: [], dbWarning: true });
+        }
+        throw error;
+      }
+      return NextResponse.json({ applications: data || [] });
+    }
+
     const isPublic = searchParams.get("public") === "true";
 
     if (isPublic) {
@@ -69,12 +87,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "กรุณากรอกข้อมูลให้ครบถ้วน" }, { status: 400 });
     }
 
-    // Check for existing pending application
+    // Check for any application that is not expired yet (expires_at > NOW())
     const { data: existing, error: checkError } = await supabase
       .from("doctor_applications")
-      .select("id")
+      .select("id, expires_at")
       .eq("discord_uid", discord_uid)
-      .eq("status", "pending")
+      .gt("expires_at", new Date().toISOString())
+      .order("expires_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (checkError) {
@@ -85,7 +105,17 @@ export async function POST(req: Request) {
     }
 
     if (existing) {
-      return NextResponse.json({ error: "คุณมีใบสมัครที่รอดำเนินการอยู่แล้ว" }, { status: 409 });
+      const expiresAtTime = new Date(existing.expires_at).getTime();
+      const remainingMs = expiresAtTime - Date.now();
+      const remainingHours = Math.max(0, Math.floor(remainingMs / (1000 * 60 * 60)));
+      const remainingMinutes = Math.max(0, Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60)));
+      
+      return NextResponse.json({
+        error: "duplicate_application",
+        message: `เนื่องจากระบบยังมีข้อมูลการสมัครของคุณอยู่ คุณจะสามารถส่งใบสมัครใหม่อีกครั้งได้ในอีก ${remainingHours} ชั่วโมง ${remainingMinutes} นาที`,
+        remainingHours,
+        remainingMinutes
+      }, { status: 409 });
     }
 
     // Calculate next queue number

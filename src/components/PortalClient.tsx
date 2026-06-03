@@ -87,6 +87,18 @@ export function PortalClient({
   });
   const [appError, setAppError] = useState("");
 
+  // Error modal states for duplicate applications
+  const [appErrorModalOpen, setAppErrorModalOpen] = useState(false);
+  const [appErrorModalMessage, setAppErrorModalMessage] = useState("");
+
+  // Application History board states
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [historyApplications, setHistoryApplications] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyStatusTab, setHistoryStatusTab] = useState<"all" | "pending" | "called" | "expired">("all");
+  const [selectedHistoryApp, setSelectedHistoryApp] = useState<any | null>(null);
+
   // Image Slideshow Banner State
   const [activeImageSlide, setActiveImageSlide] = useState(0);
 
@@ -191,6 +203,34 @@ export function PortalClient({
     return () => clearInterval(timer);
   }, [recruitmentSlides.length]);
 
+  // Fetch public applications history
+  const fetchHistoryApplications = async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch("/api/applications?history=true");
+      if (res.ok) {
+        const data = await res.json();
+        const apps = data.applications || [];
+        setHistoryApplications(apps);
+        if (apps.length > 0) {
+          setSelectedHistoryApp(apps[0]);
+        } else {
+          setSelectedHistoryApp(null);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch applications history:", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isHistoryModalOpen) {
+      fetchHistoryApplications();
+    }
+  }, [isHistoryModalOpen]);
+
   // Handle Blacklist Search
   const handleBlacklistSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,7 +272,13 @@ export function PortalClient({
       });
       const data = await res.json();
       if (!res.ok) {
-        setAppError(data.error || "เกิดข้อผิดพลาดในการส่งใบสมัคร");
+        if (res.status === 409 || data.error === "duplicate_application") {
+          setAppErrorModalMessage(data.message || "เนื่องจากระบบยังมีข้อมูลการสมัครของคุณอยู่...");
+          setAppErrorModalOpen(true);
+          setIsAppModalOpen(false); // ปิดหน้าต่างกรอกฟอร์มหลัก
+        } else {
+          setAppError(data.error || "เกิดข้อผิดพลาดในการส่งใบสมัคร");
+        }
         return;
       }
       setAppResult(data);
@@ -562,10 +608,24 @@ export function PortalClient({
           </a>
 
           {/* Join us promo */}
-          <div className="portal-sidebar-promo">
-            <div className="portal-sidebar-promo-text">มาเป็นส่วนหนึ่งกับเรา ร่วมช่วยเหลือประชาชนในเมือง</div>
-            <button className="portal-sidebar-promo-btn" onClick={() => { setIsAppModalOpen(true); setAppStep(1); }}>
+          <div className="portal-sidebar-promo" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div className="portal-sidebar-promo-text" style={{ marginBottom: 0 }}>มาเป็นส่วนหนึ่งกับเรา ร่วมช่วยเหลือประชาชนในเมือง</div>
+            <button className="portal-sidebar-promo-btn" onClick={() => { setIsAppModalOpen(true); setAppStep(1); }} style={{ padding: "8px 0" }}>
               สมัครเข้าร่วมหน่วยงาน
+            </button>
+            <button 
+              className="portal-sidebar-promo-btn" 
+              onClick={() => setIsHistoryModalOpen(true)}
+              style={{
+                padding: "8px 0",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                color: "rgba(255,255,255,0.7)"
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
+            >
+              ดูประวัติการสมัครทั้งหมด
             </button>
           </div>
 
@@ -1084,6 +1144,35 @@ export function PortalClient({
                   />
                 ))}
 
+                {/* Floating button to view application history */}
+                <button
+                  onClick={() => setIsHistoryModalOpen(true)}
+                  style={{
+                    position: "absolute",
+                    bottom: "16px",
+                    left: "16px",
+                    background: "rgba(3, 7, 18, 0.75)",
+                    backdropFilter: "blur(4px)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: "6px",
+                    color: "#ffffff",
+                    fontSize: "0.72rem",
+                    fontWeight: "700",
+                    padding: "8px 14px",
+                    cursor: "pointer",
+                    zIndex: 11,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(3, 7, 18, 0.9)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(3, 7, 18, 0.75)"; }}
+                >
+                  <ClipboardList size={12} style={{ color: "#3b82f6" }} />
+                  <span>ดูประวัติการสมัคร</span>
+                </button>
+
                 {recruitmentSlides.length > 1 && (
                   <>
                     <button 
@@ -1151,6 +1240,351 @@ export function PortalClient({
 
       {/* React Portal Login Modal */}
       {mounted && renderLoginModal()}
+
+      {/* React Portal Error Modal */}
+      {mounted && appErrorModalOpen && createPortal(
+        <div className="portal-centered-modal-overlay" onClick={() => setAppErrorModalOpen(false)}>
+          <div className="portal-centered-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "420px", width: "90vw", textAlign: "center" }}>
+            <button onClick={() => setAppErrorModalOpen(false)} className="portal-modal-close-btn" style={{ position: "absolute", top: "16px", right: "16px" }}>
+              <X size={18} />
+            </button>
+            
+            <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px auto" }}>
+              <AlertTriangle size={24} style={{ color: "#ef4444" }} />
+            </div>
+            
+            <h3 style={{ color: "#ffffff", fontSize: "0.95rem", fontWeight: "700", margin: "0 0 8px 0" }}>ส่งใบสมัครไม่สำเร็จ</h3>
+            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.76rem", marginBottom: "20px", lineHeight: "1.6", whiteSpace: "pre-line" }}>
+              {appErrorModalMessage}
+            </p>
+            
+            <button onClick={() => setAppErrorModalOpen(false)} style={{ width: "100%", padding: "10px", background: "#ef4444", border: "none", borderRadius: "4px", color: "#ffffff", fontSize: "0.76rem", fontWeight: "700", cursor: "pointer", fontFamily: "inherit" }}>
+              ตกลง
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* React Portal Application History Modal */}
+      {mounted && isHistoryModalOpen && createPortal(
+        <div className="portal-centered-modal-overlay" onClick={() => setIsHistoryModalOpen(false)}>
+          <div 
+            className="portal-centered-modal-card" 
+            onClick={(e) => e.stopPropagation()} 
+            style={{ 
+              maxWidth: "960px", 
+              width: "95vw", 
+              height: "85vh", 
+              maxHeight: "680px", 
+              display: "flex", 
+              flexDirection: "column",
+              padding: 0,
+              overflow: "hidden"
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(3, 7, 18, 0.4)" }}>
+              <div>
+                <h3 style={{ color: "#ffffff", fontSize: "0.95rem", fontWeight: "700", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                  <ClipboardList size={16} style={{ color: "#3b82f6" }} />
+                  บอร์ดตรวจสอบประวัติใบสมัคร (Application Archive)
+                </h3>
+                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.68rem", margin: "2px 0 0 0" }}>
+                  รายชื่อประวัติแบบสอบสมัครแพทย์ประจำศูนย์ปฏิบัติการกู้ชีพ
+                </p>
+              </div>
+              <button onClick={() => setIsHistoryModalOpen(false)} className="portal-modal-close-btn">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Content Body Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", flex: 1, overflow: "hidden" }}>
+              {/* Left Column: List + Filters */}
+              <div style={{ borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", background: "rgba(3, 7, 18, 0.2)", overflow: "hidden" }}>
+                {/* Search & Tabs */}
+                <div style={{ padding: "16px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div style={{ position: "relative" }}>
+                    <Search size={12} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)" }} />
+                    <input 
+                      type="text" 
+                      placeholder="ค้นหาชื่อผู้สมัคร IC..."
+                      value={historySearch}
+                      onChange={(e) => setHistorySearch(e.target.value)}
+                      style={{ width: "100%", padding: "7px 10px 7px 28px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.25)", color: "#fff", fontSize: "0.72rem", outline: "none", fontFamily: "inherit" }}
+                    />
+                  </div>
+
+                  {/* Tiny Tabs */}
+                  <div style={{ display: "flex", gap: "4px", background: "rgba(0,0,0,0.15)", padding: "2px", borderRadius: "6px" }}>
+                    {([
+                      { id: "all", label: "ทั้งหมด" },
+                      { id: "pending", label: "รอสอบ" },
+                      { id: "called", label: "เรียกสอบ" },
+                      { id: "expired", label: "หมดอายุ" }
+                    ] as const).map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setHistoryStatusTab(tab.id)}
+                        style={{
+                          flex: 1,
+                          padding: "4px 0",
+                          border: "none",
+                          borderRadius: "4px",
+                          background: historyStatusTab === tab.id ? "rgba(255,255,255,0.04)" : "transparent",
+                          color: historyStatusTab === tab.id ? "#ffffff" : "rgba(255,255,255,0.4)",
+                          fontSize: "0.64rem",
+                          fontWeight: "700",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          transition: "all 0.15s"
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Candidate List */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "8px" }} className="portal-custom-scrollbar">
+                  {historyLoading ? (
+                    <div style={{ textAlign: "center", padding: "32px", color: "rgba(255,255,255,0.35)", fontSize: "0.72rem" }}>
+                      กำลังโหลดข้อมูลประวัติ...
+                    </div>
+                  ) : historyApplications.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "32px", color: "rgba(255,255,255,0.35)", fontSize: "0.72rem" }}>
+                      ไม่มีข้อมูลใบสมัครในระบบ
+                    </div>
+                  ) : (() => {
+                    const filtered = historyApplications.filter(app => {
+                      const fullName = `${app.ic_firstname || ""} ${app.ic_lastname || ""}`.toLowerCase();
+                      const matchesSearch = fullName.includes(historySearch.toLowerCase());
+                      const matchesTab = historyStatusTab === "all" 
+                        || (historyStatusTab === "pending" && app.status === "pending")
+                        || (historyStatusTab === "called" && app.status === "called")
+                        || (historyStatusTab === "expired" && (app.status === "expired" || app.status === "rejected"));
+                      return matchesSearch && matchesTab;
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div style={{ textAlign: "center", padding: "32px", color: "rgba(255,255,255,0.35)", fontSize: "0.72rem" }}>
+                          ไม่พบประวัติการค้นหาสำหรับฟิลเตอร์นี้
+                        </div>
+                      );
+                    }
+
+                    return filtered.map((app) => {
+                      const isSelected = selectedHistoryApp?.id === app.id;
+                      let badgeColor = "#94a3b8";
+                      let badgeBg = "rgba(148, 163, 184, 0.1)";
+                      let statusText = "หมดอายุ";
+
+                      if (app.status === "pending") {
+                        badgeColor = "#3b82f6";
+                        badgeBg = "rgba(59, 130, 246, 0.1)";
+                        statusText = "รอดำเนินการ";
+                      } else if (app.status === "called") {
+                        badgeColor = "#f59e0b";
+                        badgeBg = "rgba(245, 158, 11, 0.1)";
+                        statusText = "เรียกสอบแล้ว";
+                      } else if (app.status === "rejected") {
+                        badgeColor = "#ef4444";
+                        badgeBg = "rgba(239, 68, 68, 0.1)";
+                        statusText = "ปฏิเสธ";
+                      }
+
+                      return (
+                        <div
+                          key={app.id}
+                          onClick={() => setSelectedHistoryApp(app)}
+                          style={{
+                            padding: "10px 12px",
+                            borderRadius: "6px",
+                            background: isSelected ? "rgba(59, 130, 246, 0.08)" : "transparent",
+                            border: `1px solid ${isSelected ? "rgba(59, 130, 246, 0.2)" : "transparent"}`,
+                            cursor: "pointer",
+                            marginBottom: "6px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "4px",
+                            transition: "all 0.15s"
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = "rgba(255,255,255,0.02)";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.76rem", fontWeight: "700", color: isSelected ? "#3b82f6" : "#ffffff" }}>
+                              {app.ic_firstname} {app.ic_lastname}
+                            </span>
+                            <span style={{ fontSize: "0.6rem", color: badgeColor, background: badgeBg, padding: "2px 6px", borderRadius: "4px", fontWeight: "700" }}>
+                              {statusText}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.35)", fontSize: "0.64rem" }}>
+                            <span>คิวลำดับที่: {app.queue_number}</span>
+                            <span>{new Date(app.created_at).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}</span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Right Column: Clipboard Paper Form Render */}
+              <div style={{ background: "rgba(6, 11, 20, 0.4)", overflowY: "auto", padding: "32px", display: "flex", justifyContent: "center", alignItems: "flex-start" }} className="portal-custom-scrollbar">
+                {selectedHistoryApp ? (
+                  <div style={{
+                    width: "100%",
+                    maxWidth: "520px",
+                    background: "linear-gradient(to bottom, #090f1d, #0d1527)",
+                    border: "1px solid rgba(255, 255, 255, 0.05)",
+                    borderRadius: "10px",
+                    boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+                    padding: "24px 28px",
+                    position: "relative"
+                  }}>
+                    {/* Clipboard Top Clip */}
+                    <div style={{
+                      position: "absolute",
+                      top: "-10px",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: "100px",
+                      height: "18px",
+                      background: "#1e293b",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "4px",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center"
+                    }}>
+                      <div style={{ width: "20px", height: "4px", borderRadius: "2px", background: "#3b82f6" }} />
+                    </div>
+
+                    {/* Paper Title Header */}
+                    <div style={{ textAlign: "center", borderBottom: "2px dashed rgba(255,255,255,0.06)", paddingBottom: "14px", marginBottom: "20px", marginTop: "4px" }}>
+                      <span style={{ fontSize: "0.65rem", color: "#3b82f6", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px" }}>
+                        Medical Personnel Recruitment Form
+                      </span>
+                      <h4 style={{ fontSize: "1.05rem", fontWeight: "800", color: "#ffffff", margin: "4px 0 2px 0" }}>
+                        ใบประเมินและคัดกรองบุคคลเข้ากู้เวรแพทย์
+                      </h4>
+                      <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.3)" }}>
+                        ข้อมูลตัวละครปฏิบัติการด่านหน้าโรงพยาบาลประเสริฐประจำเมือง
+                      </div>
+                    </div>
+
+                    {/* Form Layout Content */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                      {/* Name & Age Row */}
+                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px" }}>
+                        <div style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "6px" }}>
+                          <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.4)", display: "block" }}>ชื่อ-นามสกุลตัวละคร (IC Name)</span>
+                          <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#ffffff" }}>
+                            {selectedHistoryApp.ic_firstname} {selectedHistoryApp.ic_lastname}
+                          </span>
+                        </div>
+                        <div style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "6px" }}>
+                          <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.4)", display: "block" }}>อายุ (Age)</span>
+                          <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#ffffff" }}>
+                            {selectedHistoryApp.age} ปี ({selectedHistoryApp.age_type === "OC" ? "OC" : "IC"})
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Queue & Date Row */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                        <div style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "6px" }}>
+                          <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.4)", display: "block" }}>คิวสมัครปัจจุบัน (Queue No.)</span>
+                          <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#3b82f6" }}>
+                            # {selectedHistoryApp.queue_number}
+                          </span>
+                        </div>
+                        <div style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "6px" }}>
+                          <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.4)", display: "block" }}>วันที่ทำรายการ (Date Submitted)</span>
+                          <span style={{ fontSize: "0.76rem", fontWeight: "700", color: "#ffffff" }}>
+                            {new Date(selectedHistoryApp.created_at).toLocaleDateString("th-TH", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric"
+                            })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Previous Experience */}
+                      <div style={{ background: "rgba(0,0,0,0.15)", border: "1px solid rgba(255,255,255,0.04)", borderRadius: "6px", padding: "12px 14px" }}>
+                        <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: "4px" }}>
+                          ข้อมูลบันทึกประสบการณ์ปฏิบัติงานแพทย์
+                        </span>
+                        <p style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.85)", margin: 0, whiteSpace: "pre-line", lineHeight: "1.5" }}>
+                          {selectedHistoryApp.previous_experience || "— ไม่มีบันทึกข้อมูลประสบการณ์ —"}
+                        </p>
+                      </div>
+
+                      {/* Reason to Join */}
+                      <div style={{ background: "rgba(0,0,0,0.15)", border: "1px solid rgba(255,255,255,0.04)", borderRadius: "6px", padding: "12px 14px" }}>
+                        <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: "4px" }}>
+                          ความมุ่งมั่นและวัตถุประสงค์ในการสมัครเข้าหน่วยงาน
+                        </span>
+                        <p style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.85)", margin: 0, whiteSpace: "pre-line", lineHeight: "1.5" }}>
+                          {selectedHistoryApp.reason_to_join}
+                        </p>
+                      </div>
+
+                      {/* Status Stamp */}
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
+                        <div style={{
+                          border: `2px solid ${
+                            selectedHistoryApp.status === "pending" ? "#3b82f6" :
+                            selectedHistoryApp.status === "called" ? "#f59e0b" :
+                            selectedHistoryApp.status === "rejected" ? "#ef4444" : "#64748b"
+                          }`,
+                          borderRadius: "4px",
+                          padding: "6px 16px",
+                          fontWeight: "900",
+                          fontSize: "0.85rem",
+                          color: 
+                            selectedHistoryApp.status === "pending" ? "#3b82f6" :
+                            selectedHistoryApp.status === "called" ? "#f59e0b" :
+                            selectedHistoryApp.status === "rejected" ? "#ef4444" : "#94a3b8",
+                          background: "rgba(0,0,0,0.2)",
+                          textTransform: "uppercase",
+                          transform: "rotate(-4deg)",
+                          opacity: 0.85,
+                          boxShadow: "0 2px 5px rgba(0,0,0,0.2)"
+                        }}>
+                          {
+                            selectedHistoryApp.status === "pending" ? "รอดำเนินการ" :
+                            selectedHistoryApp.status === "called" ? "เรียกสอบแล้ว" :
+                            selectedHistoryApp.status === "rejected" ? "ปฏิเสธ" : "หมดอายุการกวดสอบ"
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: "center", padding: "80px 20px", color: "rgba(255,255,255,0.3)" }}>
+                    <ClipboardList size={40} style={{ margin: "0 auto 12px auto", opacity: 0.3, display: "block" }} />
+                    <span style={{ fontSize: "0.76rem" }}>เลือกรายชื่อฝั่งซ้ายเพื่อเรียกดูฟอร์มประวัติการสมัคร</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* React Portal Application Form Modal */}
       {mounted && isAppModalOpen && createPortal(
