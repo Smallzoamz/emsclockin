@@ -12,7 +12,8 @@ import {
   CrownIcon,
   CoinsIcon,
   SettingsIcon,
-  FileTextIcon
+  FileTextIcon,
+  UserPlusIcon
 } from "./Icons";
 
 export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; discordId?: string } }) {
@@ -80,6 +81,10 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; di
           <Link href="/dashboard/admin/leaves" className={pathname === "/dashboard/admin/leaves" ? "active" : ""}>
             <FileTextIcon size={20} />
             ใบลา/ออก
+          </Link>
+          <Link href="/dashboard/admin/applications" className={pathname === "/dashboard/admin/applications" ? "active" : ""}>
+            <UserPlusIcon size={20} />
+            ใบสมัคร
           </Link>
           <Link href="/dashboard/admin/mentor" className={pathname === "/dashboard/admin/mentor" ? "active" : ""}>
             <CrownIcon size={20} />

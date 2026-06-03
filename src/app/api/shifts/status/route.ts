@@ -57,7 +57,7 @@ export async function GET() {
     const { data: settingsRows } = await supabase
       .from("system_settings")
       .select("key, value")
-      .in("key", ["registered_doctors", "recruitment_quota", "op_nickname_mode", "last_nickname_sync_time"]);
+      .in("key", ["registered_doctors", "recruitment_quota", "op_nickname_mode", "last_nickname_sync_time", "user_ranks", "doctor_ranks"]);
 
     const registeredDoctors = settingsRows?.find(r => r.key === "registered_doctors")?.value || [];
     const recruitmentQuota = settingsRows?.find(r => r.key === "recruitment_quota")?.value || {
@@ -68,6 +68,8 @@ export async function GET() {
     };
     const opNicknameMode = settingsRows?.find(r => r.key === "op_nickname_mode")?.value || "manual";
     const lastNicknameSyncTime = settingsRows?.find(r => r.key === "last_nickname_sync_time")?.value || "0";
+    const userRanks = settingsRows?.find(r => r.key === "user_ranks")?.value || {};
+    const doctorRanks = settingsRows?.find(r => r.key === "doctor_ranks")?.value || [];
 
     // Passive background auto-sync check (Throttled to 5 minutes)
     const now = Date.now();
@@ -96,10 +98,14 @@ export async function GET() {
     // Map to public output
     const activeDoctors = ((activeShifts as unknown as ShiftItem[]) || []).map((shift: ShiftItem) => {
       const doctor = (registeredDoctors as RegisteredDoctor[]).find((d: RegisteredDoctor) => d.email === shift.user_email);
+      // Resolve rank from user_ranks + doctor_ranks
+      const userRankId = (userRanks as Record<string, string>)[shift.user_email];
+      const rankObj = (doctorRanks as Array<{id: string; name: string}>).find(r => r.id === userRankId);
+      const resolvedRank = rankObj?.name || doctor?.rank || "นร.แพทย์";
       return {
         name: doctor?.name || shift.user_name || "แพทย์ประจำการ",
         avatarUrl: doctor?.avatarUrl || null,
-        rank: doctor?.rank || "แพทย์ประจำการ",
+        rank: resolvedRank,
         clockIn: shift.clock_in
       };
     });
@@ -179,11 +185,15 @@ export async function GET() {
     // Construct the recent shifts log (active + completed) for landing page log table
     const completedDoctors = ((recentCompleted as unknown as ShiftItem[]) || []).map((shift: ShiftItem) => {
       const doctor = (registeredDoctors as RegisteredDoctor[]).find((d: RegisteredDoctor) => d.email === shift.user_email);
+      // Resolve rank from user_ranks + doctor_ranks
+      const userRankId = (userRanks as Record<string, string>)[shift.user_email];
+      const rankObj = (doctorRanks as Array<{id: string; name: string}>).find(r => r.id === userRankId);
+      const resolvedRank = rankObj?.name || doctor?.rank || "นร.แพทย์";
       return {
         id: shift.id,
         name: doctor?.name || shift.user_name || "แพทย์ประจำการ",
         avatarUrl: doctor?.avatarUrl || null,
-        rank: doctor?.rank || "แพทย์ประจำการ",
+        rank: resolvedRank,
         clockIn: shift.clock_in,
         clockOut: shift.clock_out || null,
         status: "completed"
@@ -192,11 +202,15 @@ export async function GET() {
 
     const activeDoctorsList = ((activeShifts as unknown as ShiftItem[]) || []).map((shift: ShiftItem) => {
       const doctor = (registeredDoctors as RegisteredDoctor[]).find((d: RegisteredDoctor) => d.email === shift.user_email);
+      // Resolve rank from user_ranks + doctor_ranks
+      const userRankId = (userRanks as Record<string, string>)[shift.user_email];
+      const rankObj = (doctorRanks as Array<{id: string; name: string}>).find(r => r.id === userRankId);
+      const resolvedRank = rankObj?.name || doctor?.rank || "นร.แพทย์";
       return {
         id: shift.id,
         name: doctor?.name || shift.user_name || "แพทย์ประจำการ",
         avatarUrl: doctor?.avatarUrl || null,
-        rank: doctor?.rank || "แพทย์ประจำการ",
+        rank: resolvedRank,
         clockIn: shift.clock_in,
         clockOut: null,
         status: "active"
@@ -230,7 +244,9 @@ export async function GET() {
         recentActivity,
         recentShifts: recentShiftsList,
         stats,
-        recruitmentQuota
+        recruitmentQuota,
+        userRanks,
+        doctorRanks
       });
     }
 
@@ -244,7 +260,9 @@ export async function GET() {
       recentActivity,
       recentShifts: recentShiftsList,
       stats,
-      recruitmentQuota
+      recruitmentQuota,
+      userRanks,
+      doctorRanks
     });
   } catch (error) {
     console.error("[Shift Status GET] Error:", error);

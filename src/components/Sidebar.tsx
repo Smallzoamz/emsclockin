@@ -16,7 +16,8 @@ import {
   CrownIcon,
   CoinsIcon,
   SettingsIcon,
-  FileTextIcon
+  FileTextIcon,
+  UserPlusIcon
 } from "./Icons";
 
 interface SidebarProps {
@@ -240,6 +241,14 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
               >
                 <FileTextIcon size={18} />
                 จัดการระบบสอบ
+              </Link>
+
+              <Link
+                href="/dashboard/admin/applications"
+                className={`nav-link ${pathname === "/dashboard/admin/applications" ? "active" : ""}`}
+              >
+                <UserPlusIcon size={18} />
+                จัดการใบสมัครแพทย์
               </Link>
 
               <Link

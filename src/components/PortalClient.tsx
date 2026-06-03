@@ -28,7 +28,12 @@ import {
   ChevronRight,
   Menu,
   Eye,
-  LogOut
+  LogOut,
+  CheckCircle,
+  Info,
+  ClipboardList,
+  Send,
+  X
 } from "lucide-react";
 import { supabaseClient } from "@/lib/supabase-client";
 
@@ -59,11 +64,28 @@ export function PortalClient({
   const [blacklistSearch, setBlacklistSearch] = useState("");
   const [blacklistData, setBlacklistData] = useState<any[]>([]);
   const [blacklistLoading, setBlacklistLoading] = useState(false);
-  const [blacklistSearchResult, setBlacklistSearchResult] = useState<any | null>(null);
+  const [blacklistSearchResults, setBlacklistSearchResults] = useState<any[] | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Layout States
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Application Form Modal States
+  const [isAppModalOpen, setIsAppModalOpen] = useState(false);
+  const [appStep, setAppStep] = useState<1 | 2 | 3>(1);
+  const [appSubmitting, setAppSubmitting] = useState(false);
+  const [appResult, setAppResult] = useState<any>(null);
+  const [appForm, setAppForm] = useState({
+    discord_uid: "",
+    ic_firstname: "",
+    ic_lastname: "",
+    age: "",
+    age_type: "IC" as "IC" | "OC",
+    previous_experience: "",
+    reason_to_join: ""
+  });
+  const [appError, setAppError] = useState("");
 
   // Image Slideshow Banner State
   const [activeImageSlide, setActiveImageSlide] = useState(0);
@@ -85,14 +107,13 @@ export function PortalClient({
   const [newsItems] = useState<any[]>(landingPageData?.news || []);
   const [forumTopics] = useState<any[]>(landingPageData?.forum || []);
 
-  // Fetch Blacklist data
+  // Fetch Blacklist data (all records including released)
   async function fetchBlacklist() {
     setBlacklistLoading(true);
     try {
       const { data } = await supabaseClient
         .from("blacklist_records")
         .select("*")
-        .eq("status", "active")
         .order("created_at", { ascending: false });
       if (data) setBlacklistData(data);
     } catch (err) {
@@ -153,18 +174,62 @@ export function PortalClient({
   const handleBlacklistSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!blacklistSearch.trim()) {
-      setBlacklistSearchResult(null);
+      setBlacklistSearchResults(null);
+      setHasSearched(false);
       return;
     }
     const term = blacklistSearch.toLowerCase().trim();
-    const match = blacklistData.find((item) => {
+    const matches = blacklistData.filter((item) => {
       return (
         (item.name && item.name.toLowerCase().includes(term)) ||
         (item.phone && item.phone.toLowerCase().includes(term)) ||
-        (item.gang && item.gang.toLowerCase().includes(term))
+        (item.gang && item.gang.toLowerCase().includes(term)) ||
+        (item.target_type && item.target_type.toLowerCase().includes(term))
       );
     });
-    setBlacklistSearchResult(match || "no_match");
+    setBlacklistSearchResults(matches);
+    setHasSearched(true);
+  };
+
+  // Handle Application Form Submit
+  const handleApplicationSubmit = async () => {
+    if (!appForm.discord_uid.trim() || !appForm.ic_firstname.trim() || !appForm.ic_lastname.trim() || !appForm.age.trim() || !appForm.reason_to_join.trim()) {
+      setAppError("กรุณากรอกข้อมูลให้ครบถ้วน");
+      return;
+    }
+    if (!/^\d{17,20}$/.test(appForm.discord_uid.trim())) {
+      setAppError("Discord UID ต้องเป็นตัวเลข 17-20 หลัก");
+      return;
+    }
+    setAppSubmitting(true);
+    setAppError("");
+    try {
+      const res = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(appForm)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAppError(data.error || "เกิดข้อผิดพลาดในการส่งใบสมัคร");
+        return;
+      }
+      setAppResult(data);
+      setAppStep(3);
+    } catch (err) {
+      setAppError("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+    } finally {
+      setAppSubmitting(false);
+    }
+  };
+
+  // Reset application modal
+  const resetAppModal = () => {
+    setAppStep(1);
+    setAppForm({ discord_uid: "", ic_firstname: "", ic_lastname: "", age: "", age_type: "IC", previous_experience: "", reason_to_join: "" });
+    setAppError("");
+    setAppResult(null);
+    setIsAppModalOpen(false);
   };
 
   // Date/Time formatting helpers
@@ -219,26 +284,21 @@ export function PortalClient({
     return `${minutes} นาที`;
   };
 
-  // Group active doctors by rank
+  // Group active doctors by rank: แพทย์ชำนาญ / แพทย์ / นักเรียนแพทย์
+  let specialistCount = 0;
   let doctorCount = 0;
-  let nurseCount = 0;
-  let emtCount = 0;
+  let studentCount = 0;
 
   activeDoctors.forEach((doc) => {
     const rank = (doc.rank || "").toLowerCase();
-    if (rank.includes("nurse") || rank.includes("พยาบาล")) {
-      nurseCount++;
-    } else if (rank.includes("emt") || rank.includes("rescue") || rank.includes("กู้ชีพ") || rank.includes("กู้ภัย")) {
-      emtCount++;
+    if (rank.includes("ชำนาญ") || rank.includes("specialist")) {
+      specialistCount++;
+    } else if (rank.includes("นักเรียน") || rank.includes("นร.") || rank.includes("student") || rank.includes("นร.แพทย์")) {
+      studentCount++;
     } else {
       doctorCount++;
     }
   });
-
-  // Blacklist card resolution
-  const activeBlacklistRecord = blacklistSearchResult === "no_match" 
-    ? null 
-    : blacklistSearchResult || blacklistData[0] || null;
 
   const displayShifts = recentShifts;
 
@@ -483,7 +543,7 @@ export function PortalClient({
           {/* Join us promo */}
           <div className="portal-sidebar-promo">
             <div className="portal-sidebar-promo-text">มาเป็นส่วนหนึ่งกับเรา ร่วมช่วยเหลือประชาชนในเมือง</div>
-            <button className="portal-sidebar-promo-btn" onClick={() => setIsLoginModalOpen(true)}>
+            <button className="portal-sidebar-promo-btn" onClick={() => { setIsAppModalOpen(true); setAppStep(1); }}>
               สมัครเข้าร่วมหน่วยงาน
             </button>
           </div>
@@ -651,16 +711,16 @@ export function PortalClient({
 
                   <div className="portal-onduty-grid">
                     <div className="portal-onduty-card">
-                      <div className="portal-onduty-card-val">{doctorCount} <span style={{ fontSize: "0.65rem", fontWeight: "normal" }}>คน</span></div>
+                      <div className="portal-onduty-card-val">{specialistCount} <span style={{ fontSize: "0.65rem", fontWeight: "normal" }}>คน</span></div>
+                      <div className="portal-onduty-card-label">แพทย์ชำนาญ</div>
+                    </div>
+                    <div className="portal-onduty-card">
+                      <div className="portal-onduty-card-val nurse">{doctorCount} <span style={{ fontSize: "0.65rem", fontWeight: "normal" }}>คน</span></div>
                       <div className="portal-onduty-card-label">แพทย์</div>
                     </div>
                     <div className="portal-onduty-card">
-                      <div className="portal-onduty-card-val nurse">{nurseCount} <span style={{ fontSize: "0.65rem", fontWeight: "normal" }}>คน</span></div>
-                      <div className="portal-onduty-card-label">พยาบาล</div>
-                    </div>
-                    <div className="portal-onduty-card">
-                      <div className="portal-onduty-card-val emt">{emtCount} <span style={{ fontSize: "0.65rem", fontWeight: "normal" }}>คน</span></div>
-                      <div className="portal-onduty-card-label">EMT</div>
+                      <div className="portal-onduty-card-val emt">{studentCount} <span style={{ fontSize: "0.65rem", fontWeight: "normal" }}>คน</span></div>
+                      <div className="portal-onduty-card-label">นักเรียนแพทย์</div>
                     </div>
                   </div>
                 </div>
@@ -820,53 +880,81 @@ export function PortalClient({
                   </button>
                 </form>
 
-                {/* Profile Card Output */}
+                {/* Blacklist Search Results */}
                 {blacklistLoading ? (
                   <div style={{ textAlign: "center", padding: "24px 0", fontSize: "0.72rem", color: "rgba(255,255,255,0.4)" }}>
                     กำลังสืบค้นฐานข้อมูล...
                   </div>
-                ) : activeBlacklistRecord ? (
-                  <div>
-                    <div className="portal-blacklist-profile-card">
-                      <div className="portal-blacklist-avatar-container">
-                        {activeBlacklistRecord.avatarUrl ? (
-                          <img src={activeBlacklistRecord.avatarUrl} alt="Avatar" className="portal-blacklist-avatar-image" />
-                        ) : (
-                          <User size={36} style={{ color: "rgba(255,255,255,0.15)" }} />
-                        )}
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <span className="portal-blacklist-badge">BLACKLIST</span>
-                        <h4 className="portal-blacklist-name">{activeBlacklistRecord.name}</h4>
-                        <div className="portal-blacklist-cid">Citizen ID: {activeBlacklistRecord.phone || "A8C123"}</div>
-                        <div className="portal-blacklist-note">
-                          <strong>หมายเหตุ:</strong> {activeBlacklistRecord.penalty}
+                ) : !hasSearched ? (
+                  <div style={{
+                    padding: "24px 16px",
+                    background: "rgba(59, 130, 246, 0.02)",
+                    border: "1px dashed rgba(59, 130, 246, 0.12)",
+                    borderRadius: "6px",
+                    textAlign: "center",
+                    color: "rgba(59, 130, 246, 0.5)",
+                    fontSize: "0.72rem"
+                  }}>
+                    <Search size={16} style={{ margin: "0 auto 6px auto", display: "block", opacity: 0.5 }} />
+                    กรุณาพิมพ์ชื่อ / ID / เลขบัตร เพื่อค้นหาข้อมูล Blacklist
+                  </div>
+                ) : blacklistSearchResults && blacklistSearchResults.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "280px", overflowY: "auto" }}>
+                    {blacklistSearchResults.map((record, idx) => (
+                      <div key={record.id || idx}>
+                        <div className="portal-blacklist-profile-card">
+                          <div className="portal-blacklist-avatar-container">
+                            {record.avatarUrl ? (
+                              <img src={record.avatarUrl} alt="Avatar" className="portal-blacklist-avatar-image" />
+                            ) : (
+                              <User size={36} style={{ color: "rgba(255,255,255,0.15)" }} />
+                            )}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                              {record.status === "released" ? (
+                                <span style={{ fontSize: "0.56rem", fontWeight: "800", background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.3)", color: "#10b981", padding: "1px 6px", borderRadius: "3px" }}>ปลดแล้ว</span>
+                              ) : (
+                                <span className="portal-blacklist-badge">BLACKLIST</span>
+                              )}
+                              {record.target_type && (
+                                <span style={{ fontSize: "0.54rem", color: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.04)", padding: "1px 5px", borderRadius: "3px" }}>{record.target_type}</span>
+                              )}
+                            </div>
+                            <h4 className="portal-blacklist-name">{record.name || record.gang || "ไม่ระบุชื่อ"}</h4>
+                            {record.phone && <div className="portal-blacklist-cid">Citizen ID: {record.phone}</div>}
+                            {record.gang && <div style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.4)", marginBottom: "2px" }}>แก๊ง: {record.gang}</div>}
+                            <div className="portal-blacklist-note">
+                              <strong>หมายเหตุ:</strong> {record.penalty}
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", borderTop: "1px dashed rgba(255,255,255,0.06)", paddingTop: "6px" }}>
+                              <span style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.35)" }}>
+                                วันที่: {formatTimeHHMM(record.created_at)}
+                              </span>
+                              <span style={{ fontSize: "0.72rem", fontWeight: "700", color: record.status === "released" ? "#10b981" : "#ef4444", fontFamily: "JetBrains Mono" }}>
+                                {record.status === "released" ? "ปลดแล้ว" : `${Number(record.fine * (record.multiplier || 1)).toLocaleString()} IC`}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", borderTop: "1px dashed rgba(255,255,255,0.06)", paddingTop: "6px" }}>
-                          <span style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.35)" }}>
-                            วันที่บันทึก: {formatTimeHHMM(activeBlacklistRecord.created_at)}
-                          </span>
-                          <span style={{ fontSize: "0.72rem", fontWeight: "700", color: "#ef4444", fontFamily: "JetBrains Mono" }}>
-                            {Number(activeBlacklistRecord.fine * (activeBlacklistRecord.multiplier || 1)).toLocaleString()} IC
-                          </span>
-                        </div>
                       </div>
-                    </div>
+                    ))}
                     <div className="portal-blacklist-warning-text">
-                      *ข้อมูล BLACKLIST ใช้สำหรับการตรวจสอบภายในหน่วยงานเท่านั้น ห้ามนำข้อมูลไปใช้ในทางที่ผิด
+                      *ข้อมูล BLACKLIST ใช้สำหรับการตรวจสอบภายในหน่วยงานเท่านั้น
                     </div>
                   </div>
                 ) : (
                   <div style={{
                     padding: "24px 16px",
-                    background: "rgba(239, 68, 68, 0.02)",
-                    border: "1px dashed rgba(239, 68, 68, 0.12)",
+                    background: "rgba(16, 185, 129, 0.03)",
+                    border: "1px dashed rgba(16, 185, 129, 0.15)",
                     borderRadius: "6px",
                     textAlign: "center",
-                    color: "rgba(239, 68, 68, 0.5)",
                     fontSize: "0.72rem"
                   }}>
-                    ไม่พบข้อมูลประวัติบัญชีดำสำหรับคำค้นหานี้
+                    <CheckCircle size={18} style={{ margin: "0 auto 6px auto", display: "block", color: "#10b981" }} />
+                    <span style={{ color: "#10b981" }}>ไม่พบข้อมูลประวัติบัญชีดำสำหรับคำค้นหานี้</span>
+                    <div style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.64rem", marginTop: "4px" }}>รายชื่อนี้ไม่ถูก Blacklist ในระบบ</div>
                   </div>
                 )}
               </div>
@@ -967,9 +1055,9 @@ export function PortalClient({
                   </p>
                 </div>
                 <div>
-                  <a href="/dashboard/rules" className="web-news-button" style={{ border: "none", background: "#3b82f6", color: "#ffffff", padding: "10px 20px", width: "100%", justifyContent: "center" }}>
+                  <button onClick={() => { setIsAppModalOpen(true); setAppStep(1); }} className="web-news-button" style={{ border: "none", background: "#3b82f6", color: "#ffffff", padding: "10px 20px", width: "100%", justifyContent: "center", cursor: "pointer", fontFamily: "inherit" }}>
                     ดูรายละเอียดรับสมัคร
-                  </a>
+                  </button>
                 </div>
               </div>
 
@@ -1009,6 +1097,225 @@ export function PortalClient({
 
       {/* React Portal Login Modal */}
       {mounted && renderLoginModal()}
+
+      {/* React Portal Application Form Modal */}
+      {mounted && isAppModalOpen && createPortal(
+        <div className="portal-centered-modal-overlay" onClick={resetAppModal}>
+          <div className="portal-centered-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "520px", width: "90vw", maxHeight: "85vh", overflowY: "auto" }}>
+            <button onClick={resetAppModal} className="portal-modal-close-btn" style={{ position: "absolute", top: "16px", right: "16px", zIndex: 10 }}>
+              <X size={18} />
+            </button>
+
+            {/* Step 1: Terms & Conditions */}
+            {appStep === 1 && (
+              <div>
+                <div style={{ textAlign: "center", marginBottom: "20px" }}>
+                  <div style={{ width: "48px", height: "48px", borderRadius: "8px", background: "rgba(59, 130, 246, 0.08)", border: "1px solid rgba(59, 130, 246, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px auto" }}>
+                    <ClipboardList size={22} style={{ color: "#3b82f6" }} />
+                  </div>
+                  <h3 style={{ color: "#ffffff", fontSize: "1rem", fontWeight: "700", margin: "0 0 6px 0" }}>เงื่อนไขการสมัครเข้าร่วมหน่วยงานแพทย์</h3>
+                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.7rem" }}>กรุณาอ่านเงื่อนไขให้ครบถ้วนก่อนดำเนินการสมัคร</p>
+                </div>
+
+                <div style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "6px", padding: "16px", marginBottom: "20px", fontSize: "0.72rem", color: "rgba(255,255,255,0.65)", lineHeight: "1.7" }}>
+                  <div style={{ fontWeight: "700", color: "#ffffff", marginBottom: "8px", fontSize: "0.78rem" }}>ข้อกำหนดและเงื่อนไข</div>
+                  <ol style={{ margin: 0, paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <li>ผู้สมัครจะต้องเป็นสมาชิกของ Discord Server หน่วยงานแพทย์เท่านั้น</li>
+                    <li>ข้อมูลที่กรอกต้องเป็นข้อมูลจริงตามตัวละครในเกม (IC) ห้ามกรอกข้อมูลเท็จ</li>
+                    <li>หลังจากส่งใบสมัคร ผู้สมัครจะต้องเข้ารับการสอบภายใน 48 ชั่วโมง</li>
+                    <li>หากไม่เข้ารับการสอบภายในเวลาที่กำหนด ระบบจะทำการลบข้อมูลผู้สมัครออกโดยอัตโนมัติ</li>
+                    <li>ผู้สมัครที่ถูกลบข้อมูลสามารถกรอกใบสมัครใหม่ได้</li>
+                    <li>การตัดสินผลสอบขึ้นอยู่กับดุลยพินิจของ ผอ. และทีมผู้ดูแลเท่านั้น ผลการตัดสินถือเป็นที่สิ้นสุด</li>
+                    <li>ผู้สมัครที่ผ่านการสอบจะเข้าสู่ตำแหน่ง "นักเรียนแพทย์" และต้องปฏิบัติตามกฎระเบียบของหน่วยงานอย่างเคร่งครัด</li>
+                  </ol>
+                </div>
+
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button onClick={resetAppModal} style={{ flex: 1, padding: "10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "4px", color: "rgba(255,255,255,0.5)", fontSize: "0.76rem", cursor: "pointer", fontFamily: "inherit" }}>
+                    ยกเลิก
+                  </button>
+                  <button onClick={() => setAppStep(2)} style={{ flex: 2, padding: "10px", background: "#3b82f6", border: "none", borderRadius: "4px", color: "#ffffff", fontSize: "0.76rem", fontWeight: "700", cursor: "pointer", fontFamily: "inherit" }}>
+                    ฉันยินยอมและรับทราบเงื่อนไข
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Application Form */}
+            {appStep === 2 && (
+              <div>
+                <div style={{ textAlign: "center", marginBottom: "20px" }}>
+                  <div style={{ width: "48px", height: "48px", borderRadius: "8px", background: "rgba(59, 130, 246, 0.08)", border: "1px solid rgba(59, 130, 246, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px auto" }}>
+                    <UserPlus size={22} style={{ color: "#3b82f6" }} />
+                  </div>
+                  <h3 style={{ color: "#ffffff", fontSize: "1rem", fontWeight: "700", margin: "0 0 6px 0" }}>แบบฟอร์มสมัครแพทย์</h3>
+                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.7rem" }}>กรอกข้อมูลให้ครบถ้วนเพื่อเข้าสู่ระบบคิวสอบ</p>
+                </div>
+
+                {appError && (
+                  <div style={{ background: "rgba(239, 68, 68, 0.06)", border: "1px solid rgba(239, 68, 68, 0.15)", borderRadius: "4px", padding: "8px 12px", marginBottom: "14px", fontSize: "0.7rem", color: "#fca5a5", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <AlertTriangle size={12} style={{ flexShrink: 0 }} />
+                    {appError}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {/* Discord UID */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "700", color: "rgba(255,255,255,0.7)", marginBottom: "4px" }}>Discord UID <span style={{ color: "#ef4444" }}>*</span></label>
+                    <input
+                      type="text"
+                      placeholder="ตัวอย่าง: 123456789012345678"
+                      value={appForm.discord_uid}
+                      onChange={(e) => setAppForm(p => ({ ...p, discord_uid: e.target.value }))}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.2)", color: "#fff", fontSize: "0.76rem", outline: "none", fontFamily: "inherit" }}
+                    />
+                    <div style={{ marginTop: "6px", background: "rgba(59, 130, 246, 0.04)", border: "1px solid rgba(59, 130, 246, 0.1)", borderRadius: "4px", padding: "8px 10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
+                        <Info size={10} style={{ color: "#3b82f6" }} />
+                        <span style={{ fontSize: "0.62rem", fontWeight: "700", color: "#3b82f6" }}>วิธีหา Discord UID</span>
+                      </div>
+                      <ol style={{ margin: 0, paddingLeft: "14px", fontSize: "0.6rem", color: "rgba(255,255,255,0.45)", lineHeight: "1.6" }}>
+                        <li>เปิด Discord แล้วไปที่ <strong style={{ color: "rgba(255,255,255,0.6)" }}>Settings (ตั้งค่า)</strong></li>
+                        <li>ไปที่ <strong style={{ color: "rgba(255,255,255,0.6)" }}>Advanced (ขั้นสูง)</strong> แล้วเปิด <strong style={{ color: "rgba(255,255,255,0.6)" }}>Developer Mode</strong></li>
+                        <li>กลับไปหน้า Server แล้ว<strong style={{ color: "rgba(255,255,255,0.6)" }}>คลิกขวาที่ชื่อตัวเอง</strong></li>
+                        <li>กด <strong style={{ color: "rgba(255,255,255,0.6)" }}>Copy User ID</strong> แล้วนำมาวางในช่องนี้</li>
+                      </ol>
+                    </div>
+                  </div>
+
+                  {/* IC Name */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "700", color: "rgba(255,255,255,0.7)", marginBottom: "4px" }}>ชื่อ IC <span style={{ color: "#ef4444" }}>*</span></label>
+                      <input
+                        type="text"
+                        placeholder="ชื่อตัวละคร"
+                        value={appForm.ic_firstname}
+                        onChange={(e) => setAppForm(p => ({ ...p, ic_firstname: e.target.value }))}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.2)", color: "#fff", fontSize: "0.76rem", outline: "none", fontFamily: "inherit" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "700", color: "rgba(255,255,255,0.7)", marginBottom: "4px" }}>นามสกุล IC <span style={{ color: "#ef4444" }}>*</span></label>
+                      <input
+                        type="text"
+                        placeholder="นามสกุลตัวละคร"
+                        value={appForm.ic_lastname}
+                        onChange={(e) => setAppForm(p => ({ ...p, ic_lastname: e.target.value }))}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.2)", color: "#fff", fontSize: "0.76rem", outline: "none", fontFamily: "inherit" }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Age */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "700", color: "rgba(255,255,255,0.7)", marginBottom: "4px" }}>อายุ <span style={{ color: "#ef4444" }}>*</span></label>
+                      <input
+                        type="text"
+                        placeholder="อายุตัวละคร / ของจริง"
+                        value={appForm.age}
+                        onChange={(e) => setAppForm(p => ({ ...p, age: e.target.value }))}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.2)", color: "#fff", fontSize: "0.76rem", outline: "none", fontFamily: "inherit" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "700", color: "rgba(255,255,255,0.7)", marginBottom: "4px" }}>ประเภท</label>
+                      <select
+                        value={appForm.age_type}
+                        onChange={(e) => setAppForm(p => ({ ...p, age_type: e.target.value as "IC" | "OC" }))}
+                        style={{ padding: "8px 12px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.2)", color: "#fff", fontSize: "0.76rem", outline: "none", fontFamily: "inherit" }}
+                      >
+                        <option value="IC">IC (ตัวละคร)</option>
+                        <option value="OC">OC (ของจริง)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Previous Experience */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "700", color: "rgba(255,255,255,0.7)", marginBottom: "4px" }}>เคยเป็นหน่วยงานแพทย์มาก่อนหรือไม่?</label>
+                    <textarea
+                      placeholder="ระบุรายละเอียดประสบการณ์ หรือพิมพ์ 'ไม่เคย'"
+                      value={appForm.previous_experience}
+                      onChange={(e) => setAppForm(p => ({ ...p, previous_experience: e.target.value }))}
+                      rows={2}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.2)", color: "#fff", fontSize: "0.76rem", outline: "none", fontFamily: "inherit", resize: "vertical" }}
+                    />
+                  </div>
+
+                  {/* Reason */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "700", color: "rgba(255,255,255,0.7)", marginBottom: "4px" }}>อยากเป็นหน่วยงานแพทย์ เพราะอะไร? <span style={{ color: "#ef4444" }}>*</span></label>
+                    <textarea
+                      placeholder="บอกเหตุผลที่อยากเข้าร่วมหน่วยงานแพทย์"
+                      value={appForm.reason_to_join}
+                      onChange={(e) => setAppForm(p => ({ ...p, reason_to_join: e.target.value }))}
+                      rows={3}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.2)", color: "#fff", fontSize: "0.76rem", outline: "none", fontFamily: "inherit", resize: "vertical" }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
+                  <button onClick={() => setAppStep(1)} style={{ flex: 1, padding: "10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "4px", color: "rgba(255,255,255,0.5)", fontSize: "0.76rem", cursor: "pointer", fontFamily: "inherit" }}>
+                    <ArrowLeft size={12} style={{ marginRight: "4px" }} />
+                    ย้อนกลับ
+                  </button>
+                  <button
+                    onClick={handleApplicationSubmit}
+                    disabled={appSubmitting}
+                    style={{ flex: 2, padding: "10px", background: appSubmitting ? "rgba(59, 130, 246, 0.5)" : "#3b82f6", border: "none", borderRadius: "4px", color: "#ffffff", fontSize: "0.76rem", fontWeight: "700", cursor: appSubmitting ? "wait" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                  >
+                    <Send size={14} />
+                    {appSubmitting ? "กำลังส่ง..." : "ยืนยันส่งแบบฟอร์ม"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Success + Queue Info */}
+            {appStep === 3 && appResult && (
+              <div style={{ textAlign: "center" }}>
+                <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px auto" }}>
+                  <CheckCircle size={28} style={{ color: "#10b981" }} />
+                </div>
+                <h3 style={{ color: "#ffffff", fontSize: "1rem", fontWeight: "700", margin: "0 0 6px 0" }}>ส่งใบสมัครสำเร็จ!</h3>
+                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.72rem", marginBottom: "20px" }}>ใบสมัครของคุณถูกส่งเข้าสู่ระบบเรียบร้อยแล้ว</p>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
+                  <div style={{ background: "rgba(59, 130, 246, 0.06)", border: "1px solid rgba(59, 130, 246, 0.15)", borderRadius: "6px", padding: "14px" }}>
+                    <div style={{ fontSize: "1.6rem", fontWeight: "900", color: "#3b82f6" }}>{appResult.totalPending || 0}</div>
+                    <div style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.4)", marginTop: "2px" }}>คิวสอบทั้งหมด</div>
+                  </div>
+                  <div style={{ background: "rgba(16, 185, 129, 0.06)", border: "1px solid rgba(16, 185, 129, 0.15)", borderRadius: "6px", padding: "14px" }}>
+                    <div style={{ fontSize: "1.6rem", fontWeight: "900", color: "#10b981" }}>{appResult.application?.queue_number || 0}</div>
+                    <div style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.4)", marginTop: "2px" }}>ลำดับคิวของคุณ</div>
+                  </div>
+                </div>
+
+                <div style={{ background: "rgba(245, 158, 11, 0.06)", border: "1px solid rgba(245, 158, 11, 0.15)", borderRadius: "6px", padding: "14px", marginBottom: "20px", textAlign: "left" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+                    <AlertTriangle size={14} style={{ color: "#f59e0b", flexShrink: 0 }} />
+                    <span style={{ fontSize: "0.72rem", fontWeight: "700", color: "#f59e0b" }}>ข้อควรทราบ</span>
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "0.66rem", color: "rgba(255,255,255,0.5)", lineHeight: "1.7" }}>
+                    <li>หากไม่มาเข้ารับการสอบ<strong style={{ color: "#f59e0b" }}>ภายใน 48 ชั่วโมง</strong> ระบบจะทำการลบข้อมูลผู้สมัครออกโดยอัตโนมัติ</li>
+                    <li>คุณจะต้องกรอกแบบฟอร์มใหม่เพื่อเข้ารับการสอบอีกครั้ง</li>
+                    <li>กรุณารอการแจ้งเตือนเรียกสอบผ่าน Discord ของคุณ</li>
+                  </ul>
+                </div>
+
+                <button onClick={resetAppModal} style={{ width: "100%", padding: "10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "4px", color: "rgba(255,255,255,0.6)", fontSize: "0.76rem", cursor: "pointer", fontFamily: "inherit" }}>
+                  ปิดหน้าต่าง
+                </button>
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

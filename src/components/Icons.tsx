@@ -42,7 +42,8 @@ import {
   X,
   Power,
   Upload,
-  CornerUpLeft
+  CornerUpLeft,
+  UserPlus
 } from "lucide-react";
 
 export const ClockIcon = FcClock;
@@ -84,3 +85,4 @@ export const LayoutIcon = FcTemplate;
 export const StarIcon = FcRating;
 export const InfoIcon = FcInfo;
 export const FileTextIcon = FcDocument;
+export const UserPlusIcon = UserPlus;

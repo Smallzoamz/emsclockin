@@ -60,6 +60,7 @@ export async function POST(req: Request) {
       "admin_discord_accounts", 
       "discord_webhook_url", 
       "discord_op_webhook_url",
+      "discord_application_webhook_url",
       "server_sync_enabled",
       "server_sync_api_key",
       "discord_bot_token",

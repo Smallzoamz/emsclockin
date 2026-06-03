@@ -36,6 +36,7 @@ export default function AdminSettingsPage() {
   // Webhook Configuration State
   const [discordWebhookUrl, setDiscordWebhookUrl] = useState("");
   const [discordOpWebhookUrl, setDiscordOpWebhookUrl] = useState("");
+  const [discordApplicationWebhookUrl, setDiscordApplicationWebhookUrl] = useState("");
   const [isSavingWebhooks, setIsSavingWebhooks] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
 
@@ -362,6 +363,9 @@ export default function AdminSettingsPage() {
         if (data.settings?.discord_op_webhook_url) {
           setDiscordOpWebhookUrl(data.settings.discord_op_webhook_url);
         }
+        if (data.settings?.discord_application_webhook_url) {
+          setDiscordApplicationWebhookUrl(data.settings.discord_application_webhook_url);
+        }
         if (data.settings?.discord_bot_token) {
           setDiscordBotToken(data.settings.discord_bot_token);
         }
@@ -506,13 +510,20 @@ export default function AdminSettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: "discord_op_webhook_url", value: discordOpWebhookUrl }),
       });
+      // Save Application webhook
+      const res3 = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "discord_application_webhook_url", value: discordApplicationWebhookUrl }),
+      });
 
-      if (res1.ok && res2.ok) {
+      if (res1.ok && res2.ok && res3.ok) {
         setWebhookStatus({ message: "บันทึกข้อมูล Discord Webhook เรียบร้อยแล้วค่ะ", type: "success" });
       } else {
         const d1 = await res1.json();
         const d2 = await res2.json();
-        setWebhookStatus({ message: d1.error || d2.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
+        const d3 = await res3.json();
+        setWebhookStatus({ message: d1.error || d2.error || d3.error || "เกิดข้อผิดพลาดในการบันทึก", type: "error" });
       }
     } catch {
       setWebhookStatus({ message: "เกิดข้อผิดพลาดในการเชื่อมต่อ", type: "error" });
@@ -1260,6 +1271,23 @@ export default function AdminSettingsPage() {
               />
               <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                 ใช้รายงานคิวแพทย์เวร (OP) และสถานะคิวเคสแบบอัปเดตเรียลไทม์ (ถ้าปล่อยว่างไว้จะใช้ร่วมกับตัวแจ้งเตือนทั่วไปด้านซ้าย)
+              </span>
+            </div>
+
+            {/* Input 3: Applications Webhook */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                🔗 Webhook ใบสมัครและเรียกสอบ (Recruitment Webhook)
+              </label>
+              <input 
+                type="url" 
+                placeholder="https://discord.com/api/webhooks/..." 
+                value={discordApplicationWebhookUrl}
+                onChange={e => setDiscordApplicationWebhookUrl(e.target.value.trim())}
+                style={{ width: "100%", padding: "10px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "8px", outline: "none", fontSize: "0.85rem" }}
+              />
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                ใช้แจ้งเตือนการส่งใบสมัครใหม่ และใช้เมื่อแอดมินกดเรียกตัวผู้สมัครเพื่อสัมภาษณ์/สอบสอบปฏิบัติ
               </span>
             </div>
 
