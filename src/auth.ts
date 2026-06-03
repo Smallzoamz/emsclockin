@@ -167,10 +167,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     Authorization: `Bot ${botToken}`
                   }
                 });
-
                 if (rolesRes.ok) {
                   const rolesData = (await rolesRes.json()) as Array<{ id: string; name: string }>;
-                  const targetRoleNames = ["ผอ.", "รองผอ.", "ผอ", "รอง ผอ", "รองผอ", "รอง ผอ.", "director", "deputy director"];
+                  const targetRoleNames = [
+                    "ผอ.", "รองผอ.", "ผอ", "รอง ผอ", "รองผอ", "รอง ผอ.", 
+                    "ผู้อำนวยการ", "รองผู้อำนวยการ", "รอง ผู้อำนวยการ",
+                    "director", "deputy director"
+                  ];
                   
                   const targetRoleIds = rolesData
                     .filter(r => targetRoleNames.some(name => r.name.trim().toLowerCase() === name.toLowerCase()))

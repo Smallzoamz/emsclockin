@@ -405,4 +405,7 @@
 
 ## [2026-06-03 15:45] | File: src/auth.ts | Line: 128 | Keyword: Discord Role Admin Permission Grant | Status: ✅ Complete | Change: Modified the JWT authentication callback to check if logging in users possess Director (ผอ.) or Deputy Director (รองผอ.) Discord roles in the guild using the Discord API, and automatically grant them the admin role in the system. Kept the custom admin database accounts list check as a fallback.
 
+## [2026-06-03 15:50] | File: src/auth.ts | Line: 173 | Keyword: Thai Discord Role Admin Permission Match | Status: ✅ Complete | Change: Added full Thai terms (ผู้อำนวยการ, รองผู้อำนวยการ, รอง ผู้อำนวยการ) to targetRoleNames in auth.ts to allow user accounts with the exact role "ผู้อำนวยการ" (Director) to dynamically receive admin access to the website dashboard.
+
+
 
