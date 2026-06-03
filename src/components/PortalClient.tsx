@@ -96,7 +96,7 @@ export function PortalClient({
   const [historyApplications, setHistoryApplications] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historySearch, setHistorySearch] = useState("");
-  const [historyStatusTab, setHistoryStatusTab] = useState<"all" | "pending" | "called" | "expired">("all");
+  const [historyStatusTab, setHistoryStatusTab] = useState<"all" | "pending" | "called" | "approved" | "expired">("all");
   const [selectedHistoryApp, setSelectedHistoryApp] = useState<any | null>(null);
 
   // Image Slideshow Banner State
@@ -1322,7 +1322,8 @@ export function PortalClient({
                       { id: "all", label: "ทั้งหมด" },
                       { id: "pending", label: "รอสอบ" },
                       { id: "called", label: "เรียกสอบ" },
-                      { id: "expired", label: "หมดอายุ" }
+                      { id: "approved", label: "สอบผ่าน" },
+                      { id: "expired", label: "ไม่ผ่าน/หมดอายุ" }
                     ] as const).map((tab) => (
                       <button
                         key={tab.id}
@@ -1365,6 +1366,7 @@ export function PortalClient({
                       const matchesTab = historyStatusTab === "all" 
                         || (historyStatusTab === "pending" && app.status === "pending")
                         || (historyStatusTab === "called" && app.status === "called")
+                        || (historyStatusTab === "approved" && app.status === "approved")
                         || (historyStatusTab === "expired" && (app.status === "expired" || app.status === "rejected"));
                       return matchesSearch && matchesTab;
                     });
@@ -1394,7 +1396,11 @@ export function PortalClient({
                       } else if (app.status === "rejected") {
                         badgeColor = "#ef4444";
                         badgeBg = "rgba(239, 68, 68, 0.1)";
-                        statusText = "ปฏิเสธ";
+                        statusText = "สอบไม่ผ่าน";
+                      } else if (app.status === "approved") {
+                        badgeColor = "#10b981";
+                        badgeBg = "rgba(16, 185, 129, 0.1)";
+                        statusText = "สอบผ่าน";
                       }
 
                       return (
@@ -1548,6 +1554,7 @@ export function PortalClient({
                           border: `2px solid ${
                             selectedHistoryApp.status === "pending" ? "#3b82f6" :
                             selectedHistoryApp.status === "called" ? "#f59e0b" :
+                            selectedHistoryApp.status === "approved" ? "#10b981" :
                             selectedHistoryApp.status === "rejected" ? "#ef4444" : "#64748b"
                           }`,
                           borderRadius: "4px",
@@ -1557,6 +1564,7 @@ export function PortalClient({
                           color: 
                             selectedHistoryApp.status === "pending" ? "#3b82f6" :
                             selectedHistoryApp.status === "called" ? "#f59e0b" :
+                            selectedHistoryApp.status === "approved" ? "#10b981" :
                             selectedHistoryApp.status === "rejected" ? "#ef4444" : "#94a3b8",
                           background: "rgba(0,0,0,0.2)",
                           textTransform: "uppercase",
@@ -1567,7 +1575,8 @@ export function PortalClient({
                           {
                             selectedHistoryApp.status === "pending" ? "รอดำเนินการ" :
                             selectedHistoryApp.status === "called" ? "เรียกสอบแล้ว" :
-                            selectedHistoryApp.status === "rejected" ? "ปฏิเสธ" : "หมดอายุการกวดสอบ"
+                            selectedHistoryApp.status === "approved" ? "สอบผ่าน" :
+                            selectedHistoryApp.status === "rejected" ? "สอบไม่ผ่าน" : "หมดอายุการตรวจสอบ"
                           }
                         </div>
                       </div>

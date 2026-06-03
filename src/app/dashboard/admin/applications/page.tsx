@@ -134,9 +134,9 @@ export default function AdminApplicationsPage() {
   // Action Handler: Reject application
   const handleRejectApplicant = async (appId: string, name: string) => {
     const isConfirmed = await confirm({
-      title: "🔴 ปฏิเสธใบสมัครแพทย์",
-      message: `ยืนยันต้องการปฏิเสธใบสมัครของ "${name}" ใช่หรือไม่? ผู้สมัครสามารถยื่นส่งใบสมัครใหม่ได้อีกครั้ง`,
-      confirmText: "ปฏิเสธ",
+      title: "🔴 ผลประเมิน: สอบไม่ผ่าน",
+      message: `ยืนยันต้องการประเมินให้ "${name}" สอบไม่ผ่าน ใช่หรือไม่?`,
+      confirmText: "ยืนยัน (สอบไม่ผ่าน)",
       cancelText: "ยกเลิก",
       variant: "danger"
     });
@@ -151,7 +151,38 @@ export default function AdminApplicationsPage() {
       });
 
       if (res.ok) {
-        alert(`ปฏิเสธใบสมัครของ "${name}" เรียบร้อยแล้วค่ะ`);
+        alert(`ดำเนินการประเมิน "${name}" สอบไม่ผ่าน เรียบร้อยแล้วค่ะ`);
+        loadData();
+      } else {
+        const errorData = await res.json();
+        alert(`ล้มเหลว: ${errorData.error || "เกิดข้อผิดพลาดในการดำเนินการ"}`);
+      }
+    } catch (err: any) {
+      alert(`ล้มเหลว: ${err.message}`);
+    }
+  };
+
+  // Action Handler: Approve application (Pass Exam)
+  const handleApproveApplicant = async (appId: string, name: string) => {
+    const isConfirmed = await confirm({
+      title: "🟢 ผลประเมิน: สอบผ่าน",
+      message: `ยืนยันต้องการประเมินให้ "${name}" สอบผ่านการคัดเลือก ใช่หรือไม่? ระบบจะทำการบันทึกและส่งข้อความแสดงความยินดีทาง Discord`,
+      confirmText: "ยืนยัน (สอบผ่าน)",
+      cancelText: "ยกเลิก",
+      variant: "success"
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      const res = await fetch("/api/applications/webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ application_id: appId, action: "approve" })
+      });
+
+      if (res.ok) {
+        alert(`ดำเนินการประเมิน "${name}" สอบผ่าน เรียบร้อยแล้วค่ะ`);
         loadData();
       } else {
         const errorData = await res.json();
@@ -402,11 +433,11 @@ export default function AdminApplicationsPage() {
                   } else if (app.status === "rejected") {
                     badgeBg = "rgba(239, 68, 68, 0.15)";
                     badgeColor = "#f87171";
-                    statusText = "ปฏิเสธแล้ว";
+                    statusText = "สอบไม่ผ่าน";
                   } else if (app.status === "approved") {
                     badgeBg = "rgba(16, 185, 129, 0.15)";
                     badgeColor = "#34d399";
-                    statusText = "อนุมัติแล้ว";
+                    statusText = "สอบผ่าน";
                   }
 
                   return (
@@ -497,7 +528,7 @@ export default function AdminApplicationsPage() {
                               style={{ padding: "6px 10px", fontSize: "0.72rem", display: "inline-flex", alignItems: "center", gap: "4px" }}
                             >
                               <CrossIcon size={12} />
-                              ปฏิเสธ
+                              สอบไม่ผ่าน
                             </button>
                             <button
                               onClick={() => handleCallApplicant(app.id, fullName)}
@@ -509,14 +540,24 @@ export default function AdminApplicationsPage() {
                             </button>
                           </div>
                         ) : app.status === "called" ? (
-                          <button
-                            onClick={() => handleRejectApplicant(app.id, fullName)}
-                            className="btn btn-danger"
-                            style={{ padding: "6px 10px", fontSize: "0.72rem", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                          >
-                            <CrossIcon size={12} />
-                            ปฏิเสธใบสมัคร
-                          </button>
+                          <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                            <button
+                              onClick={() => handleRejectApplicant(app.id, fullName)}
+                              className="btn btn-danger"
+                              style={{ padding: "6px 10px", fontSize: "0.72rem", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                            >
+                              <CrossIcon size={12} />
+                              สอบไม่ผ่าน
+                            </button>
+                            <button
+                              onClick={() => handleApproveApplicant(app.id, fullName)}
+                              className="btn btn-success"
+                              style={{ padding: "6px 12px", fontSize: "0.72rem", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                            >
+                              <CheckIcon size={12} />
+                              สอบผ่าน
+                            </button>
+                          </div>
                         ) : (
                           <span style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>ดำเนินการเสร็จสิ้น</span>
                         )}

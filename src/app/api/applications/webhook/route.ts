@@ -111,11 +111,105 @@ export async function POST(req: Request) {
         .single();
 
       if (updateError) throw updateError;
+      if (!application) {
+        return NextResponse.json({ error: "Application not found" }, { status: 404 });
+      }
+
+      // Send Discord webhook notification
+      const webhookUrl = await getApplicationWebhookUrl();
+      if (webhookUrl) {
+        const embed = {
+          title: "❌ ผลการประเมิน: สอบไม่ผ่าน — EMS Hospital",
+          color: 0xef4444,
+          description: [
+            `**👤 ผู้สมัคร:** <@${application.discord_uid}>`,
+            `**📝 ชื่อ IC:** ${application.ic_firstname} ${application.ic_lastname}`,
+            `**🔢 คิวที่:** ${application.queue_number}`,
+            "",
+            "ขออภัยด้วยค่ะ คุณไม่ผ่านการสอบในรอบนี้ สามารถยื่นสมัครใหม่ได้เมื่อระยะเวลาใบสมัครสิ้นสุดลง"
+          ].join("\n"),
+          footer: {
+            text: "FiveM EMS Recruitment System"
+          },
+          timestamp: new Date().toISOString()
+        };
+
+        const requestBody = {
+          username: "EMS Recruitment Bot",
+          avatar_url: "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+          content: `<@${application.discord_uid}>`,
+          embeds: [embed]
+        };
+
+        try {
+          await fetch(`${webhookUrl}?wait=true`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody)
+          });
+        } catch (webhookError) {
+          console.error("[Application Webhook] Error sending fail webhook:", webhookError);
+        }
+      }
 
       return NextResponse.json({ success: true, application });
     }
 
-    return NextResponse.json({ error: "Invalid action. Use 'call' or 'reject'" }, { status: 400 });
+    if (action === "approve") {
+      // Update status to 'approved'
+      const { data: application, error: updateError } = await supabase
+        .from("doctor_applications")
+        .update({ status: "approved" })
+        .eq("id", application_id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+      if (!application) {
+        return NextResponse.json({ error: "Application not found" }, { status: 404 });
+      }
+
+      // Send Discord webhook notification
+      const webhookUrl = await getApplicationWebhookUrl();
+      if (webhookUrl) {
+        const embed = {
+          title: "🎉 สอบผ่านการคัดเลือก — EMS Hospital",
+          color: 0x10b981,
+          description: [
+            `**👤 ผู้สมัคร:** <@${application.discord_uid}>`,
+            `**📝 ชื่อ IC:** ${application.ic_firstname} ${application.ic_lastname}`,
+            `**🔢 คิวที่:** ${application.queue_number}`,
+            "",
+            "ยินดีด้วยค่ะ! คุณผ่านการสอบคัดเลือกเข้าเป็นแพทย์เรียบร้อยแล้ว"
+          ].join("\n"),
+          footer: {
+            text: "FiveM EMS Recruitment System"
+          },
+          timestamp: new Date().toISOString()
+        };
+
+        const requestBody = {
+          username: "EMS Recruitment Bot",
+          avatar_url: "https://cdn-icons-png.flaticon.com/512/2869/2869823.png",
+          content: `<@${application.discord_uid}>`,
+          embeds: [embed]
+        };
+
+        try {
+          await fetch(`${webhookUrl}?wait=true`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody)
+          });
+        } catch (webhookError) {
+          console.error("[Application Webhook] Error sending pass webhook:", webhookError);
+        }
+      }
+
+      return NextResponse.json({ success: true, application });
+    }
+
+    return NextResponse.json({ error: "Invalid action. Use 'call', 'reject' or 'approve'" }, { status: 400 });
   } catch (error: any) {
     console.error("[Application Webhook POST] Error:", error);
     return NextResponse.json({ error: error.message || "Failed to process application action" }, { status: 500 });

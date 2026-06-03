@@ -702,6 +702,16 @@ body::before {
   background: rgba(239, 68, 68, 0.25);
 }
 
+.btn-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #a7f3d0;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.btn-success:hover {
+  background: rgba(16, 185, 129, 0.25);
+}
+
 /* ===== Page Header ===== */
 .page-header {
   margin-bottom: 32px;
