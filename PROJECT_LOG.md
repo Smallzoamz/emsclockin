@@ -409,6 +409,9 @@
 
 ## [2026-06-03 15:55] | File: src/auth.ts | Line: 179 | Keyword: Partial Discord Role Admin Permission Match | Status: ✅ Complete | Change: Modified the role checking logic in auth.ts from an exact string match to a partial substring match (using .includes()) to correctly handle Discord role names containing emojis and custom formatting prefixes (e.g. "🧑🏻‍⚕️| ผู้อำนวยการ").
 
+## [2026-06-03 16:10] | File: src/app/dashboard/admin/leaves/page.tsx | Line: 462 | Keyword: Dynamic Canvas Certificate Approver Signature | Status: ✅ Complete | Change: Modified LeaveManagementPage to load doctor list and ranks configuration, and updated the medical discharge certificate canvas rendering engine to dynamically look up the approver's name and position (e.g. "ผู้อำนวยการ" or "รองผู้อำนวยการ") and draw it at the bottom signature section of the document.
+
+
 
 
 

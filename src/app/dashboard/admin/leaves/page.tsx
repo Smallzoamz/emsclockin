@@ -71,6 +71,10 @@ export default function LeaveManagementPage() {
   const [themeAccentColor, setThemeAccentColor] = useState("#10b981");
   const [cityLogoUrl, setCityLogoUrl] = useState<string | null>(null);
 
+  const [registeredDoctors, setRegisteredDoctors] = useState<any[]>([]);
+  const [userRanks, setUserRanks] = useState<Record<string, string>>({});
+  const [doctorRanks, setDoctorRanks] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(true);
 
   // Fetch data
@@ -96,6 +100,9 @@ export default function LeaveManagementPage() {
       if (settingsData.settings) {
         setThemeAccentColor(settingsData.settings.theme_accent_color || "#10b981");
         setCityLogoUrl(settingsData.settings.theme_logo_url || null);
+        setRegisteredDoctors(settingsData.settings.registered_doctors || []);
+        setUserRanks(settingsData.settings.user_ranks || {});
+        setDoctorRanks(settingsData.settings.doctor_ranks || []);
         if (settingsData.settings.resignation_criteria_hours !== undefined) {
           setResignationCriteriaHours(Number(settingsData.settings.resignation_criteria_hours));
         }
@@ -455,9 +462,41 @@ export default function LeaveManagementPage() {
         ctx.font = "14px Arial, sans-serif";
         ctx.fillText("ลงชื่ออนุมัติพ้นสภาพแพทย์", canvas.width - 80, y);
         
+        const approverUsernameOrEmail = selectedResignationForDoc.approved_by || "Admin";
+        
+        const approverDoc = registeredDoctors.find(d => 
+          (d.email && d.email.toLowerCase() === approverUsernameOrEmail.toLowerCase()) ||
+          (d.discordUsername && d.discordUsername.toLowerCase() === approverUsernameOrEmail.toLowerCase()) ||
+          (d.name && d.name.toLowerCase() === approverUsernameOrEmail.toLowerCase())
+        );
+
+        let approverName = approverDoc?.name || approverUsernameOrEmail;
+        if (approverName.includes("@")) {
+          approverName = approverName.split("@")[0];
+        }
+
+        let approverPosition = "ผู้ดูแลระบบ";
+        
+        if (approverDoc && approverDoc.email) {
+          const rankId = userRanks[approverDoc.email];
+          if (rankId) {
+            const rankObj = doctorRanks.find(r => r.id === rankId);
+            if (rankObj && rankObj.name) {
+              const parts = rankObj.name.split("|");
+              approverPosition = parts[parts.length - 1].trim();
+            }
+          }
+        } else if (approverUsernameOrEmail.toLowerCase() === "lneeobee@gmail.com") {
+          approverPosition = "ผู้ดูแลระบบหลัก";
+        }
+        
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 15px Arial, sans-serif";
-        ctx.fillText("ผอ. ฝ่ายพัฒนาบุคลากรแพทย์", canvas.width - 80, y + 45);
+        ctx.fillText(`( ${approverName} )`, canvas.width - 80, y + 45);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+        ctx.font = "bold 13px Arial, sans-serif";
+        ctx.fillText(approverPosition, canvas.width - 80, y + 70);
         
         ctx.strokeStyle = "rgba(255,255,255,0.2)";
         ctx.lineWidth = 1.5;
