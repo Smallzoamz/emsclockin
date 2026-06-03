@@ -79,6 +79,110 @@ export async function POST(req: Request) {
       );
     }
 
+    // If updating registered_doctors, perform cleanup for deleted doctors
+    if (key === "registered_doctors") {
+      try {
+        const { data: settingsRows } = await supabase
+          .from("system_settings")
+          .select("key, value")
+          .in("key", ["registered_doctors", "user_ranks", "op_schedule"]);
+
+        const settingsMap = (settingsRows || []).reduce((acc: Record<string, any>, curr) => {
+          acc[curr.key] = curr.value;
+          return acc;
+        }, {});
+
+        const oldDoctors = (settingsMap["registered_doctors"] || []) as Array<{
+          email?: string;
+          name?: string;
+          discordUsername?: string;
+          avatarUrl?: string;
+          discordId?: string;
+        }>;
+
+        const userRanks = (settingsMap["user_ranks"] || {}) as Record<string, string>;
+        const opSchedule = (settingsMap["op_schedule"] || {}) as Record<string, string[]>;
+
+        const newDoctors = value as Array<{
+          email?: string;
+          name?: string;
+          discordUsername?: string;
+          avatarUrl?: string;
+          discordId?: string;
+        }>;
+
+        const deletedDoctors = oldDoctors.filter(oldDoc => 
+          !newDoctors.some(newDoc => newDoc.email === oldDoc.email)
+        );
+
+        if (deletedDoctors.length > 0) {
+          let ranksChanged = false;
+          let scheduleChanged = false;
+
+          for (const doc of deletedDoctors) {
+            const doctorEmail = doc.email;
+            const targetDiscordId = doc.discordId;
+            const targetDiscordUsername = doc.discordUsername;
+
+            if (doctorEmail) {
+              if (userRanks[doctorEmail]) {
+                delete userRanks[doctorEmail];
+                ranksChanged = true;
+              }
+            }
+
+            if (targetDiscordUsername) {
+              for (const day of Object.keys(opSchedule)) {
+                if (Array.isArray(opSchedule[day]) && opSchedule[day].includes(targetDiscordUsername)) {
+                  opSchedule[day] = opSchedule[day].filter(u => u !== targetDiscordUsername);
+                  scheduleChanged = true;
+                }
+              }
+            }
+
+            if (doctorEmail) {
+              await supabase.from("shifts").delete().eq("user_email", doctorEmail);
+              await supabase.from("exam_attempts").delete().eq("user_email", doctorEmail);
+              await supabase.from("user_inbox").delete().eq("user_email", doctorEmail);
+              await supabase
+                .from("mentorship_relations")
+                .delete()
+                .or(`mentor_email.eq.${doctorEmail},student_email.eq.${doctorEmail}`);
+              await supabase.from("bonus_payouts").delete().eq("doctor_email", doctorEmail);
+            }
+
+            if (targetDiscordId) {
+              await supabase.from("leave_requests").delete().eq("discord_id", targetDiscordId);
+            } else if (targetDiscordUsername) {
+              await supabase.from("leave_requests").delete().eq("discord_username", targetDiscordUsername);
+            }
+          }
+
+          if (ranksChanged) {
+            await supabase
+              .from("system_settings")
+              .upsert({
+                key: "user_ranks",
+                value: userRanks,
+                updated_at: new Date().toISOString()
+              });
+          }
+
+          if (scheduleChanged) {
+            await supabase
+              .from("system_settings")
+              .upsert({
+                key: "op_schedule",
+                value: opSchedule,
+                updated_at: new Date().toISOString()
+              });
+          }
+        }
+      } catch (err) {
+        console.error("[Settings POST] Failed to cleanup deleted doctors:", err);
+      }
+    }
+
     const { error } = await supabase
       .from("system_settings")
       .upsert({ key, value, updated_at: new Date().toISOString() });
