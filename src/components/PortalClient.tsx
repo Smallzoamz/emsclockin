@@ -393,7 +393,7 @@ export function PortalClient({
               alignItems: "center",
               justifyContent: "center",
               margin: "0 auto 12px auto",
-              color: "#3b82f6"
+              color: "var(--accent)"
             }}>
               <Lock size={16} />
             </div>
@@ -506,7 +506,7 @@ export function PortalClient({
                   style={{ 
                     width: "100%", 
                     padding: "9px 0", 
-                    background: "#3b82f6",
+                    background: "var(--accent)",
                     border: "none",
                     borderRadius: "4px",
                     color: "#ffffff",
@@ -515,8 +515,8 @@ export function PortalClient({
                     cursor: "pointer",
                     transition: "background 0.2s"
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "#2563eb"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "#3b82f6"; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent-light)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "var(--accent)"; }}
                 >
                   เข้าสู่ระบบ
                 </button>
@@ -531,7 +531,7 @@ export function PortalClient({
 
   return (
     <div className="portal-container" style={{
-      backgroundColor: "#030712",
+      backgroundColor: "transparent",
       backgroundImage: "linear-gradient(rgba(255, 255, 255, 0.002) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.002) 1px, transparent 1px)",
       backgroundSize: "40px 40px"
     }}>
@@ -544,7 +544,7 @@ export function PortalClient({
             {logoUrl ? (
               <img src={logoUrl} alt="LSMS Logo" style={{ width: "36px", height: "36px", objectFit: "contain" }} />
             ) : (
-              <Activity size={32} style={{ color: "#3b82f6" }} />
+              <Activity size={32} style={{ color: "var(--accent)" }} />
             )}
             <div>
               <h2 style={{ fontSize: "0.95rem", fontWeight: "900", color: "#ffffff", margin: 0, letterSpacing: "0.5px", lineHeight: "1.1" }}>
@@ -595,16 +595,16 @@ export function PortalClient({
           {/* Quick links */}
           <div className="portal-sidebar-section-title">Quick Links</div>
           <a href="#" className="portal-quick-link-item">
-            <span style={{ color: "#3b82f6" }}>●</span> ระบบแจ้งเหตุฉุกเฉิน
+            <span style={{ color: "var(--accent)" }}>●</span> ระบบแจ้งเหตุฉุกเฉิน
           </a>
           <a href="#" className="portal-quick-link-item">
-            <span style={{ color: "#3b82f6" }}>●</span> แผนที่โรงพยาบาล
+            <span style={{ color: "var(--accent)" }}>●</span> แผนที่โรงพยาบาล
           </a>
           <a href="#" className="portal-quick-link-item">
-            <span style={{ color: "#3b82f6" }}>●</span> คู่มือการปฏิบัติงาน
+            <span style={{ color: "var(--accent)" }}>●</span> คู่มือการปฏิบัติงาน
           </a>
           <a href="#" className="portal-quick-link-item">
-            <span style={{ color: "#3b82f6" }}>●</span> ดาวน์โหลดเอกสาร
+            <span style={{ color: "var(--accent)" }}>●</span> ดาวน์โหลดเอกสาร
           </a>
 
           {/* Join us promo */}
@@ -654,7 +654,7 @@ export function PortalClient({
             {/* Header right: Clock & Profile */}
             <div className="portal-header-clock-group">
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Clock size={16} style={{ color: "#3b82f6" }} />
+                <Clock size={16} style={{ color: "var(--accent)" }} />
                 <span className="portal-header-clock">
                   {formatThaiTime(now)}
                 </span>
@@ -668,10 +668,10 @@ export function PortalClient({
                 <button 
                   onClick={() => setIsLoginModalOpen(true)}
                   style={{
-                    background: "rgba(59, 130, 246, 0.1)",
-                    border: "1px solid rgba(59, 130, 246, 0.2)",
+                    background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
                     borderRadius: "4px",
-                    color: "#3b82f6",
+                    color: "var(--accent)",
                     fontSize: "0.72rem",
                     fontWeight: "700",
                     padding: "5px 12px",
@@ -720,7 +720,7 @@ export function PortalClient({
                       pointerEvents: idx === activeImageSlide ? "auto" : "none"
                     }}
                   >
-                    <span className="web-slide-tag" style={{ background: "rgba(59, 130, 246, 0.15)", borderColor: "rgba(59, 130, 246, 0.3)", color: "#3b82f6" }}>
+                    <span className="web-slide-tag" style={{ background: "color-mix(in srgb, var(--accent) 15%, transparent)", borderColor: "color-mix(in srgb, var(--accent) 30%, transparent)", color: "var(--accent)" }}>
                       {slide.tag}
                     </span>
                     <h2 className="web-slide-title" style={{ fontSize: "1.7rem", marginBottom: "8px" }}>
@@ -730,7 +730,7 @@ export function PortalClient({
                       {slide.description}
                     </p>
                     <div style={{ marginTop: "16px" }}>
-                      <a href="/dashboard/rules" className="web-news-button" style={{ border: "none", background: "#3b82f6", color: "#ffffff", padding: "8px 16px" }}>
+                      <a href="/dashboard/rules" className="web-news-button" style={{ border: "none", background: "var(--accent)", color: "#ffffff", padding: "8px 16px" }}>
                         ดูรายละเอียดเพิ่มเติม
                       </a>
                     </div>
@@ -846,10 +846,10 @@ export function PortalClient({
               <div style={{ background: "#090f1d", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "8px", padding: "20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "10px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <FileText size={15} style={{ color: "#3b82f6" }} />
+                    <FileText size={15} style={{ color: "var(--accent)" }} />
                     <h3 style={{ fontSize: "0.8rem", fontWeight: "700", color: "#ffffff", margin: 0, textTransform: "uppercase" }}>ข่าวสาร & ประกาศ</h3>
                   </div>
-                  <a href="#news-section" style={{ fontSize: "0.68rem", color: "#3b82f6", textDecoration: "none" }}>ดูทั้งหมด</a>
+                  <a href="#news-section" style={{ fontSize: "0.68rem", color: "var(--accent)", textDecoration: "none" }}>ดูทั้งหมด</a>
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -883,10 +883,10 @@ export function PortalClient({
               <div id="discussion-section" style={{ background: "#090f1d", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "8px", padding: "20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "10px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <MessageSquare size={15} style={{ color: "#3b82f6" }} />
+                    <MessageSquare size={15} style={{ color: "var(--accent)" }} />
                     <h3 style={{ fontSize: "0.8rem", fontWeight: "700", color: "#ffffff", margin: 0, textTransform: "uppercase" }}>บอร์ดสนทนาล่าสุด</h3>
                   </div>
-                  <a href="#discussion-section" style={{ fontSize: "0.68rem", color: "#3b82f6", textDecoration: "none" }}>ดูทั้งหมด</a>
+                  <a href="#discussion-section" style={{ fontSize: "0.68rem", color: "var(--accent)", textDecoration: "none" }}>ดูทั้งหมด</a>
                 </div>
 
                 <div className="portal-forum-list">
@@ -947,7 +947,7 @@ export function PortalClient({
                   <button 
                     type="submit"
                     style={{
-                      background: "#3b82f6",
+                      background: "var(--accent)",
                       color: "#ffffff",
                       border: "none",
                       borderRadius: "4px",
@@ -969,11 +969,11 @@ export function PortalClient({
                 ) : !hasSearched ? (
                   <div style={{
                     padding: "24px 16px",
-                    background: "rgba(59, 130, 246, 0.02)",
-                    border: "1px dashed rgba(59, 130, 246, 0.12)",
+                    background: "color-mix(in srgb, var(--accent) 2%, transparent)",
+                    border: "1px dashed color-mix(in srgb, var(--accent) 12%, transparent)",
                     borderRadius: "6px",
                     textAlign: "center",
-                    color: "rgba(59, 130, 246, 0.5)",
+                    color: "color-mix(in srgb, var(--accent) 50%, transparent)",
                     fontSize: "0.72rem"
                   }}>
                     <Search size={16} style={{ margin: "0 auto 6px auto", display: "block", opacity: 0.5 }} />
@@ -1049,7 +1049,7 @@ export function PortalClient({
               <div style={{ background: "#090f1d", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "8px", padding: "20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "10px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Clock size={15} style={{ color: "#3b82f6" }} />
+                    <Clock size={15} style={{ color: "var(--accent)" }} />
                     <h3 style={{ fontSize: "0.8rem", fontWeight: "700", color: "#ffffff", margin: 0, textTransform: "uppercase" }}>ตรวจสอบการเข้า-ออกเวร</h3>
                   </div>
                   
@@ -1169,7 +1169,7 @@ export function PortalClient({
                   onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(3, 7, 18, 0.9)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(3, 7, 18, 0.75)"; }}
                 >
-                  <ClipboardList size={12} style={{ color: "#3b82f6" }} />
+                  <ClipboardList size={12} style={{ color: "var(--accent)" }} />
                   <span>ดูประวัติการสมัคร</span>
                 </button>
 
@@ -1287,7 +1287,7 @@ export function PortalClient({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(3, 7, 18, 0.4)" }}>
               <div>
                 <h3 style={{ color: "#ffffff", fontSize: "0.95rem", fontWeight: "700", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-                  <ClipboardList size={16} style={{ color: "#3b82f6" }} />
+                  <ClipboardList size={16} style={{ color: "var(--accent)" }} />
                   บอร์ดตรวจสอบประวัติใบสมัคร (Application Archive)
                 </h3>
                 <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.68rem", margin: "2px 0 0 0" }}>
@@ -1386,8 +1386,8 @@ export function PortalClient({
                       let statusText = "หมดอายุ";
 
                       if (app.status === "pending") {
-                        badgeColor = "#3b82f6";
-                        badgeBg = "rgba(59, 130, 246, 0.1)";
+                        badgeColor = "var(--accent)";
+                        badgeBg = "color-mix(in srgb, var(--accent) 10%, transparent)";
                         statusText = "รอดำเนินการ";
                       } else if (app.status === "called") {
                         badgeColor = "#f59e0b";
@@ -1410,8 +1410,8 @@ export function PortalClient({
                           style={{
                             padding: "10px 12px",
                             borderRadius: "6px",
-                            background: isSelected ? "rgba(59, 130, 246, 0.08)" : "transparent",
-                            border: `1px solid ${isSelected ? "rgba(59, 130, 246, 0.2)" : "transparent"}`,
+                            background: isSelected ? "color-mix(in srgb, var(--accent) 8%, transparent)" : "transparent",
+                            border: `1px solid ${isSelected ? "color-mix(in srgb, var(--accent) 20%, transparent)" : "transparent"}`,
                             cursor: "pointer",
                             marginBottom: "6px",
                             display: "flex",
@@ -1427,7 +1427,7 @@ export function PortalClient({
                           }}
                         >
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontSize: "0.76rem", fontWeight: "700", color: isSelected ? "#3b82f6" : "#ffffff" }}>
+                            <span style={{ fontSize: "0.76rem", fontWeight: "700", color: isSelected ? "var(--accent)" : "#ffffff" }}>
                               {app.ic_firstname} {app.ic_lastname}
                             </span>
                             <span style={{ fontSize: "0.6rem", color: badgeColor, background: badgeBg, padding: "2px 6px", borderRadius: "4px", fontWeight: "700" }}>
@@ -1474,12 +1474,12 @@ export function PortalClient({
                       justifyContent: "center",
                       alignItems: "center"
                     }}>
-                      <div style={{ width: "20px", height: "4px", borderRadius: "2px", background: "#3b82f6" }} />
+                      <div style={{ width: "20px", height: "4px", borderRadius: "2px", background: "var(--accent)" }} />
                     </div>
 
                     {/* Paper Title Header */}
                     <div style={{ textAlign: "center", borderBottom: "2px dashed rgba(255,255,255,0.06)", paddingBottom: "14px", marginBottom: "20px", marginTop: "4px" }}>
-                      <span style={{ fontSize: "0.65rem", color: "#3b82f6", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px" }}>
+                      <span style={{ fontSize: "0.65rem", color: "var(--accent)", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px" }}>
                         Medical Personnel Recruitment Form
                       </span>
                       <h4 style={{ fontSize: "1.05rem", fontWeight: "800", color: "#ffffff", margin: "4px 0 2px 0" }}>
@@ -1512,7 +1512,7 @@ export function PortalClient({
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                         <div style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "6px" }}>
                           <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.4)", display: "block" }}>คิวสมัครปัจจุบัน (Queue No.)</span>
-                          <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#3b82f6" }}>
+                          <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "var(--accent)" }}>
                             # {selectedHistoryApp.queue_number}
                           </span>
                         </div>
@@ -1552,7 +1552,7 @@ export function PortalClient({
                       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
                         <div style={{
                           border: `2px solid ${
-                            selectedHistoryApp.status === "pending" ? "#3b82f6" :
+                            selectedHistoryApp.status === "pending" ? "var(--accent)" :
                             selectedHistoryApp.status === "called" ? "#f59e0b" :
                             selectedHistoryApp.status === "approved" ? "#10b981" :
                             selectedHistoryApp.status === "rejected" ? "#ef4444" : "#64748b"
@@ -1562,7 +1562,7 @@ export function PortalClient({
                           fontWeight: "900",
                           fontSize: "0.85rem",
                           color: 
-                            selectedHistoryApp.status === "pending" ? "#3b82f6" :
+                            selectedHistoryApp.status === "pending" ? "var(--accent)" :
                             selectedHistoryApp.status === "called" ? "#f59e0b" :
                             selectedHistoryApp.status === "approved" ? "#10b981" :
                             selectedHistoryApp.status === "rejected" ? "#ef4444" : "#94a3b8",
@@ -1607,8 +1607,8 @@ export function PortalClient({
             {appStep === 1 && (
               <div>
                 <div style={{ textAlign: "center", marginBottom: "20px" }}>
-                  <div style={{ width: "48px", height: "48px", borderRadius: "8px", background: "rgba(59, 130, 246, 0.08)", border: "1px solid rgba(59, 130, 246, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px auto" }}>
-                    <ClipboardList size={22} style={{ color: "#3b82f6" }} />
+                  <div style={{ width: "48px", height: "48px", borderRadius: "8px", background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--accent) 15%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px auto" }}>
+                    <ClipboardList size={22} style={{ color: "var(--accent)" }} />
                   </div>
                   <h3 style={{ color: "#ffffff", fontSize: "1rem", fontWeight: "700", margin: "0 0 6px 0" }}>เงื่อนไขการสมัครเข้าร่วมหน่วยงานแพทย์</h3>
                   <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.7rem" }}>กรุณาอ่านเงื่อนไขให้ครบถ้วนก่อนดำเนินการสมัคร</p>
@@ -1631,7 +1631,7 @@ export function PortalClient({
                   <button onClick={resetAppModal} style={{ flex: 1, padding: "10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "4px", color: "rgba(255,255,255,0.5)", fontSize: "0.76rem", cursor: "pointer", fontFamily: "inherit" }}>
                     ยกเลิก
                   </button>
-                  <button onClick={() => setAppStep(2)} style={{ flex: 2, padding: "10px", background: "#3b82f6", border: "none", borderRadius: "4px", color: "#ffffff", fontSize: "0.76rem", fontWeight: "700", cursor: "pointer", fontFamily: "inherit" }}>
+                  <button onClick={() => setAppStep(2)} style={{ flex: 2, padding: "10px", background: "var(--accent)", border: "none", borderRadius: "4px", color: "#ffffff", fontSize: "0.76rem", fontWeight: "700", cursor: "pointer", fontFamily: "inherit" }}>
                     ฉันยินยอมและรับทราบเงื่อนไข
                   </button>
                 </div>
@@ -1642,8 +1642,8 @@ export function PortalClient({
             {appStep === 2 && (
               <div>
                 <div style={{ textAlign: "center", marginBottom: "20px" }}>
-                  <div style={{ width: "48px", height: "48px", borderRadius: "8px", background: "rgba(59, 130, 246, 0.08)", border: "1px solid rgba(59, 130, 246, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px auto" }}>
-                    <UserPlus size={22} style={{ color: "#3b82f6" }} />
+                  <div style={{ width: "48px", height: "48px", borderRadius: "8px", background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--accent) 15%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px auto" }}>
+                    <UserPlus size={22} style={{ color: "var(--accent)" }} />
                   </div>
                   <h3 style={{ color: "#ffffff", fontSize: "1rem", fontWeight: "700", margin: "0 0 6px 0" }}>แบบฟอร์มสมัครแพทย์</h3>
                   <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.7rem" }}>กรอกข้อมูลให้ครบถ้วนเพื่อเข้าสู่ระบบคิวสอบ</p>
@@ -1667,10 +1667,10 @@ export function PortalClient({
                       onChange={(e) => setAppForm(p => ({ ...p, discord_uid: e.target.value }))}
                       style={{ width: "100%", padding: "8px 12px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.2)", color: "#fff", fontSize: "0.76rem", outline: "none", fontFamily: "inherit" }}
                     />
-                    <div style={{ marginTop: "6px", background: "rgba(59, 130, 246, 0.04)", border: "1px solid rgba(59, 130, 246, 0.1)", borderRadius: "4px", padding: "8px 10px" }}>
+                    <div style={{ marginTop: "6px", background: "color-mix(in srgb, var(--accent) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--accent) 10%, transparent)", borderRadius: "4px", padding: "8px 10px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
-                        <Info size={10} style={{ color: "#3b82f6" }} />
-                        <span style={{ fontSize: "0.62rem", fontWeight: "700", color: "#3b82f6" }}>วิธีหา Discord UID</span>
+                        <Info size={10} style={{ color: "var(--accent)" }} />
+                        <span style={{ fontSize: "0.62rem", fontWeight: "700", color: "var(--accent)" }}>วิธีหา Discord UID</span>
                       </div>
                       <ol style={{ margin: 0, paddingLeft: "14px", fontSize: "0.6rem", color: "rgba(255,255,255,0.45)", lineHeight: "1.6" }}>
                         <li>เปิด Discord แล้วไปที่ <strong style={{ color: "rgba(255,255,255,0.6)" }}>Settings (ตั้งค่า)</strong></li>
@@ -1763,7 +1763,7 @@ export function PortalClient({
                   <button
                     onClick={handleApplicationSubmit}
                     disabled={appSubmitting}
-                    style={{ flex: 2, padding: "10px", background: appSubmitting ? "rgba(59, 130, 246, 0.5)" : "#3b82f6", border: "none", borderRadius: "4px", color: "#ffffff", fontSize: "0.76rem", fontWeight: "700", cursor: appSubmitting ? "wait" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                    style={{ flex: 2, padding: "10px", background: appSubmitting ? "color-mix(in srgb, var(--accent) 50%, transparent)" : "var(--accent)", border: "none", borderRadius: "4px", color: "#ffffff", fontSize: "0.76rem", fontWeight: "700", cursor: appSubmitting ? "wait" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
                   >
                     <Send size={14} />
                     {appSubmitting ? "กำลังส่ง..." : "ยืนยันส่งแบบฟอร์ม"}
@@ -1782,8 +1782,8 @@ export function PortalClient({
                 <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.72rem", marginBottom: "20px" }}>ใบสมัครของคุณถูกส่งเข้าสู่ระบบเรียบร้อยแล้ว</p>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
-                  <div style={{ background: "rgba(59, 130, 246, 0.06)", border: "1px solid rgba(59, 130, 246, 0.15)", borderRadius: "6px", padding: "14px" }}>
-                    <div style={{ fontSize: "1.6rem", fontWeight: "900", color: "#3b82f6" }}>{appResult.totalPending || 0}</div>
+                  <div style={{ background: "color-mix(in srgb, var(--accent) 6%, transparent)", border: "1px solid color-mix(in srgb, var(--accent) 15%, transparent)", borderRadius: "6px", padding: "14px" }}>
+                    <div style={{ fontSize: "1.6rem", fontWeight: "900", color: "var(--accent)" }}>{appResult.totalPending || 0}</div>
                     <div style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.4)", marginTop: "2px" }}>คิวสอบทั้งหมด</div>
                   </div>
                   <div style={{ background: "rgba(16, 185, 129, 0.06)", border: "1px solid rgba(16, 185, 129, 0.15)", borderRadius: "6px", padding: "14px" }}>
