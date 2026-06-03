@@ -4619,7 +4619,7 @@ body::before {
   display: grid;
   grid-template-columns: 260px 1fr;
   min-height: 100vh;
-  background-color: #030712;
+  background-color: transparent;
   overflow: hidden;
 }
 
@@ -4672,8 +4672,8 @@ body::before {
 }
 
 .portal-sidebar-link:hover, .portal-sidebar-link.active {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
 }
 
 .portal-quick-link-item {
@@ -4710,7 +4710,7 @@ body::before {
 
 .portal-sidebar-promo-btn {
   width: 100%;
-  background-color: #3b82f6;
+  background-color: var(--accent);
   color: #ffffff;
   font-size: 0.72rem;
   font-weight: 700;
@@ -4722,8 +4722,8 @@ body::before {
 }
 
 .portal-sidebar-promo-btn:hover {
-  background-color: #2563eb;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+  background-color: var(--accent-light);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 .portal-content-wrapper {
@@ -4731,7 +4731,7 @@ body::before {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  background-color: #030712;
+  background-color: transparent;
 }
 
 .portal-header-bar {
@@ -4774,7 +4774,7 @@ body::before {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #3b82f6;
+  color: var(--accent);
   letter-spacing: 0.5px;
 }
 
@@ -4854,14 +4854,14 @@ body::before {
 }
 
 .portal-onduty-card:hover {
-  border-color: rgba(59, 130, 246, 0.2);
-  background-color: rgba(59, 130, 246, 0.02);
+  border-color: color-mix(in srgb, var(--accent) 20%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 2%, transparent);
 }
 
 .portal-onduty-card-val {
   font-size: 1.15rem;
   font-weight: 800;
-  color: #3b82f6;
+  color: var(--accent);
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -4918,7 +4918,7 @@ body::before {
 
 .portal-progress-bar-fill {
   height: 100%;
-  background-color: #3b82f6;
+  background-color: var(--accent);
   border-radius: 3px;
   transition: width 0.3s;
 }
@@ -4941,8 +4941,8 @@ body::before {
 }
 
 .portal-forum-item:hover {
-  border-color: rgba(59, 130, 246, 0.18);
-  background-color: rgba(59, 130, 246, 0.01);
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 1%, transparent);
   transform: translateX(2px);
 }
 
