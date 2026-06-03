@@ -99,6 +99,10 @@ export function PortalClient({
   const [historyStatusTab, setHistoryStatusTab] = useState<"all" | "pending" | "called" | "approved" | "expired">("all");
   const [selectedHistoryApp, setSelectedHistoryApp] = useState<any | null>(null);
 
+  // Selected news modal states
+  const [selectedNews, setSelectedNews] = useState<any | null>(null);
+  const [isNewsModalOpen, setIsNewsModalOpen] = useState(false);
+
   // Image Slideshow Banner State
   const [activeImageSlide, setActiveImageSlide] = useState(0);
 
@@ -117,7 +121,6 @@ export function PortalClient({
   });
 
   const [newsItems] = useState<any[]>(landingPageData?.news || []);
-  const [forumTopics] = useState<any[]>(landingPageData?.forum || []);
 
   // Recruitment slides state
   const [recruitmentSlides] = useState<any[]>(() => {
@@ -567,10 +570,6 @@ export function PortalClient({
             <UserPlus size={16} />
             <span>ประกาศรับสมัคร</span>
           </a>
-          <a href="#discussion-section" className="portal-sidebar-link">
-            <MessageSquare size={16} />
-            <span>บอร์ดสนทนา</span>
-          </a>
           <a href="#blacklist-section" className="portal-sidebar-link">
             <ShieldAlert size={16} />
             <span>ตรวจสอบ BLACKLIST</span>
@@ -646,7 +645,6 @@ export function PortalClient({
               <a href="#" className="portal-header-nav-link">หน้าแรก</a>
               <a href="#news-section" className="portal-header-nav-link">ข่าวสาร</a>
               <a href="#recruitment-section" className="portal-header-nav-link">ประกาศรับสมัคร</a>
-              <a href="#discussion-section" className="portal-header-nav-link">บอร์ด</a>
               <a href="/dashboard/rules" className="portal-header-nav-link">เกี่ยวกับเรา</a>
               <a href="#footer" className="portal-header-nav-link">ติดต่อเรา</a>
             </div>
@@ -839,8 +837,8 @@ export function PortalClient({
               </div>
             </div>
 
-            {/* ROW 2: News List (1/3) + Forums list (1/3) + Blacklist Search (1/3) */}
-            <div id="news-section" className="portal-grid-3-cols">
+            {/* ROW 2: News List (2/3) + Blacklist Search (1/3) */}
+            <div id="news-section" className="portal-news-grid">
               
               {/* Column 1: News & Announcements */}
               <div style={{ background: "#090f1d", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "8px", padding: "20px" }}>
@@ -852,60 +850,53 @@ export function PortalClient({
                   <a href="#news-section" style={{ fontSize: "0.68rem", color: "var(--accent)", textDecoration: "none" }}>ดูทั้งหมด</a>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   {newsItems.length === 0 ? (
                     <div style={{ textAlign: "center", padding: "32px 16px", color: "rgba(255,255,255,0.3)", fontSize: "0.75rem" }}>
                       ไม่มีข่าวสารหรือประกาศประชาสัมพันธ์ในขณะนี้
                     </div>
                   ) : (
                     newsItems.map((item, idx) => (
-                      <div key={idx} style={{ display: "flex", gap: "10px", borderBottom: idx < newsItems.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", paddingBottom: idx < newsItems.length - 1 ? "12px" : 0 }}>
-                        <img src={item.image} alt={item.title} style={{ width: "64px", height: "64px", borderRadius: "4px", objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,0.05)" }} />
-                        <div style={{ minWidth: 0 }}>
-                          <span style={{ fontSize: "0.58rem", color: item.tagColor, fontWeight: "800", background: `${item.tagColor}15`, border: `1px solid ${item.tagColor}30`, padding: "1px 5px", borderRadius: "3px", display: "inline-block", marginBottom: "4px" }}>
-                            {item.tag}
-                          </span>
-                          <h4 style={{ fontSize: "0.75rem", fontWeight: "700", color: "#ffffff", margin: "0 0 2px 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {item.title}
-                          </h4>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.62rem", color: "rgba(255,255,255,0.35)" }}>
-                            <span>{item.date}</span>
-                            <span style={{ display: "flex", alignItems: "center", gap: "2px" }}><Eye size={10} /> {item.views}</span>
+                      <div 
+                        key={idx} 
+                        onClick={() => {
+                          setSelectedNews(item);
+                          setIsNewsModalOpen(true);
+                        }}
+                        style={{ 
+                          display: "flex", 
+                          gap: "16px", 
+                          borderBottom: idx < newsItems.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", 
+                          paddingBottom: idx < newsItems.length - 1 ? "16px" : 0,
+                          cursor: "pointer",
+                          transition: "all 0.2s"
+                        }}
+                        className="portal-news-item-hover"
+                      >
+                        <img src={item.image} alt={item.title} style={{ width: "80px", height: "80px", borderRadius: "6px", objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,0.05)" }} />
+                        <div style={{ minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1 }}>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                              <span style={{ fontSize: "0.58rem", color: item.tagColor, fontWeight: "800", background: `${item.tagColor}15`, border: `1px solid ${item.tagColor}30`, padding: "1px 5px", borderRadius: "3px", display: "inline-block" }}>
+                                {item.tag}
+                              </span>
+                              <span style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.3)" }}>{item.date}</span>
+                            </div>
+                            <h4 className="portal-news-title-text" style={{ fontSize: "0.82rem", fontWeight: "700", color: "#ffffff", margin: "0 0 4px 0", transition: "color 0.2s" }}>
+                              {item.title}
+                            </h4>
+                            <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.45)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", lineHeight: "1.4" }}>
+                              {item.desc}
+                            </p>
                           </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Column 2: Web Forum Discussions */}
-              <div id="discussion-section" style={{ background: "#090f1d", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "8px", padding: "20px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "10px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <MessageSquare size={15} style={{ color: "var(--accent)" }} />
-                    <h3 style={{ fontSize: "0.8rem", fontWeight: "700", color: "#ffffff", margin: 0, textTransform: "uppercase" }}>บอร์ดสนทนาล่าสุด</h3>
-                  </div>
-                  <a href="#discussion-section" style={{ fontSize: "0.68rem", color: "var(--accent)", textDecoration: "none" }}>ดูทั้งหมด</a>
-                </div>
-
-                <div className="portal-forum-list">
-                  {forumTopics.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "32px 16px", color: "rgba(255,255,255,0.3)", fontSize: "0.75rem" }}>
-                      ไม่มีหัวข้อสนทนาล่าสุดในขณะนี้
-                    </div>
-                  ) : (
-                    forumTopics.map((topic, idx) => (
-                      <div key={idx} className="portal-forum-item">
-                        <div style={{ minWidth: 0, paddingRight: "8px" }}>
-                          <h4 className="portal-forum-title">{topic.title}</h4>
-                          <span className="portal-forum-author">โดย {topic.author}</span>
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "end", gap: "4px" }}>
-                          <span className="portal-forum-reply">
-                            <MessageSquare size={10} /> {topic.replies}
-                          </span>
-                          <span style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.3)" }}>{topic.time}</span>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px" }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.62rem", color: "rgba(255,255,255,0.35)" }}>
+                              <Eye size={10} /> {item.views} ครั้ง
+                            </span>
+                            <span style={{ fontSize: "0.68rem", color: "var(--accent)", fontWeight: "700", display: "flex", alignItems: "center", gap: "2px" }} className="portal-news-readmore-text">
+                              อ่านรายละเอียดเพิ่มเติม <ChevronRight size={12} />
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))
@@ -1809,6 +1800,151 @@ export function PortalClient({
                 </button>
               </div>
             )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* News Details Modal */}
+      {mounted && isNewsModalOpen && selectedNews && createPortal(
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(3, 7, 18, 0.65)",
+          backdropFilter: "blur(12px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px"
+        }}
+        onClick={() => setIsNewsModalOpen(false)}
+        >
+          <div style={{
+            width: "100%",
+            maxWidth: "600px",
+            background: "linear-gradient(to bottom, #090f1d, #0d1527)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4)",
+            borderRadius: "12px",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            animation: "slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1)"
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header / Banner Image */}
+            {selectedNews.image && (
+              <div style={{ width: "100%", height: "240px", position: "relative", overflow: "hidden" }}>
+                <img src={selectedNews.image} alt={selectedNews.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 40%, rgba(9, 15, 29, 0.95))" }} />
+                {/* Close Button */}
+                <button 
+                  onClick={() => setIsNewsModalOpen(false)}
+                  style={{
+                    position: "absolute",
+                    top: "16px",
+                    right: "16px",
+                    background: "rgba(0, 0, 0, 0.5)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    color: "#ffffff",
+                    borderRadius: "50%",
+                    width: "32px",
+                    height: "32px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(0, 0, 0, 0.8)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(0, 0, 0, 0.5)"}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+            
+            {/* Content Container */}
+            <div style={{ padding: "24px", position: "relative" }}>
+              {!selectedNews.image && (
+                <button 
+                  onClick={() => setIsNewsModalOpen(false)}
+                  style={{
+                    position: "absolute",
+                    top: "16px",
+                    right: "16px",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    color: "rgba(255, 255, 255, 0.6)",
+                    borderRadius: "50%",
+                    width: "32px",
+                    height: "32px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"}
+                >
+                  <X size={16} />
+                </button>
+              )}
+              
+              <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "12px" }}>
+                <span style={{ fontSize: "0.6rem", color: selectedNews.tagColor, fontWeight: "800", background: `${selectedNews.tagColor}15`, border: `1px solid ${selectedNews.tagColor}30`, padding: "2px 6px", borderRadius: "4px" }}>
+                  {selectedNews.tag}
+                </span>
+                <span style={{ fontSize: "0.68rem", color: "rgba(255, 255, 255, 0.4)" }}>
+                  {selectedNews.date}
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.68rem", color: "rgba(255, 255, 255, 0.4)" }}>
+                  <Eye size={12} /> {selectedNews.views}
+                </span>
+              </div>
+              
+              <h2 style={{ fontSize: "1.2rem", fontWeight: "800", color: "#ffffff", margin: "0 0 16px 0", lineHeight: "1.4" }}>
+                {selectedNews.title}
+              </h2>
+              
+              <div style={{
+                fontSize: "0.85rem",
+                color: "rgba(255, 255, 255, 0.85)",
+                lineHeight: "1.7",
+                maxHeight: "300px",
+                overflowY: "auto",
+                whiteSpace: "pre-line",
+                paddingRight: "8px"
+              }}
+              className="portal-custom-scrollbar"
+              >
+                {selectedNews.content || selectedNews.desc}
+              </div>
+              
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "24px" }}>
+                <button
+                  onClick={() => setIsNewsModalOpen(false)}
+                  style={{
+                    padding: "8px 20px",
+                    background: "var(--accent)",
+                    border: "none",
+                    borderRadius: "6px",
+                    color: "#ffffff",
+                    fontSize: "0.76rem",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "var(--accent-light)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "var(--accent)"}
+                >
+                  ปิดหน้าต่าง
+                </button>
+              </div>
+            </div>
           </div>
         </div>,
         document.body

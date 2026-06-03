@@ -77,11 +77,11 @@ export default function AdminSettingsPage() {
 
   // Landing Page Management State
   const [landingSlides, setLandingSlides] = useState<Array<{ image: string; tag: string; title: string; description: string }>>([]);
-  const [landingNews, setLandingNews] = useState<Array<{ tag: string; tagColor: string; title: string; date: string; views: number; image: string; desc: string }>>([]);
-  const [landingForum, setLandingForum] = useState<Array<{ title: string; author: string; replies: number; time: string }>>([]);
+  const [landingNews, setLandingNews] = useState<Array<{ tag: string; tagColor: string; title: string; date: string; views: number; image: string; desc: string; content?: string }>>([]);
+
   const [isSavingLanding, setIsSavingLanding] = useState(false);
   const [landingStatus, setLandingStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
-  const [activeLandingTab, setActiveLandingTab] = useState<"slides" | "news" | "forum" | "recruitment_slides">("slides");
+  const [activeLandingTab, setActiveLandingTab] = useState<"slides" | "news" | "recruitment_slides">("slides");
   
   // Slide Upload state (to track which slide image is uploading)
   const [isUploadingSlideIndex, setIsUploadingSlideIndex] = useState<number | null>(null);
@@ -135,22 +135,13 @@ export default function AdminSettingsPage() {
         date: new Date().toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" }),
         views: 0,
         image: "/images/rules/doctor_duty.png",
-        desc: "รายละเอียดคำอธิบายของข่าวสารประกาศใหม่"
+        desc: "รายละเอียดคำอธิบายของข่าวสารประกาศใหม่",
+        content: "รายละเอียดเนื้อหาประกาศฉบับเต็ม..."
       }
     ]);
   };
 
-  const addForum = () => {
-    setLandingForum([
-      ...landingForum,
-      {
-        title: "กระทู้ใหม่เรื่องการแลกเปลี่ยนเวร",
-        author: "Doctor",
-        replies: 0,
-        time: "1 นาที ที่แล้ว"
-      }
-    ]);
-  };
+
 
   const deleteSlide = async (index: number) => {
     if (!await confirm({
@@ -178,18 +169,7 @@ export default function AdminSettingsPage() {
     setLandingNews(updated);
   };
 
-  const deleteForum = async (index: number) => {
-    if (!await confirm({
-      title: "🗑️ ลบกระทู้สนทนา",
-      message: `ยืนยันว่าต้องการลบกระทู้สนทนา "${landingForum[index].title || "ไม่มีชื่อ"}" หรือไม่?`,
-      confirmText: "ลบออก",
-      cancelText: "ยกเลิก",
-      variant: "danger"
-    })) return;
 
-    const updated = landingForum.filter((_, idx) => idx !== index);
-    setLandingForum(updated);
-  };
 
   const moveRecruitmentSlide = (index: number, direction: "up" | "down") => {
     const updated = [...landingRecruitmentSlides];
@@ -377,7 +357,7 @@ export default function AdminSettingsPage() {
     const payload = {
       slides: landingSlides,
       news: landingNews,
-      forum: landingForum,
+      forum: [],
       recruitment_slides: landingRecruitmentSlides
     };
 
@@ -479,7 +459,7 @@ export default function AdminSettingsPage() {
             : data.settings.landing_page_data;
           if (lpd.slides) setLandingSlides(lpd.slides);
           if (lpd.news) setLandingNews(lpd.news);
-          if (lpd.forum) setLandingForum(lpd.forum);
+
           if (lpd.recruitment_slides) {
             setLandingRecruitmentSlides(lpd.recruitment_slides);
           } else {
@@ -538,32 +518,7 @@ export default function AdminSettingsPage() {
               desc: "ขอเชิญแพทย์และผู้สนใจเข้าร่วมอบรมการทำ CPR ปฐมพยาบาลเบื้องต้น"
             }
           ]);
-          setLandingForum([
-            {
-              title: "สอบถามเรื่องการเบิกอุปกรณ์ทางการแพทย์",
-              author: "NurseMint",
-              replies: 15,
-              time: "2 ชม. ที่แล้ว"
-            },
-            {
-              title: "แนวทางการรักษาคนไข้ในเคสวิกฤต",
-              author: "DoctorX",
-              replies: 23,
-              time: "5 ชม. ที่แล้ว"
-            },
-            {
-              title: "รวมภาพกิจกรรมฝึกซ้อมหน่วยแพทย์",
-              author: "EMT-TONY",
-              replies: 8,
-              time: "1 วัน ที่แล้ว"
-            },
-            {
-              title: "ปัญหาเรียนระบบเข้าเวรไม่แสดงเวลา",
-              author: "ParamedicK",
-              replies: 12,
-              time: "1 วัน ที่แล้ว"
-            }
-          ]);
+
           setLandingRecruitmentSlides([
             { image: "/images/leave_banner.jpg" },
             { image: "/images/welcome_banner.jpg" }
@@ -2028,7 +1983,6 @@ export default function AdminSettingsPage() {
           {([
             { id: "slides", label: "🖼️ สไลด์แบนเนอร์ (Slideshow)" },
             { id: "news", label: "📰 ข่าวสาร & ประกาศ (News)" },
-            { id: "forum", label: "💬 บอร์ดสนทนาล่าสุด (Forum)" },
             { id: "recruitment_slides", label: "🩺 สไลด์รับสมัคร (Recruitment)" }
           ] as const).map((tab) => (
             <button
@@ -2356,6 +2310,22 @@ export default function AdminSettingsPage() {
                                 style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none", resize: "none" }}
                               />
                             </div>
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>รายละเอียดเนื้อหาประกาศฉบับเต็ม (markdown/ข้อความยาว)</span>
+                            <textarea
+                              value={item.content || ""}
+                              onChange={(e) => {
+                                const updated = [...landingNews];
+                                updated[idx].content = e.target.value;
+                                setLandingNews(updated);
+                              }}
+                              placeholder="รายละเอียดข้อมูลเนื้อหาประกาศตัวเต็ม..."
+                              rows={4}
+                              style={{ width: "100%", padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none", resize: "vertical" }}
+                            />
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: "10px", marginTop: "10px" }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>วันที่ลงประกาศ</span>
                               <input
@@ -2404,109 +2374,7 @@ export default function AdminSettingsPage() {
             </div>
           )}
 
-          {/* Tab 3: Forum Discussions */}
-          {activeLandingTab === "forum" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h3 style={{ fontSize: "0.95rem", color: "var(--text-primary)", margin: 0 }}>
-                  รายการกระทู้จำลองในบอร์ดสนทนาล่าสุด ({landingForum.length} กระทู้)
-                </h3>
-                <button
-                  type="button"
-                  onClick={addForum}
-                  style={{
-                    padding: "6px 12px",
-                    background: "color-mix(in srgb, var(--accent) 10%, transparent)",
-                    border: "1px solid var(--border-glow)",
-                    color: "var(--accent-light)",
-                    borderRadius: "6px",
-                    fontSize: "0.8rem",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}
-                >
-                  <PlusIcon size={12} /> เพิ่มกระทู้สนทนาใหม่
-                </button>
-              </div>
 
-              {landingForum.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px", background: "var(--bg-secondary)", borderRadius: "8px", color: "var(--text-muted)", fontSize: "0.85rem", border: "1px dashed var(--border)" }}>
-                  ไม่มีข้อมูลกระทู้ในบอร์ดสนทนาหน้าแรก กรุณากดปุ่มเพิ่มเพื่อเริ่มต้นสร้างค่ะ
-                </div>
-              ) : (
-                <div style={{ background: "var(--bg-secondary)", borderRadius: "10px", padding: "16px", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "12px", overflowX: "auto" }}>
-                  <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border-subtle)", display: "grid", gridTemplateColumns: "1fr 180px 100px 140px 80px", gap: "16px", fontSize: "0.75rem", color: "var(--text-muted)", minWidth: "700px" }}>
-                    <span>หัวข้อของกระทู้โพสต์</span>
-                    <span>ผู้โพสต์ / เขียน</span>
-                    <span>จำนวนการตอบ</span>
-                    <span>เวลาที่โพสต์ (เช่น 2 ชม. ที่แล้ว)</span>
-                    <span style={{ textAlign: "center" }}>การจัดการ</span>
-                  </div>
-                  
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", minWidth: "700px" }}>
-                    {landingForum.map((topic, idx) => (
-                      <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 180px 100px 140px 80px", gap: "16px", alignItems: "center", padding: "4px 12px" }}>
-                        <input
-                          type="text"
-                          value={topic.title}
-                          onChange={(e) => {
-                            const updated = [...landingForum];
-                            updated[idx].title = e.target.value;
-                            setLandingForum(updated);
-                          }}
-                          placeholder="รวมภาพบรรยากาศการฝึกร่วม..."
-                          style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
-                        />
-                        <input
-                          type="text"
-                          value={topic.author}
-                          onChange={(e) => {
-                            const updated = [...landingForum];
-                            updated[idx].author = e.target.value;
-                            setLandingForum(updated);
-                          }}
-                          placeholder="EMT-TONY"
-                          style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
-                        />
-                        <input
-                          type="number"
-                          value={topic.replies}
-                          onChange={(e) => {
-                            const updated = [...landingForum];
-                            updated[idx].replies = Number(e.target.value);
-                            setLandingForum(updated);
-                          }}
-                          placeholder="12"
-                          style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
-                        />
-                        <input
-                          type="text"
-                          value={topic.time}
-                          onChange={(e) => {
-                            const updated = [...landingForum];
-                            updated[idx].time = e.target.value;
-                            setLandingForum(updated);
-                          }}
-                          placeholder="2 ชั่วโมงที่แล้ว"
-                          style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => deleteForum(idx)}
-                          style={{ padding: "8px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid var(--danger)", color: "var(--danger)", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer", display: "flex", justifyContent: "center" }}
-                        >
-                          ลบออก
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Tab 4: Recruitment Slides */}
           {activeLandingTab === "recruitment_slides" && (

@@ -5172,6 +5172,27 @@ body::before {
   }
 }
 
+.portal-news-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .portal-news-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.portal-news-item-hover:hover .portal-news-title-text {
+  color: var(--accent-light) !important;
+}
+
+.portal-news-item-hover:hover .portal-news-readmore-text {
+  text-decoration: underline;
+  color: var(--accent-light) !important;
+}
+
 /* ===== Dashboard Redesign Styles ===== */
 .dashboard-layout-container {
   display: flex;
