@@ -263,7 +263,7 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
 
     ctx.fillStyle = "#10b981";
     ctx.font = "bold 13px Arial, sans-serif";
-    ctx.fillText("Fox Community Medical Unit (FCMU)", canvas.width / 2, 155);
+    ctx.fillText("Fox Community Medical Unit (FCMD)", canvas.width / 2, 155);
 
     // Divider
     ctx.strokeStyle = "rgba(255,255,255,0.1)";

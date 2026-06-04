@@ -40,8 +40,20 @@ CREATE POLICY "Allow insert/all actions for admin"
     USING (auth.jwt()->>'role' = 'admin')
     WITH CHECK (auth.jwt()->>'role' = 'admin');
 
--- Enable Realtime for the table
-ALTER PUBLICATION supabase_realtime ADD TABLE public.medical_contracts;
+-- Enable Realtime for the table if not already added
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM pg_publication_rel pr
+        JOIN pg_publication p ON p.oid = pr.prpubid
+        JOIN pg_class c ON c.oid = pr.prrelid
+        WHERE p.pubname = 'supabase_realtime' 
+          AND c.relname = 'medical_contracts'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.medical_contracts;
+    END IF;
+END $$;
 
 -- 2. Add contract_id to user_inbox table if not exists
 ALTER TABLE public.user_inbox ADD COLUMN IF NOT EXISTS contract_id UUID REFERENCES public.medical_contracts(id) ON DELETE SET NULL;
