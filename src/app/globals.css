@@ -2970,6 +2970,7 @@ body::before {
 .map-pin-main.active-wiggle image {
   animation: pinBounce 0.6s ease-in-out infinite;
   transform-origin: 50% 100%;
+  transform-box: fill-box;
 }
 
 .map-pin-second image {
@@ -2980,6 +2981,7 @@ body::before {
 .map-pin-second.active-wiggle image {
   animation: pinWiggle 0.4s ease-in-out infinite;
   transform-origin: 50% 100%;
+  transform-box: fill-box;
 }
 
 

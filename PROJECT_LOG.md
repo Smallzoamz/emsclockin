@@ -1,5 +1,7 @@
 # PROJECT_LOG.md — FiveM Doctor Clock-in System
 
+## [2026-06-04 14:16] | File: src/app/globals.css | Line: 2973, 2983 | Keyword: Map Pin Bounding Box Origin Fix | Status: ✅ Complete | Change: Added `transform-box: fill-box;` to the SVG `<image>` transform properties for map pins. This forces modern browsers to evaluate percentage-based `transform-origin` (like `50% 100%`) relative to each pin image's individual bounding box instead of the global SVG container viewport, successfully anchoring the pin tip and shaking only the head.
+
 ## [2026-06-04 14:05] | File: src/app/globals.css | Line: 2954, 2972, 2982 | Keyword: Map Pin Wiggle Animation Update | Status: ✅ Complete | Change: Improved the interactive map pin wiggle/shake animation to make it look like a realistic "head shake" (ส่ายหัว) anchored at the pin's bottom tip. Changed `transform-origin` from `50% 50%` (center) to `50% 100%` (bottom center) and increased rotation from `6deg` to `8deg` in `pinWiggle` keyframes.
 
 ## [2026-06-04 13:58] | File: src/app/dashboard/rules/page.tsx | Line: 194, 2420, 3812 | Keyword: Map Pin Hover Wiggle Fix | Status: ✅ Complete | Change: Fixed the interactive map pin wiggle animation by declaring a unique `hoveredPinKey` state synthesized from `zoneName` and `pinIdx`. Hovering a specific map pin now wiggles only that individual pin, while hovering details table rows still triggers the fallback wiggle for all pins sharing that label name.
