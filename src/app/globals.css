@@ -5627,14 +5627,14 @@ body::before {
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  background-color: #030712;
+  background: transparent;
   position: relative;
 }
 
 .dashboard-top-header {
   height: 64px;
-  background-color: #090f1d;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: var(--bg-glass);
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -5729,20 +5729,30 @@ body::before {
 }
 
 .active-shift-card-wrapper {
-  background-color: #090f1d;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   padding: 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   min-height: 240px;
+  backdrop-filter: blur(12px);
   box-shadow: var(--shadow-card);
-  transition: border-color 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  clip-path: polygon(
+    0 0, 
+    calc(100% - 12px) 0, 
+    100% 12px, 
+    100% 100%, 
+    12px 100%, 
+    0 calc(100% - 12px)
+  );
 }
 
 .active-shift-card-wrapper:hover {
   border-color: var(--border-glow);
+  box-shadow: 0 0 15px rgba(234, 88, 12, 0.15), var(--shadow-elevated);
 }
 
 .active-shift-card-header {
@@ -5785,19 +5795,29 @@ body::before {
 }
 
 .weekly-bonus-summary-card {
-  background-color: #090f1d;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   padding: 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  backdrop-filter: blur(12px);
   box-shadow: var(--shadow-card);
-  transition: border-color 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  clip-path: polygon(
+    0 0, 
+    calc(100% - 12px) 0, 
+    100% 12px, 
+    100% 100%, 
+    12px 100%, 
+    0 calc(100% - 12px)
+  );
 }
 
 .weekly-bonus-summary-card:hover {
   border-color: var(--border-glow);
+  box-shadow: 0 0 15px rgba(234, 88, 12, 0.15), var(--shadow-elevated);
 }
 
 .bonus-metrics-list {
@@ -5845,13 +5865,29 @@ body::before {
 }
 
 .metric-badge-card {
-  background-color: #090f1d;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  clip-path: polygon(
+    0 0, 
+    calc(100% - 8px) 0, 
+    100% 8px, 
+    100% 100%, 
+    8px 100%, 
+    0 calc(100% - 8px)
+  );
+}
+
+.metric-badge-card:hover {
+  border-color: var(--border-glow);
+  box-shadow: 0 0 10px rgba(234, 88, 12, 0.12), var(--shadow-elevated);
 }
 
 .metric-badge-label {
