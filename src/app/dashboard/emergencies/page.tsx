@@ -6,6 +6,11 @@ import { useRouter } from "next/navigation";
 import { supabaseClient } from "@/lib/supabase-client";
 import { Phone, Check, ExternalLink, Siren, MessageSquare, Inbox } from "lucide-react";
 
+const extractUrls = (text: string) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.match(urlRegex) || [];
+};
+
 export default function EmergenciesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -629,6 +634,14 @@ export default function EmergenciesPage() {
                     <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.45)" }}>{timeText}</span>
                   </div>
 
+                  {/* Phone contact if any */}
+                  {complaint.phone && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "-4px" }}>
+                      <Phone size={14} style={{ color: "var(--accent-light)" }} />
+                      <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>ติดต่อกลับ: {complaint.phone}</span>
+                    </div>
+                  )}
+
                   {/* Complaint Content */}
                   <div style={{
                     background: "rgba(255, 255, 255, 0.015)",
@@ -643,6 +656,51 @@ export default function EmergenciesPage() {
                   }}>
                     {complaint.content}
                   </div>
+
+                  {/* Detected video/clip links */}
+                  {(() => {
+                    const urls = extractUrls(complaint.content);
+                    if (urls.length === 0) return null;
+                    return (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "-4px" }}>
+                        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "bold" }}>🔗 ลิงก์คลิปหลักฐานที่แนบมา:</span>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                          {urls.map((url, idx) => (
+                            <a
+                              key={idx}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                background: "rgba(250, 204, 21, 0.08)",
+                                border: "1px solid rgba(250, 204, 21, 0.25)",
+                                padding: "6px 12px",
+                                borderRadius: "6px",
+                                fontSize: "0.76rem",
+                                color: "#fde047",
+                                textDecoration: "none",
+                                fontWeight: "bold",
+                                transition: "all 0.2s"
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.background = "rgba(250, 204, 21, 0.15)";
+                                e.currentTarget.style.borderColor = "rgba(250, 204, 21, 0.4)";
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.background = "rgba(250, 204, 21, 0.08)";
+                                e.currentTarget.style.borderColor = "rgba(250, 204, 21, 0.25)";
+                              }}
+                            >
+                              <ExternalLink size={12} /> 🎥 ดูคลิปหลักฐานที่ {idx + 1}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Attachment Image (if any) */}
                   {complaint.image_url && (

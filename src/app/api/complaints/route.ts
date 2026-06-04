@@ -31,7 +31,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { content, image_url, discord_message_id, discord_user_id, discord_username, discord_nickname, secret } = body;
+    const { content, phone, image_url, discord_message_id, discord_user_id, discord_username, discord_nickname, discord_thread_id, secret } = body;
 
     // Check shared API key secret for security
     const apiKey = process.env.EMERGENCY_API_KEY || "ems_emergency_secret_key_2026";
@@ -48,11 +48,13 @@ export async function POST(request: Request) {
       .insert([
         {
           content,
+          phone: phone || null,
           image_url: image_url || null,
           discord_message_id,
           discord_user_id: discord_user_id || null,
           discord_username: discord_username || null,
           discord_nickname: discord_nickname || null,
+          discord_thread_id: discord_thread_id || null,
           status: "pending"
         }
       ])
