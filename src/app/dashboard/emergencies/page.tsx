@@ -95,6 +95,42 @@ export default function EmergenciesPage() {
     }
   };
 
+  const [commandPrefix, setCommandPrefix] = useState("/ems");
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const res = await fetch("/api/admin/settings");
+        const data = await res.json();
+        if (data.settings && data.settings.announcement_command_prefix) {
+          setCommandPrefix(data.settings.announcement_command_prefix);
+        }
+      } catch (err) {
+        console.error("Failed to load settings:", err);
+      }
+    }
+    if (!loading) {
+      loadSettings();
+    }
+  }, [loading]);
+
+  const handleCopyAnnouncement = (phone: string, type: "not_found" | "inaccessible") => {
+    let text = "";
+    if (type === "not_found") {
+      text = `${commandPrefix} ทางทีมแพทย์ได้รุดไปตรวจสอบบริเวณพื้นที่ตามรูปภาพที่แจ้งเหตุเข้ามา (เบอร์โทร: ${phone}) แต่ไม่พบร่างผู้ได้รับบาดเจ็บในจุดดังกล่าว จึงขออนุญาตปิดเคสครับ`;
+    } else {
+      text = `${commandPrefix} ทางทีมแพทย์ได้รุดไปตรวจสอบบริเวณพื้นที่ตามรูปภาพที่แจ้งเหตุเข้ามา (เบอร์โทร: ${phone}) แต่ไม่สามารถเข้าถึงตัวผู้ป่วยได้เนื่องจากพื้นที่เข้าถึงยากหรือเป็นจุดสุ่มเสี่ยง จึงขออนุญาตปิดเคสครับ`;
+    }
+
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        showToast("คัดลอกประกาศไปยังคลิปบอร์ดแล้ว", "success");
+      })
+      .catch(() => {
+        showToast("ไม่สามารถคัดลอกข้อความได้", "error");
+      });
+  };
+
   // Auth Guard & fetch initial data
   useEffect(() => {
     getSession().then((session) => {
@@ -296,6 +332,68 @@ export default function EmergenciesPage() {
                     <ExternalLink size={12} /> คลิกเพื่อดูจุดเกิดเหตุขนาดใหญ่
                   </div>
                 </a>
+
+                {/* Copy Shortcuts */}
+                <div style={{ display: "flex", gap: "10px", marginTop: "-4px" }}>
+                  <button 
+                    onClick={() => handleCopyAnnouncement(call.phone, "not_found")}
+                    className="btn btn-ghost"
+                    style={{
+                      flex: 1,
+                      padding: "8px 0",
+                      border: "1px solid rgba(255, 255, 255, 0.08)",
+                      background: "rgba(255, 255, 255, 0.01)",
+                      borderRadius: "8px",
+                      fontSize: "0.74rem",
+                      color: "rgba(255, 255, 255, 0.75)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "4px",
+                      transition: "all 0.2s"
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.01)";
+                    }}
+                  >
+                    🔍 ไม่พบศพ
+                  </button>
+                  <button 
+                    onClick={() => handleCopyAnnouncement(call.phone, "inaccessible")}
+                    className="btn btn-ghost"
+                    style={{
+                      flex: 1,
+                      padding: "8px 0",
+                      border: "1px solid rgba(255, 255, 255, 0.08)",
+                      background: "rgba(255, 255, 255, 0.01)",
+                      borderRadius: "8px",
+                      fontSize: "0.74rem",
+                      color: "rgba(255, 255, 255, 0.75)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "4px",
+                      transition: "all 0.2s"
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.01)";
+                    }}
+                  >
+                    🚧 เข้าถึงไม่ได้
+                  </button>
+                </div>
 
                 {/* Action button */}
                 <button
