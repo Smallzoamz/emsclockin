@@ -56,3 +56,8 @@ BEGIN
     CREATE POLICY "Allow public update" ON public.complaints FOR UPDATE USING (true);
   END IF;
 END $$;
+
+-- Ensure columns exist if table was already created in a previous migration
+ALTER TABLE public.complaints ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.complaints ADD COLUMN IF NOT EXISTS discord_thread_id TEXT;
+
