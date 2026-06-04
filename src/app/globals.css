@@ -6769,6 +6769,133 @@ body::before {
   }
 }
 
+/* ===== Sidebar Profile Status Window ===== */
+.sidebar-status-window {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  backdrop-filter: blur(16px);
+  position: relative;
+  box-shadow: var(--shadow-card);
+}
+
+.sidebar-status-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+  padding-bottom: 10px;
+}
+
+.sidebar-status-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--border-glow);
+  box-shadow: 0 0 8px var(--accent-glow);
+  object-fit: cover;
+}
+
+.sidebar-status-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-status-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-status-job {
+  font-size: 0.7rem;
+  color: var(--accent-light);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 1px;
+}
+
+/* Stat Bars (HP & EXP) */
+.sidebar-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar-stat-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-stat-header.hp {
+  color: #f87171;
+}
+
+.sidebar-stat-header.exp {
+  color: var(--accent-light);
+}
+
+.sidebar-stat-track {
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  position: relative;
+}
+
+.sidebar-stat-track.hp {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.sidebar-stat-track.exp {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+.sidebar-stat-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.sidebar-stat-fill.hp {
+  background: linear-gradient(90deg, #ef4444, #b91c1c);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+.sidebar-stat-fill.hp.low {
+  animation: hpPulse 1.5s infinite alternate;
+}
+
+.sidebar-stat-fill.exp {
+  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+@keyframes hpPulse {
+  0% {
+    background: linear-gradient(90deg, #ef4444, #b91c1c);
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.3);
+  }
+  100% {
+    background: linear-gradient(90deg, #f87171, #ef4444);
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.7);
+  }
+}
+
 
 
 
