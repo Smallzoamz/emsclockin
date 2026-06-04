@@ -219,6 +219,16 @@ export async function GET() {
 
     const recentShiftsList = [...activeDoctorsList, ...completedDoctors];
 
+    const sanitizedDoctors = (registeredDoctors as RegisteredDoctor[]).map((d: RegisteredDoctor) => {
+      const userRankId = (userRanks as Record<string, string>)[d.email || ""];
+      const rankObj = (doctorRanks as Array<{id: string; name: string}>).find(r => r.id === userRankId);
+      return {
+        name: d.name || "แพทย์ประจำการ",
+        avatarUrl: d.avatarUrl || null,
+        rank: rankObj?.name || d.rank || "นร.แพทย์"
+      };
+    });
+
     // 7. If authenticated, fetch their personal active/pending shifts
     if (userEmail) {
       const { data: activeShift } = await supabase
@@ -246,7 +256,8 @@ export async function GET() {
         stats,
         recruitmentQuota,
         userRanks,
-        doctorRanks
+        doctorRanks,
+        registeredDoctors: sanitizedDoctors
       });
     }
 
@@ -262,7 +273,8 @@ export async function GET() {
       stats,
       recruitmentQuota,
       userRanks,
-      doctorRanks
+      doctorRanks,
+      registeredDoctors: sanitizedDoctors
     });
   } catch (error) {
     console.error("[Shift Status GET] Error:", error);
@@ -274,7 +286,8 @@ export async function GET() {
       activeDoctors: [],
       recentActivity: [],
       stats: { totalDoctors: 0, weeklyShifts: 0 },
-      recruitmentQuota: { target: 30, current: 22, batch: 15, end_date: "2026-06-15T23:59:59+07:00" }
+      recruitmentQuota: { target: 30, current: 22, batch: 15, end_date: "2026-06-15T23:59:59+07:00" },
+      registeredDoctors: []
     });
   }
 }

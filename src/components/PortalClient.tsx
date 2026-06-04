@@ -60,6 +60,11 @@ export function PortalClient({
   const [recentShifts, setRecentShifts] = useState<any[]>([]);
   const [now, setNow] = useState(new Date());
 
+  // Doctor Roster Modal States
+  const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
+  const [registeredDoctors, setRegisteredDoctors] = useState<any[]>([]);
+  const [rosterSearch, setRosterSearch] = useState("");
+
   // Blacklist Search States
   const [blacklistSearch, setBlacklistSearch] = useState("");
   const [blacklistData, setBlacklistData] = useState<any[]>([]);
@@ -180,6 +185,9 @@ export function PortalClient({
           }
           if (data.recentShifts && Array.isArray(data.recentShifts)) {
             setRecentShifts(data.recentShifts);
+          }
+          if (data.registeredDoctors && Array.isArray(data.registeredDoctors)) {
+            setRegisteredDoctors(data.registeredDoctors);
           }
         }
       } catch (err) {
@@ -550,6 +558,229 @@ export function PortalClient({
     return createPortal(modalContent, document.body);
   };
 
+  const renderRosterModal = () => {
+    if (!isRosterModalOpen) return null;
+    const searchLower = rosterSearch.toLowerCase().trim();
+    const filtered = registeredDoctors.filter((doc) => {
+      if (!searchLower) return true;
+      return (
+        (doc.name || "").toLowerCase().includes(searchLower) ||
+        (doc.rank || "").toLowerCase().includes(searchLower)
+      );
+    });
+
+    const modalContent = (
+      <div 
+        className="portal-centered-modal-overlay" 
+        onClick={() => {
+          setIsRosterModalOpen(false);
+          setRosterSearch("");
+        }}
+      >
+        <div 
+          className="portal-centered-modal-card" 
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            maxWidth: "580px",
+            width: "90vw",
+            maxHeight: "85vh",
+            display: "flex",
+            flexDirection: "column",
+            padding: "24px",
+            background: "rgba(15, 23, 42, 0.95)",
+            border: "1px solid var(--border-glow)",
+            boxShadow: "0 0 25px var(--accent-glow)",
+            clipPath: "polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px))"
+          }}
+        >
+          {/* Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Users size={18} style={{ color: "var(--accent)" }} />
+              <h3 style={{ color: "#ffffff", fontSize: "0.95rem", fontWeight: "700", margin: 0, fontFamily: "var(--font-ui)" }}>
+                รายชื่อแพทย์ในสังกัด (Doctor Roster)
+              </h3>
+            </div>
+            <button 
+              onClick={() => {
+                setIsRosterModalOpen(false);
+                setRosterSearch("");
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "rgba(255,255,255,0.5)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "4px",
+                borderRadius: "50%",
+                transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "#ffffff"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Search bar */}
+          <div style={{ position: "relative", marginBottom: "16px" }}>
+            <input 
+              type="text" 
+              placeholder="ค้นหารายชื่อแพทย์ หรือ ตำแหน่ง..." 
+              value={rosterSearch}
+              onChange={(e) => setRosterSearch(e.target.value)}
+              style={{
+                width: "100%",
+                background: "rgba(0, 0, 0, 0.3)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                borderRadius: "6px",
+                padding: "8px 12px 8px 34px",
+                color: "#ffffff",
+                fontSize: "0.75rem",
+                outline: "none",
+                fontFamily: "inherit",
+                transition: "border-color 0.2s"
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = "var(--border-glow)"; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)"; }}
+            />
+            <Search size={14} style={{ position: "absolute", left: "12px", top: "11px", color: "rgba(255,255,255,0.3)" }} />
+          </div>
+
+          {/* Doctors list */}
+          <div style={{ overflowY: "auto", flex: 1, paddingRight: "4px", display: "flex", flexDirection: "column", gap: "8px" }} className="sidebar-nav">
+            {filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "32px 16px", color: "var(--text-muted)", fontSize: "0.78rem" }}>
+                {registeredDoctors.length === 0 ? "กำลังดึงข้อมูลรายชื่อแพทย์..." : "ไม่พบรายชื่อแพทย์ที่ตรงกับการค้นหา"}
+              </div>
+            ) : (
+              filtered.map((doc, idx) => {
+                const isOnline = activeDoctors.some((ad) => ad.name === doc.name);
+                
+                let rankColor = "rgba(255,255,255,0.5)";
+                let rankBg = "rgba(255,255,255,0.03)";
+                let rankBorder = "rgba(255,255,255,0.06)";
+                const rankName = (doc.rank || "").toLowerCase();
+
+                if (rankName.includes("ผอ.") || rankName.includes("ผู้บริหาร") || rankName.includes("director")) {
+                  rankColor = "#f43f5e";
+                  rankBg = "rgba(244, 63, 94, 0.08)";
+                  rankBorder = "rgba(244, 63, 94, 0.25)";
+                } else if (rankName.includes("ชำนาญ") || rankName.includes("specialist")) {
+                  rankColor = "#ea580c";
+                  rankBg = "rgba(234, 88, 12, 0.08)";
+                  rankBorder = "rgba(234, 88, 12, 0.25)";
+                } else if (rankName.includes("นักเรียน") || rankName.includes("นร.") || rankName.includes("student") || rankName.includes("นร.แพทย์")) {
+                  rankColor = "#a3a3a3";
+                  rankBg = "rgba(163, 163, 163, 0.05)";
+                  rankBorder = "rgba(163, 163, 163, 0.15)";
+                } else {
+                  rankColor = "#06b6d4";
+                  rankBg = "rgba(6, 182, 212, 0.08)";
+                  rankBorder = "rgba(6, 182, 212, 0.25)";
+                }
+
+                return (
+                  <div 
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 14px",
+                      background: "rgba(255, 255, 255, 0.01)",
+                      border: "1px solid rgba(255, 255, 255, 0.04)",
+                      borderRadius: "8px",
+                      transition: "all 0.2s"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(234, 88, 12, 0.15)";
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.04)";
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.01)";
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      {doc.avatarUrl ? (
+                        <img 
+                          src={doc.avatarUrl} 
+                          alt={doc.name} 
+                          style={{ width: "36px", height: "36px", borderRadius: "50%", objectFit: "cover", border: "1px solid rgba(255,255,255,0.08)" }} 
+                        />
+                      ) : (
+                        <div style={{ 
+                          width: "36px", 
+                          height: "36px", 
+                          borderRadius: "50%", 
+                          background: "rgba(255,255,255,0.03)", 
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          display: "flex", 
+                          alignItems: "center", 
+                          justifyContent: "center",
+                          fontSize: "1rem"
+                        }}>
+                          🩺
+                        </div>
+                      )}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2.5px" }}>
+                        <span style={{ fontSize: "0.82rem", fontWeight: "600", color: "#ffffff" }}>
+                          {doc.name}
+                        </span>
+                        <span style={{ 
+                          fontSize: "0.62rem", 
+                          color: rankColor, 
+                          background: rankBg, 
+                          border: `1px solid ${rankBorder}`,
+                          padding: "1px 5px",
+                          borderRadius: "3px",
+                          display: "inline-block",
+                          width: "fit-content",
+                          fontWeight: "700",
+                          textTransform: "uppercase"
+                        }}>
+                          {doc.rank || "แพทย์ประจำการ"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ 
+                        width: "6px", 
+                        height: "6px", 
+                        background: isOnline ? "#10b981" : "rgba(255,255,255,0.15)", 
+                        borderRadius: "50%", 
+                        boxShadow: isOnline ? "0 0 6px #10b981" : "none" 
+                      }} />
+                      <span style={{ 
+                        fontSize: "0.6rem", 
+                        color: isOnline ? "#10b981" : "rgba(255,255,255,0.35)", 
+                        fontWeight: "800" 
+                      }}>
+                        {isOnline ? "ACTIVE" : "OFF DUTY"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer stats */}
+          <div style={{ marginTop: "16px", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "var(--text-muted)" }}>
+            <span>แพทย์ในสังกัดทั้งหมด: {registeredDoctors.length} นาย</span>
+            <span>กำลังปฏิบัติหน้าที่: {activeCount !== null ? activeCount : 0} นาย</span>
+          </div>
+        </div>
+      </div>
+    );
+    return createPortal(modalContent, document.body);
+  };
+
   return (
     <div className="portal-container" style={{
       backgroundColor: "transparent",
@@ -596,7 +827,11 @@ export function PortalClient({
             <Clock size={16} />
             <span>ตรวจสอบการเข้า-ออกเวร</span>
           </a>
-          <a href="#roster-section" className="portal-sidebar-link">
+          <a 
+            href="#" 
+            onClick={(e) => { e.preventDefault(); setIsRosterModalOpen(true); }}
+            className="portal-sidebar-link"
+          >
             <Users size={16} />
             <span>รายชื่อแพทย์</span>
           </a>
@@ -1259,6 +1494,9 @@ export function PortalClient({
 
       {/* React Portal Login Modal */}
       {mounted && renderLoginModal()}
+
+      {/* React Portal Doctor Roster Modal */}
+      {mounted && renderRosterModal()}
 
       {/* React Portal Error Modal */}
       {mounted && appErrorModalOpen && createPortal(
