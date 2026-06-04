@@ -446,3 +446,6 @@
 
 ## [2026-06-04 16:05] | File: sql/2026-06-04-create-complaints.sql | Line: 60 | Keyword: Add Missing Database Columns and Fix Complaints API Route | Status: ✅ Complete | Change: Fixed the issue where complaints submitted from Discord did not appear on the website. Added missing columns 'phone' and 'discord_thread_id' to the 'complaints' database schema because the table already existed and 'CREATE TABLE IF NOT EXISTS' didn't add them. Updated the migration SQL script to include idempotent 'ALTER TABLE' queries for future setups, and successfully reloaded the PostgREST schema cache to restore full API functionality.
 
+## [2026-06-04 16:15] | File: multiple | Line: 1 | Keyword: Set Complaint Ticket Banner Image | Status: ✅ Complete | Change: Copied the user's uploaded banner image (media__1780564465179.jpg) to public/images/complaint_banner.jpg and pushed it to git to deploy on Vercel. Updated post-complaint-button.ts and complaint.ts to use the new banner URL for the public ticket button and the private ticket welcomes, and successfully ran the script to post the updated button message.
+
+
