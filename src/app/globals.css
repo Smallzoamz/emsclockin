@@ -1,20 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=VT323&display=swap');
 
 /* ===== Design Tokens ===== */
 :root {
-  --bg-primary: #060a13;
-  --bg-secondary: #0c1220;
-  --bg-card: rgba(15, 23, 42, 0.7);
-  --bg-card-hover: rgba(20, 30, 55, 0.8);
-  --bg-glass: rgba(15, 23, 42, 0.5);
-  --border-subtle: color-mix(in srgb, var(--accent) 12%, transparent);
-  --border-glow: color-mix(in srgb, var(--accent) 30%, transparent);
+  --bg-primary: #080710;
+  --bg-secondary: #0d0b18;
+  --bg-card: rgba(15, 23, 42, 0.65);
+  --bg-card-hover: rgba(20, 30, 55, 0.75);
+  --bg-glass: rgba(15, 23, 42, 0.45);
+  --border-subtle: rgba(234, 88, 12, 0.12);
+  --border-glow: rgba(234, 88, 12, 0.3);
 
-  --accent: #10b981;
-  --accent-light: color-mix(in srgb, var(--accent) 80%, white);
-  --accent-glow: color-mix(in srgb, var(--accent) 40%, transparent);
-  --bg-glow-color: color-mix(in srgb, var(--accent) 6%, transparent);
-  --success: var(--accent);
+  --accent: #ea580c;
+  --accent-light: #fdba74;
+  --accent-glow: rgba(234, 88, 12, 0.4);
+  --bg-glow-color: rgba(234, 88, 12, 0.05);
+  
+  --visor-cyan: #06b6d4;
+  --visor-cyan-glow: rgba(6, 182, 212, 0.4);
+  
+  --success: #10b981;
   --danger: #ef4444;
   --danger-glow: rgba(239, 68, 68, 0.4);
   --warning: #f59e0b;
@@ -30,6 +34,7 @@
 
   --font-ui: 'Outfit', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --font-pixel: 'VT323', monospace;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -63,7 +68,11 @@ body::before {
   inset: 0;
   background:
     radial-gradient(ellipse 80% 60% at 20% 10%, var(--bg-glow-color) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 80% 90%, color-mix(in srgb, var(--accent) 4%, transparent) 0%, transparent 60%);
+    radial-gradient(ellipse 60% 50% at 80% 90%, rgba(6, 182, 212, 0.03) 0%, transparent 60%),
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%),
+    linear-gradient(90deg, rgba(234, 88, 12, 0.015) 1px, transparent 1px),
+    linear-gradient(rgba(234, 88, 12, 0.015) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 4px, 32px 32px, 32px 32px;
   pointer-events: none;
   z-index: 0;
 }
@@ -209,16 +218,24 @@ body::before {
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   padding: 24px;
   backdrop-filter: blur(12px);
   box-shadow: var(--shadow-card);
   transition: all 0.3s ease;
+  clip-path: polygon(
+    0 0, 
+    calc(100% - 12px) 0, 
+    100% 12px, 
+    100% 100%, 
+    12px 100%, 
+    0 calc(100% - 12px)
+  );
 }
 
 .card:hover {
   border-color: var(--border-glow);
-  box-shadow: var(--shadow-elevated);
+  box-shadow: 0 0 15px rgba(234, 88, 12, 0.15), var(--shadow-elevated);
 }
 
 .card-header {
@@ -243,14 +260,14 @@ body::before {
 }
 
 .clock-btn {
-  width: 220px;
-  height: 220px;
+  width: 180px;
+  height: 180px;
   border-radius: var(--radius-full);
-  border: 3px solid var(--accent);
-  background: radial-gradient(circle at center, color-mix(in srgb, var(--accent) 15%, transparent) 0%, transparent 70%);
+  border: 3px solid var(--visor-cyan);
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--visor-cyan) 15%, transparent) 0%, transparent 70%);
   color: var(--accent-light);
   font-family: var(--font-ui);
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   position: relative;
@@ -258,18 +275,18 @@ body::before {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 30px var(--accent-glow), inset 0 0 30px color-mix(in srgb, var(--accent) 5%, transparent);
+  box-shadow: 0 0 25px var(--visor-cyan-glow), inset 0 0 20px color-mix(in srgb, var(--visor-cyan) 5%, transparent);
 }
 
 .clock-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 50px var(--accent-glow), inset 0 0 40px color-mix(in srgb, var(--accent) 10%, transparent);
+  transform: scale(1.04);
+  box-shadow: 0 0 40px var(--visor-cyan-glow), inset 0 0 30px color-mix(in srgb, var(--visor-cyan) 10%, transparent);
 }
 
 .clock-btn:active {
-  transform: scale(0.98);
+  transform: scale(0.96);
 }
 
 .clock-btn.on-duty {
@@ -285,18 +302,18 @@ body::before {
 }
 
 .clock-btn .btn-icon {
-  font-size: 3rem;
+  font-size: 2.2rem;
 }
 
 .clock-btn .btn-label {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 500;
   opacity: 0.8;
 }
 
 @keyframes pulse-danger {
-  0%, 100% { box-shadow: 0 0 30px var(--danger-glow); }
-  50% { box-shadow: 0 0 50px var(--danger-glow), 0 0 80px rgba(239, 68, 68, 0.2); }
+  0%, 100% { box-shadow: 0 0 25px var(--danger-glow); }
+  50% { box-shadow: 0 0 45px var(--danger-glow), 0 0 70px rgba(239, 68, 68, 0.15); }
 }
 
 /* ===== Pulse Ring ===== */
@@ -305,7 +322,7 @@ body::before {
   position: absolute;
   inset: -8px;
   border-radius: var(--radius-full);
-  border: 2px solid var(--accent);
+  border: 2px solid var(--visor-cyan);
   opacity: 0;
   animation: ring-pulse 2s ease-out infinite;
 }
@@ -315,19 +332,19 @@ body::before {
 }
 
 @keyframes ring-pulse {
-  0% { transform: scale(1); opacity: 0.6; }
-  100% { transform: scale(1.15); opacity: 0; }
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.12); opacity: 0; }
 }
 
 /* ===== Live Timer ===== */
 .live-timer {
-  font-family: var(--font-mono);
-  font-size: 3rem;
+  font-family: var(--font-pixel);
+  font-size: 3.5rem;
   font-weight: 700;
   text-align: center;
-  letter-spacing: 4px;
+  letter-spacing: 2px;
   color: var(--accent-light);
-  text-shadow: 0 0 20px var(--accent-glow);
+  text-shadow: 0 0 15px var(--accent-glow);
   padding: 16px 0;
 }
 
