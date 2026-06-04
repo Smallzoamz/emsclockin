@@ -6334,5 +6334,32 @@ body::before {
   }
 }
 
+/* OP Queue Page Responsiveness */
+.op-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .op-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+.op-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .op-layout-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
 
 

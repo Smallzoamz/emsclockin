@@ -454,6 +454,9 @@
 
 ## [2026-06-04 16:50] | File: multiple | Line: 1 | Keyword: Auto Responsive Layout and Mobile Header Optimization | Status: ✅ Complete | Change: Improved layout responsiveness and spacing across the website. Removed overriding inline padding from the main wrapper inside layout.tsx to let the global CSS media query scale margins correctly (32px on desktop, 16px on mobile). Added media queries to hide the clock/calendar header widget and shrink padding on tablet/mobile screens (<= 768px). Updated the emergencies and complaints tab switcher with flex-wrap and cards grid columns using modern min() clamps to prevent layout overflow on narrow mobile screens. Successfully compiled the Next.js production build with zero errors.
 
+## [2026-06-04 17:00] | File: multiple (src/app/dashboard/op/page.tsx, src/app/globals.css) | Line: 1 | Keyword: OP Page Mobile Responsive Layout Optimization | Status: ✅ Complete | Change: Improved layout responsiveness on the OP queue page. Replaced inline grid styles with custom classes (op-stats-grid, op-layout-grid) and added media queries to globals.css. This allows the 4 stats metrics cards ("เข้าเวร", "เหม่อ", "สตอรี่", "ออกเวร") to arrange into a 2x2 grid on mobile viewports (<= 768px), and collapses the main 2-column sidebar layout (Queue Columns + Calendar Panel) into a single column on screens <= 1024px, moving the calendar ("ตารางเวร OP") to the bottom of the page. Pushed changes and successfully compiled Next.js build.
+
+
 
 
 

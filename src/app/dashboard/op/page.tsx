@@ -551,7 +551,7 @@ export default function OpQueuePage() {
 
       {/* Stats Row */}
       {opActive && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "20px" }}>
+        <div className="op-stats-grid">
           {stats.map((s, i) => (
             <div key={i} style={{
               background: "var(--bg-card)", border: "1px solid var(--border-subtle)",
@@ -577,7 +577,7 @@ export default function OpQueuePage() {
       )}
 
       {/* Main Content: 2-column layout */}
-      <div style={{ display: "grid", gridTemplateColumns: opActive ? "1fr 320px" : "1fr", gap: "20px" }}>
+      <div className={opActive ? "op-layout-grid" : ""} style={!opActive ? { display: "grid", gridTemplateColumns: "1fr", gap: "20px" } : undefined}>
         {/* LEFT: Queue Columns or Summary */}
         <div>
           {opActive ? (
