@@ -54,6 +54,27 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
   const [errorMsg, setErrorMsg] = useState("");
   const [typedSignature, setTypedSignature] = useState("");
   const [respondingContract, setRespondingContract] = useState(false);
+  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
+
+  const getProcessedContractContent = (contract: any) => {
+    if (!contract) return "";
+    const formattedDate = new Date(contract.created_at).toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: "Asia/Bangkok"
+    });
+    
+    let bodyText = contract.content || "";
+    bodyText = bodyText
+      .replace(/\[ชื่อแพทย์\]/g, contract.doctor_name)
+      .replace(/\[Discord\]/g, `@${contract.doctor_discord_username}`)
+      .replace(/\[เลขสัญญา\]/g, contract.id ? contract.id.substring(0, 8).toUpperCase() : "XXXX")
+      .replace(/\[ชื่อผู้ลงนาม\]/g, contract.signature_name || "_________________________________")
+      .replace(/\[วันที่\]/g, formattedDate);
+      
+    return bodyText;
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -471,7 +492,8 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
   if (!isOpen || !mounted) return null;
 
   return createPortal(
-    <div className="inbox-drawer-backdrop" onClick={onClose}>
+    <>
+      <div className="inbox-drawer-backdrop" onClick={onClose}>
       <div className="inbox-drawer" onClick={(e) => e.stopPropagation()}>
         {/* Drawer Header */}
         <div className="inbox-drawer-header">
@@ -525,79 +547,21 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
                   <div className="inbox-exam-action-card" style={{ border: "1px solid var(--border-subtle)", padding: "16px", borderRadius: "12px", background: "rgba(255,255,255,0.015)", display: "flex", flexDirection: "column", gap: "14px" }}>
                     <div className="exam-flex-row-center" style={{ color: "var(--accent-light)", fontWeight: 600, fontSize: "0.92rem", display: "flex", alignItems: "center", gap: "8px" }}>
                       <FileText size={18} />
-                      <span>รายละเอียดสัญญาปฏิบัติหน้าที่</span>
+                      <span>เอกสารสัญญาปฏิบัติงานแพทย์</span>
                     </div>
 
-                    <div style={{ maxHeight: "250px", overflowY: "auto", padding: "12px", borderRadius: "8px", background: "rgba(0,0,0,0.2)", fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.6, border: "1px solid rgba(255,255,255,0.04)" }}>
-                      {selectedMessage.medical_contracts.content.split("\n").map((line, idx) => (
-                        <p key={idx} style={{ marginBottom: "8px" }}>{line}</p>
-                      ))}
+                    <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                      โปรดกดปุ่มด้านล่างเพื่อเปิดอ่านรายละเอียดข้อตกลงสัญญาจ้างฉบับจริงในหน้าจอตรงกลาง และดำเนินการลงนามยินยอมหรือตรวจสอบความถูกต้องค่ะ
                     </div>
 
-                    {selectedMessage.medical_contracts.status === "pending" ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "4px" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                          <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>พิมพ์ชื่อ-นามสกุลจริงเพื่อยอมรับและลงนามสัญญา:</label>
-                          <input
-                            type="text"
-                            placeholder="พิมพ์ชื่อ-นามสกุลจริงของคุณที่นี่"
-                            value={typedSignature}
-                            onChange={e => setTypedSignature(e.target.value)}
-                            style={{
-                              padding: "10px",
-                              borderRadius: "8px",
-                              border: "1px solid var(--border-subtle)",
-                              background: "rgba(0,0,0,0.3)",
-                              color: "#fff",
-                              fontSize: "0.88rem"
-                            }}
-                          />
-                        </div>
-                        <div style={{ display: "flex", gap: "10px" }}>
-                          <button
-                            onClick={() => handleRespondContract(selectedMessage, "rejected")}
-                            disabled={respondingContract}
-                            className="btn btn-danger"
-                            style={{ flex: 1, padding: "10px", fontSize: "0.85rem" }}
-                          >
-                            ปฏิเสธสัญญา
-                          </button>
-                          <button
-                            onClick={() => handleRespondContract(selectedMessage, "accepted")}
-                            disabled={respondingContract}
-                            className="btn btn-primary"
-                            style={{ flex: 2, padding: "10px", fontSize: "0.85rem", fontWeight: 600 }}
-                          >
-                            {respondingContract ? "กำลังประทับลงนาม..." : "ยินยอม & ลงนามสัญญา ✅"}
-                          </button>
-                        </div>
-                      </div>
-                    ) : selectedMessage.medical_contracts.status === "accepted" ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "4px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--success)", padding: "10px", background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: "8px", fontSize: "0.85rem" }}>
-                          <CheckCircle size={16} />
-                          <div>
-                            <strong>ลงนามสัญญาเรียบร้อยแล้วค่ะ</strong>
-                            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                              ลงชื่อ: {selectedMessage.medical_contracts.signature_name} | วันที่: {new Date(selectedMessage.medical_contracts.signed_at || "").toLocaleDateString("th-TH")}
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleDownloadDoctorContract(selectedMessage.medical_contracts)}
-                          className="btn btn-primary"
-                          style={{ width: "100%", padding: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontSize: "0.85rem", fontWeight: 600 }}
-                        >
-                          <FileText size={16} style={{ color: "#000" }} />
-                          ดาวน์โหลดเอกสารสัญญา (PNG)
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--danger)", padding: "10px", background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: "8px", fontSize: "0.85rem", marginTop: "4px" }}>
-                        <AlertTriangle size={16} />
-                        <span>คุณได้ทำการปฏิเสธสัญญาฉบับนี้แล้วค่ะ</span>
-                      </div>
-                    )}
+                    <button
+                      onClick={() => setIsContractModalOpen(true)}
+                      className="btn btn-primary"
+                      style={{ width: "100%", padding: "12px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontSize: "0.88rem", fontWeight: 600 }}
+                    >
+                      <FileText size={16} style={{ color: "#000" }} />
+                      <span>เปิดอ่านและลงนามสัญญา 📄</span>
+                    </button>
                   </div>
                 )}
 
@@ -747,7 +711,171 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
           )}
         </div>
       </div>
-    </div>,
+    </div>
+
+    {/* Centered Contract Viewer Modal */}
+    {isContractModalOpen && selectedMessage?.medical_contracts && (
+      <div 
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.85)",
+          backdropFilter: "blur(8px)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 3000,
+          padding: "20px"
+        }}
+        onClick={() => setIsContractModalOpen(false)}
+      >
+        <div 
+          className="card"
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "16px",
+            padding: "24px",
+            maxWidth: "680px",
+            width: "100%",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "20px",
+            maxHeight: "90vh",
+            overflowY: "auto"
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <FileText className="text-[var(--accent)]" size={22} />
+              <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700, color: "#fff" }}>
+                {selectedMessage.medical_contracts.title}
+              </h3>
+            </div>
+            <button 
+              onClick={() => setIsContractModalOpen(false)}
+              style={{ background: "transparent", border: "none", color: "var(--text-muted)", fontSize: "1.5rem", cursor: "pointer" }}
+            >
+              &times;
+            </button>
+          </div>
+
+          {/* Contract Meta Info */}
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "var(--text-secondary)", padding: "10px 14px", background: "rgba(255,255,255,0.02)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.04)" }}>
+            <span>ผู้ส่ง: {selectedMessage.sender_name}</span>
+            <span>สถานะ: {
+              selectedMessage.medical_contracts.status === "accepted" ? "เซ็นสัญญาแล้ว ✅" :
+              selectedMessage.medical_contracts.status === "rejected" ? "ปฏิเสธสัญญา ❌" : "รอเซ็นสัญญา ⏳"
+            }</span>
+          </div>
+
+          {/* Processed Contract Text */}
+          <div style={{ 
+            padding: "20px", 
+            borderRadius: "10px", 
+            background: "rgba(0,0,0,0.4)", 
+            fontSize: "0.92rem", 
+            color: "rgba(255,255,255,0.85)", 
+            lineHeight: 1.7, 
+            border: "1px solid rgba(255,255,255,0.05)",
+            maxHeight: "400px",
+            overflowY: "auto",
+            whiteSpace: "pre-wrap",
+            fontFamily: "var(--font-sans, Arial, sans-serif)"
+          }}>
+            {getProcessedContractContent(selectedMessage.medical_contracts)}
+          </div>
+
+          {/* Signing and Actions Section */}
+          {selectedMessage.medical_contracts.status === "pending" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "16px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: 600 }}>
+                  พิมพ์ชื่อ-นามสกุลจริงของคุณเพื่อลงนามสัญญา:
+                </label>
+                <input
+                  type="text"
+                  placeholder="พิมพ์ชื่อจริง-นามสกุลของคุณที่นี่ (เช่น นายแพทย์ สมชาย ดีงาม)"
+                  value={typedSignature}
+                  onChange={e => setTypedSignature(e.target.value)}
+                  style={{
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)",
+                    background: "rgba(0,0,0,0.3)",
+                    color: "#fff",
+                    fontSize: "0.9rem"
+                  }}
+                />
+              </div>
+              
+              <div style={{ display: "flex", gap: "12px", marginTop: "4px" }}>
+                <button
+                  onClick={() => handleRespondContract(selectedMessage, "rejected")}
+                  disabled={respondingContract}
+                  className="btn btn-danger"
+                  style={{ flex: 1, padding: "12px", fontSize: "0.9rem" }}
+                >
+                  ปฏิเสธข้อตกลงสัญญา
+                </button>
+                <button
+                  onClick={() => handleRespondContract(selectedMessage, "accepted")}
+                  disabled={respondingContract}
+                  className="btn btn-primary"
+                  style={{ flex: 2, padding: "12px", fontSize: "0.9rem", fontWeight: 600 }}
+                >
+                  {respondingContract ? "กำลังประทับลงนาม..." : "ยินยอม & ลงนามสัญญา ✅"}
+                </button>
+              </div>
+            </div>
+          ) : selectedMessage.medical_contracts.status === "accepted" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "var(--success)", padding: "12px", background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: "8px", fontSize: "0.88rem" }}>
+                <CheckCircle size={18} />
+                <div>
+                  <strong>ลงนามสัญญาเรียบร้อยแล้ว</strong>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "3px" }}>
+                    ผู้ลงนาม: {selectedMessage.medical_contracts.signature_name} | วันที่: {new Date(selectedMessage.medical_contracts.signed_at || "").toLocaleDateString("th-TH", { hour: "2-digit", minute: "2-digit" })}
+                  </div>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => handleDownloadDoctorContract(selectedMessage.medical_contracts)}
+                className="btn btn-primary"
+                style={{ width: "100%", padding: "12px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontSize: "0.9rem", fontWeight: 600 }}
+              >
+                <FileText size={18} style={{ color: "#000" }} />
+                ดาวน์โหลดเอกสารสัญญา (PNG)
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "var(--danger)", padding: "12px", background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: "8px", fontSize: "0.88rem", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "16px" }}>
+              <AlertTriangle size={18} />
+              <span>คุณได้ปฏิเสธข้อตกลงสัญญานี้แล้ว</span>
+            </div>
+          )}
+
+          {/* Footer Buttons */}
+          <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: "12px", marginTop: "4px" }}>
+            <button 
+              onClick={() => setIsContractModalOpen(false)}
+              className="btn btn-ghost"
+              style={{ padding: "8px 20px", borderRadius: "8px", fontSize: "0.85rem" }}
+            >
+              ปิดหน้าต่าง
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>,
     document.body
   );
 }
