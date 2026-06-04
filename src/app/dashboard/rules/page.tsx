@@ -191,6 +191,7 @@ export default function RulesPage() {
   const [copiedRuleId, setCopiedRuleId] = useState<string | null>(null);
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
   const [hoveredPinLabel, setHoveredPinLabel] = useState<string | null>(null);
+  const [hoveredPinKey, setHoveredPinKey] = useState<string | null>(null);
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [selectedDrawZone, setSelectedDrawZone] = useState<string>("ในเมือง");
   const [drawMode, setDrawMode] = useState<"polygon" | "pencil" | "pin">("polygon");
@@ -2417,7 +2418,10 @@ export default function RulesPage() {
                                     const isActive = hoveredZone === zoneName;
                                     
                                     return pinsList.map((pin, pinIdx) => {
-                                      const isWiggling = hoveredPinLabel ? (pin.label === hoveredPinLabel) : false;
+                                      const pinKey = `${zoneName}-${pinIdx}`;
+                                      const isWiggling = hoveredPinKey 
+                                        ? (hoveredPinKey === pinKey) 
+                                        : (hoveredPinLabel ? (pin.label === hoveredPinLabel) : false);
                                       return (
                                         <g
                                           key={`pin-${zoneName}-${pinIdx}`}
@@ -2432,6 +2436,7 @@ export default function RulesPage() {
                                               setHoveredZone(zoneName);
                                               if (pin.label) {
                                                 setHoveredPinLabel(pin.label);
+                                                setHoveredPinKey(pinKey);
                                               }
                                             }
                                           }}
@@ -2439,6 +2444,7 @@ export default function RulesPage() {
                                             if (!isEditMode) {
                                               setHoveredZone(null);
                                               setHoveredPinLabel(null);
+                                              setHoveredPinKey(null);
                                             }
                                           }}
                                         >
@@ -3786,7 +3792,10 @@ export default function RulesPage() {
                           const isActive = hoveredZone === zoneName;
                           
                           return pinsList.map((pin, pinIdx) => {
-                            const isWiggling = hoveredPinLabel ? (pin.label === hoveredPinLabel) : false;
+                            const pinKey = zoneName + "-" + pinIdx;
+                            const isWiggling = hoveredPinKey 
+                              ? (hoveredPinKey === pinKey) 
+                              : (hoveredPinLabel ? (pin.label === hoveredPinLabel) : false);
                             const labelText = pin.label || zoneName;
                             return (
                               <g
@@ -3801,11 +3810,13 @@ export default function RulesPage() {
                                   setHoveredZone(zoneName);
                                   if (pin.label) {
                                     setHoveredPinLabel(pin.label);
+                                    setHoveredPinKey(pinKey);
                                   }
                                 }}
                                 onMouseLeave={() => {
                                   setHoveredZone(null);
                                   setHoveredPinLabel(null);
+                                  setHoveredPinKey(null);
                                 }}
                               >
                                 <circle 
