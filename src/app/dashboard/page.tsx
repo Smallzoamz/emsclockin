@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { supabaseClient } from "@/lib/supabase-client";
+import { Phone, Check, ExternalLink, Siren } from "lucide-react";
 import { getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -54,6 +56,9 @@ export default function DashboardPage() {
   const [shiftsHistory, setShiftsHistory] = useState<any[]>([]);
   const [totalShiftsCount, setTotalShiftsCount] = useState(0);
   const [currentMonthFilter, setCurrentMonthFilter] = useState("");
+
+  // Emergency Calls state
+  const [emergencyCalls, setEmergencyCalls] = useState<any[]>([]);
 
   // Mentorship System State
   const confirm = useConfirm();
@@ -164,6 +169,119 @@ export default function DashboardPage() {
       console.error("Failed to fetch shifts history:", err);
     }
   }, []);
+
+  // Synthesize alarm sound for emergency notifications
+  const playEmergencyChime = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Node 1 (High alarm tone)
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.type = "sawtooth";
+      osc1.frequency.setValueAtTime(880.00, audioCtx.currentTime);
+      gain1.gain.setValueAtTime(0.04, audioCtx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.start();
+      osc1.stop(audioCtx.currentTime + 0.35);
+      
+      // Node 2 (Siren osc)
+      setTimeout(() => {
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = "sawtooth";
+        osc2.frequency.setValueAtTime(1100.00, audioCtx.currentTime);
+        gain2.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.45);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start();
+        osc2.stop(audioCtx.currentTime + 0.45);
+      }, 150);
+    } catch (e) {
+      console.warn("AudioContext blocked or failed to play chime:", e);
+    }
+  };
+
+  // Fetch pending emergency notifications
+  const fetchEmergencyCalls = useCallback(async () => {
+    try {
+      const { data, error } = await supabaseClient
+        .from("emergency_calls")
+        .select("*")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false }); // Newest first
+      
+      if (!error && data) {
+        setEmergencyCalls(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch emergency calls:", err);
+    }
+  }, []);
+
+  const handleResolveEmergency = async (id: string) => {
+    try {
+      const res = await fetch(`/api/emergency-calls/${id}/resolve`, {
+        method: "POST"
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("ช่วยเหลือสำเร็จแล้ว", "success");
+        setEmergencyCalls(prev => prev.filter(c => c.id !== id));
+      } else {
+        showToast(data.error || "เกิดข้อผิดพลาด", "error");
+      }
+    } catch {
+      showToast("เกิดข้อผิดพลาดในการบันทึกข้อมูล", "error");
+    }
+  };
+
+  // Setup Supabase Realtime subscription for emergency calls
+  useEffect(() => {
+    fetchEmergencyCalls();
+
+    const channel = supabaseClient
+      .channel("realtime-emergency-calls")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "emergency_calls",
+        },
+        (payload: any) => {
+          if (payload.eventType === "INSERT") {
+            const newCall = payload.new;
+            if (newCall && newCall.status === "pending") {
+              setEmergencyCalls(prev => [newCall, ...prev]);
+              playEmergencyChime();
+            }
+          } else if (payload.eventType === "UPDATE") {
+            const updatedCall = payload.new;
+            if (updatedCall) {
+              if (updatedCall.status !== "pending") {
+                setEmergencyCalls(prev => prev.filter(c => c.id !== updatedCall.id));
+              } else {
+                setEmergencyCalls(prev => prev.map(c => c.id === updatedCall.id ? updatedCall : c));
+              }
+            }
+          } else if (payload.eventType === "DELETE") {
+            const deletedCall = payload.old;
+            if (deletedCall) {
+              setEmergencyCalls(prev => prev.filter(c => c.id !== deletedCall.id));
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabaseClient.removeChannel(channel);
+    };
+  }, [fetchEmergencyCalls]);
 
   const fetchWeekly = useCallback(async () => {
     try {
@@ -757,75 +875,171 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Col 2: Online Roster + Shortcuts (1/3 width) */}
+        {/* Col 2: Online Roster + Shortcuts OR Emergency Alerts (1/3 width) */}
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          {/* Active Co-workers */}
-          <div className="weekly-bonus-summary-card" style={{ flex: 1 }}>
-            <div className="active-shift-card-header" style={{ marginBottom: "12px" }}>
-              <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#fff" }}>
-                เพื่อนร่วมเวรตอนนี้ (On-Duty Roster)
-              </span>
-            </div>
+          {emergencyCalls.length > 0 ? (
+            /* Emergency Alerts Panel */
+            <div className="weekly-bonus-summary-card" style={{ flex: 1, border: "1px solid rgba(239, 68, 68, 0.3)", boxShadow: "0 0 16px rgba(239, 68, 68, 0.15)" }}>
+              <div className="active-shift-card-header" style={{ marginBottom: "12px", borderBottom: "1px solid rgba(239, 68, 68, 0.2)", paddingBottom: "8px" }}>
+                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#f87171", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Siren size={18} style={{ color: "#ef4444", animation: "pulse 1.5s infinite" }} />
+                  มีผู้สลบต้องการความช่วยเหลือด่วน! ({emergencyCalls.length} เคส)
+                </span>
+              </div>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxHeight: "420px", overflowY: "auto", paddingRight: "4px" }} className="portal-custom-scrollbar">
+                {emergencyCalls.map((call) => {
+                  const minutesElapsed = Math.max(0, Math.floor((Date.now() - new Date(call.created_at).getTime()) / 60000));
+                  const timeText = minutesElapsed === 0 ? "เมื่อครู่นี้" : `แจ้งเมื่อ ${minutesElapsed} นาทีที่แล้ว`;
+                  
+                  return (
+                    <div 
+                      key={call.id} 
+                      style={{ 
+                        background: "rgba(239, 68, 68, 0.03)", 
+                        border: "1px solid rgba(239, 68, 68, 0.15)", 
+                        borderRadius: "10px", 
+                        padding: "14px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                        transition: "all 0.25s"
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <Phone size={14} style={{ color: "var(--accent-light)" }} />
+                          <span style={{ fontSize: "0.82rem", fontWeight: "bold", color: "#fff" }}>{call.phone}</span>
+                        </div>
+                        <span style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)" }}>{timeText}</span>
+                      </div>
+                      
+                      {/* Image Thumbnail with zoom on click */}
+                      <a 
+                        href={call.image_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ 
+                          width: "100%", 
+                          height: "140px", 
+                          borderRadius: "6px", 
+                          overflow: "hidden", 
+                          border: "1px solid rgba(255,255,255,0.06)",
+                          position: "relative",
+                          display: "block"
+                        }}
+                      >
+                        <img 
+                          src={call.image_url} 
+                          alt="Emergency Spot" 
+                          style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s" }}
+                          onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+                          onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                        />
+                        <div style={{ position: "absolute", bottom: "6px", right: "6px", background: "rgba(0,0,0,0.6)", padding: "2px 6px", borderRadius: "4px", fontSize: "0.6rem", color: "#fff", display: "flex", alignItems: "center", gap: "4px" }}>
+                          <ExternalLink size={10} /> ดูจุดแจ้งเหตุขนาดเต็ม
+                        </div>
+                      </a>
 
-            <div className="roster-list">
-              {activeDoctors.length === 0 ? (
-                <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", padding: "16px 0", textAlign: "center" }}>
-                  ไม่มีหมอขึ้นเวรอยู่ในขณะนี้
-                </div>
-              ) : (
-                activeDoctors.map((doc, idx) => (
-                  <div key={idx} className="roster-doctor-item">
-                    {doc.avatarUrl ? (
-                      <img src={doc.avatarUrl} alt={doc.name} className="roster-doctor-avatar" />
-                    ) : (
-                      <div className="roster-doctor-fallback">🩺</div>
-                    )}
-                    <div className="roster-doctor-info">
-                      <div className="roster-doctor-name">{doc.name}</div>
-                      <div className="roster-doctor-rank">{doc.rank}</div>
+                      <button
+                        onClick={() => handleResolveEmergency(call.id)}
+                        style={{
+                          width: "100%",
+                          padding: "8px 0",
+                          background: "var(--accent)",
+                          color: "#060a13",
+                          border: "none",
+                          borderRadius: "6px",
+                          fontSize: "0.74rem",
+                          fontWeight: "bold",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = "var(--accent-light)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "var(--accent)"}
+                      >
+                        <Check size={14} strokeWidth={3} /> ช่วยเหลือสำเร็จแล้ว
+                      </button>
                     </div>
-                    <div className="roster-status-indicator" />
-                  </div>
-                ))
-              )}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Active Co-workers */}
+              <div className="weekly-bonus-summary-card" style={{ flex: 1 }}>
+                <div className="active-shift-card-header" style={{ marginBottom: "12px" }}>
+                  <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#fff" }}>
+                    เพื่อนร่วมเวรตอนนี้ (On-Duty Roster)
+                  </span>
+                </div>
 
-          {/* Quick Menu shortcuts */}
-          <div className="weekly-bonus-summary-card">
-            <div className="active-shift-card-header" style={{ marginBottom: "12px" }}>
-              <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#fff" }}>
-                เมนูลัดของหน่วยงาน
-              </span>
-            </div>
+                <div className="roster-list">
+                  {activeDoctors.length === 0 ? (
+                    <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", padding: "16px 0", textAlign: "center" }}>
+                      ไม่มีหมอขึ้นเวรอยู่ในขณะนี้
+                    </div>
+                  ) : (
+                    activeDoctors.map((doc, idx) => (
+                      <div key={idx} className="roster-doctor-item">
+                        {doc.avatarUrl ? (
+                          <img src={doc.avatarUrl} alt={doc.name} className="roster-doctor-avatar" />
+                        ) : (
+                          <div className="roster-doctor-fallback">🩺</div>
+                        )}
+                        <div className="roster-doctor-info">
+                          <div className="roster-doctor-name">{doc.name}</div>
+                          <div className="roster-doctor-rank">{doc.rank}</div>
+                        </div>
+                        <div className="roster-status-indicator" />
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
 
-            <div className="shortcuts-grid">
-              <Link href="/dashboard/op" className="shortcut-item-btn">
-                <HospitalIcon size={20} className="shortcut-item-icon" />
-                <span>จัดการเวร OP</span>
-              </Link>
-              <Link href="/dashboard/my-bonus" className="shortcut-item-btn">
-                <MoneyIcon size={20} className="shortcut-item-icon" />
-                <span>โบนัสของฉัน</span>
-              </Link>
-              <Link href="/dashboard/history" className="shortcut-item-btn">
-                <ChartBarIcon size={20} className="shortcut-item-icon" />
-                <span>ประวัติสะสม</span>
-              </Link>
-              <Link href="/dashboard/announcements" className="shortcut-item-btn">
-                <MegaphoneIcon size={20} className="shortcut-item-icon" />
-                <span>ข้อความประกาศ</span>
-              </Link>
-              <Link href="/dashboard/rules" className="shortcut-item-btn">
-                <FileTextIcon size={20} className="shortcut-item-icon" />
-                <span>กฎระเบียบแพทย์</span>
-              </Link>
-              <Link href="/dashboard/ranking" className="shortcut-item-btn">
-                <TrophyIcon size={20} className="shortcut-item-icon" />
-                <span>จัดอันดับสัปดาห์</span>
-              </Link>
-            </div>
-          </div>
+              {/* Quick Menu shortcuts */}
+              <div className="weekly-bonus-summary-card">
+                <div className="active-shift-card-header" style={{ marginBottom: "12px" }}>
+                  <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#fff" }}>
+                    เมนูลัดของหน่วยงาน
+                  </span>
+                </div>
+
+                <div className="shortcuts-grid">
+                  <Link href="/dashboard/op" className="shortcut-item-btn">
+                    <HospitalIcon size={20} className="shortcut-item-icon" />
+                    <span>จัดการเวร OP</span>
+                  </Link>
+                  <Link href="/dashboard/my-bonus" className="shortcut-item-btn">
+                    <MoneyIcon size={20} className="shortcut-item-icon" />
+                    <span>โบนัสของฉัน</span>
+                  </Link>
+                  <Link href="/dashboard/history" className="shortcut-item-btn">
+                    <ChartBarIcon size={20} className="shortcut-item-icon" />
+                    <span>ประวัติสะสม</span>
+                  </Link>
+                  <Link href="/dashboard/announcements" className="shortcut-item-btn">
+                    <MegaphoneIcon size={20} className="shortcut-item-icon" />
+                    <span>ข้อความประกาศ</span>
+                  </Link>
+                  <Link href="/dashboard/rules" className="shortcut-item-btn">
+                    <FileTextIcon size={20} className="shortcut-item-icon" />
+                    <span>กฎระเบียบแพทย์</span>
+                  </Link>
+                  <Link href="/dashboard/ranking" className="shortcut-item-btn">
+                    <TrophyIcon size={20} className="shortcut-item-icon" />
+                    <span>จัดอันดับสัปดาห์</span>
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
       </div>

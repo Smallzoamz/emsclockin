@@ -103,6 +103,9 @@ export function PortalClient({
   const [selectedNews, setSelectedNews] = useState<any | null>(null);
   const [isNewsModalOpen, setIsNewsModalOpen] = useState(false);
 
+  // Contact us modal state
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+
   // Image Slideshow Banner State
   const [activeImageSlide, setActiveImageSlide] = useState(0);
 
@@ -601,7 +604,11 @@ export function PortalClient({
             <BookOpen size={16} />
             <span>กฎระเบียบหน่วยงาน</span>
           </a>
-          <a href="#footer" className="portal-sidebar-link">
+          <a 
+            href="#" 
+            onClick={(e) => { e.preventDefault(); setIsContactModalOpen(true); }} 
+            className="portal-sidebar-link"
+          >
             <Phone size={16} />
             <span>ติดต่อเรา</span>
           </a>
@@ -661,7 +668,13 @@ export function PortalClient({
               <a href="#news-section" className="portal-header-nav-link">ข่าวสาร</a>
               <a href="#recruitment-section" className="portal-header-nav-link">ประกาศรับสมัคร</a>
               <a href="/dashboard/rules" className="portal-header-nav-link">เกี่ยวกับเรา</a>
-              <a href="#footer" className="portal-header-nav-link">ติดต่อเรา</a>
+              <a 
+                href="#" 
+                onClick={(e) => { e.preventDefault(); setIsContactModalOpen(true); }} 
+                className="portal-header-nav-link"
+              >
+                ติดต่อเรา
+              </a>
             </div>
 
             {/* Header right: Clock & Profile */}
@@ -1955,6 +1968,275 @@ export function PortalClient({
                   ปิดหน้าต่าง
                 </button>
               </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* React Portal Contact Us Modal */}
+      {mounted && isContactModalOpen && createPortal(
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(3, 7, 18, 0.8)",
+          backdropFilter: "blur(12px)",
+          zIndex: 110000,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "20px"
+        }}
+        onClick={() => setIsContactModalOpen(false)}
+        >
+          <div style={{
+            width: "100%",
+            maxWidth: "480px",
+            background: "linear-gradient(to bottom, #090f1d, #0d1527)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            boxShadow: "0 24px 48px rgba(0, 0, 0, 0.5), 0 0 24px rgba(16, 185, 129, 0.05)",
+            borderRadius: "16px",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            animation: "slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1)"
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "20px 24px",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+              background: "rgba(3, 7, 18, 0.4)"
+            }}>
+              <div>
+                <h3 style={{ color: "#ffffff", fontSize: "0.95rem", fontWeight: "700", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Phone size={16} style={{ color: "var(--accent)" }} />
+                  ช่องทางการติดต่อหน่วยงาน (Contact Us)
+                </h3>
+                <p style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: "0.68rem", margin: "2px 0 0 0" }}>
+                  ติดต่อสอบถาม ร้องเรียน หรือประสานงานพัฒนาหน่วยงาน
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsContactModalOpen(false)} 
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "rgba(255, 255, 255, 0.4)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "4px",
+                  borderRadius: "50%",
+                  transition: "all 0.2s"
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = "#ffffff"; e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.4)"; e.currentTarget.style.background = "transparent"; }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
+              
+              {/* Channel 1: Discord DMs */}
+              <div>
+                <div style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: "8px", 
+                  fontSize: "0.78rem", 
+                  color: "var(--accent-light)", 
+                  fontWeight: "bold",
+                  marginBottom: "12px",
+                  borderBottom: "1px solid rgba(255, 255, 255, 0.04)",
+                  paddingBottom: "6px"
+                }}>
+                  <svg viewBox="0 0 127.14 96.36" fill="currentColor" style={{ width: "14px", height: "14px" }}>
+                    <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36a77.7,77.7,0,0,0,6.63-10.85,68.43,68.43,0,0,1-10.4-5c.87-.64,1.71-1.32,2.51-2a75.76,75.76,0,0,0,72.76,0c.8,0.71,1.64,1.39,2.51,2a68.43,68.43,0,0,1-10.4,5,77.7,77.7,0,0,0,6.63,10.85,105.73,105.73,0,0,0,31.06-18.83C129.54,49.33,123.63,26.47,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.83,46,53.83,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.07,46,96.07,53,91,65.69,84.69,65.69Z"/>
+                  </svg>
+                  <span>ช่องทางที่ 1: ติดต่อฝ่ายบริหาร (Discord DM)</span>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {/* Director */}
+                  <a 
+                    href="https://discord.com/users/956866340474478642" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 16px",
+                      background: "rgba(88, 101, 242, 0.08)",
+                      border: "1px solid rgba(88, 101, 242, 0.2)",
+                      borderRadius: "8px",
+                      color: "#ffffff",
+                      textDecoration: "none",
+                      transition: "all 0.25s",
+                      cursor: "pointer"
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = "rgba(88, 101, 242, 0.15)";
+                      e.currentTarget.style.borderColor = "rgba(88, 101, 242, 0.4)";
+                      e.currentTarget.style.transform = "translateY(-1px)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = "rgba(88, 101, 242, 0.08)";
+                      e.currentTarget.style.borderColor = "rgba(88, 101, 242, 0.2)";
+                      e.currentTarget.style.transform = "translateY(0)";
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{ 
+                        width: "36px", 
+                        height: "36px", 
+                        borderRadius: "50%", 
+                        background: "rgba(88, 101, 242, 0.15)", 
+                        display: "flex", 
+                        alignItems: "center", 
+                        justifyContent: "center" 
+                      }}>
+                        <User size={18} style={{ color: "#5865F2" }} />
+                      </div>
+                      <div style={{ textAlign: "left" }}>
+                        <div style={{ fontSize: "0.8rem", fontWeight: "bold" }}>ผู้อำนวยการ (ผอ.)</div>
+                        <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)" }}>Discord ID: 956866340474478642</div>
+                      </div>
+                    </div>
+                    <ExternalLink size={14} style={{ color: "rgba(255,255,255,0.3)" }} />
+                  </a>
+
+                  {/* Deputy Director */}
+                  <a 
+                    href="https://discord.com/users/1443821449621016626" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 16px",
+                      background: "rgba(88, 101, 242, 0.08)",
+                      border: "1px solid rgba(88, 101, 242, 0.2)",
+                      borderRadius: "8px",
+                      color: "#ffffff",
+                      textDecoration: "none",
+                      transition: "all 0.25s",
+                      cursor: "pointer"
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = "rgba(88, 101, 242, 0.15)";
+                      e.currentTarget.style.borderColor = "rgba(88, 101, 242, 0.4)";
+                      e.currentTarget.style.transform = "translateY(-1px)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = "rgba(88, 101, 242, 0.08)";
+                      e.currentTarget.style.borderColor = "rgba(88, 101, 242, 0.2)";
+                      e.currentTarget.style.transform = "translateY(0)";
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{ 
+                        width: "36px", 
+                        height: "36px", 
+                        borderRadius: "50%", 
+                        background: "rgba(88, 101, 242, 0.15)", 
+                        display: "flex", 
+                        alignItems: "center", 
+                        justifyContent: "center" 
+                      }}>
+                        <User size={18} style={{ color: "#5865F2" }} />
+                      </div>
+                      <div style={{ textAlign: "left" }}>
+                        <div style={{ fontSize: "0.8rem", fontWeight: "bold" }}>รองผู้อำนวยการ (รอง ผอ.)</div>
+                        <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)" }}>Discord ID: 1443821449621016626</div>
+                      </div>
+                    </div>
+                    <ExternalLink size={14} style={{ color: "rgba(255,255,255,0.3)" }} />
+                  </a>
+                </div>
+
+              </div>
+
+              {/* Channel 2: Facebook */}
+              <div>
+                <div style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: "8px", 
+                  fontSize: "0.78rem", 
+                  color: "var(--accent-light)", 
+                  fontWeight: "bold",
+                  marginBottom: "12px",
+                  borderBottom: "1px solid rgba(255, 255, 255, 0.04)",
+                  paddingBottom: "6px"
+                }}>
+                  <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: "14px", height: "14px" }}>
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                  <span>ช่องทางที่ 2: ติดต่อผู้พัฒนาหน่วยงาน (Facebook)</span>
+                </div>
+
+                <a 
+                  href="https://www.facebook.com/ohm.noxoradev" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px 16px",
+                    background: "rgba(24, 119, 242, 0.08)",
+                    border: "1px solid rgba(24, 119, 242, 0.2)",
+                    borderRadius: "8px",
+                    color: "#ffffff",
+                    textDecoration: "none",
+                    transition: "all 0.25s",
+                    cursor: "pointer"
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = "rgba(24, 119, 242, 0.15)";
+                    e.currentTarget.style.borderColor = "rgba(24, 119, 242, 0.4)";
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = "rgba(24, 119, 242, 0.08)";
+                    e.currentTarget.style.borderColor = "rgba(24, 119, 242, 0.2)";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ 
+                      width: "36px", 
+                      height: "36px", 
+                      borderRadius: "50%", 
+                      background: "rgba(24, 119, 242, 0.15)", 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center" 
+                    }}>
+                      <svg viewBox="0 0 24 24" fill="#1877F2" style={{ width: "18px", height: "18px" }}>
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                      </svg>
+                    </div>
+                    <div style={{ textAlign: "left" }}>
+                      <div style={{ fontSize: "0.8rem", fontWeight: "bold" }}>Noxora Dev (Ohm)</div>
+                      <div style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)" }}>Facebook: ohm.noxoradev</div>
+                    </div>
+                  </div>
+                  <ExternalLink size={14} style={{ color: "rgba(255,255,255,0.3)" }} />
+                </a>
+
+              </div>
+
             </div>
           </div>
         </div>,
