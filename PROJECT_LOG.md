@@ -448,4 +448,7 @@
 
 ## [2026-06-04 16:15] | File: multiple | Line: 1 | Keyword: Set Complaint Ticket Banner Image | Status: ✅ Complete | Change: Copied the user's uploaded banner image (media__1780564465179.jpg) to public/images/complaint_banner.jpg and pushed it to git to deploy on Vercel. Updated post-complaint-button.ts and complaint.ts to use the new banner URL for the public ticket button and the private ticket welcomes, and successfully ran the script to post the updated button message.
 
+## [2026-06-04 16:18] | File: multiple (post-complaint-button.ts, complaint.ts) | Line: 1 | Keyword: Complaint Ticket Banner Cache Bypass | Status: ✅ Complete | Change: Appended a version query parameter (?v=2) to the hosted complaint banner image URL inside both post-complaint-button.ts and complaint.ts to bypass Discord's proxy cache which had cached the initial 404 response. Successfully ran the poster script to send a new message with the rendering image.
+
+
 
