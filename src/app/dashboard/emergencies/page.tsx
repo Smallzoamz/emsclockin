@@ -115,11 +115,12 @@ export default function EmergenciesPage() {
   }, [loading]);
 
   const handleCopyAnnouncement = (phone: string, type: "not_found" | "inaccessible") => {
+    const cleanPhone = phone.replace(/\D/g, "");
     let text = "";
     if (type === "not_found") {
-      text = `${commandPrefix} ทางทีมแพทย์ได้รุดไปตรวจสอบบริเวณพื้นที่ตามรูปภาพที่แจ้งเหตุเข้ามา (เบอร์โทร: ${phone}) แต่ไม่พบร่างผู้ได้รับบาดเจ็บในจุดดังกล่าว จึงขออนุญาตปิดเคสครับ`;
+      text = `${commandPrefix} คนไข้เบอร์ ${cleanPhone} แพทย์ไม่พบผู้สลบ รบกวนแจ้งในห้องขอความช่วยเหลือแพทย์ในนิตยสารประเทศ ขอบคุณครับ/ค่ะ`;
     } else {
-      text = `${commandPrefix} ทางทีมแพทย์ได้รุดไปตรวจสอบบริเวณพื้นที่ตามรูปภาพที่แจ้งเหตุเข้ามา (เบอร์โทร: ${phone}) แต่ไม่สามารถเข้าถึงตัวผู้ป่วยได้เนื่องจากพื้นที่เข้าถึงยากหรือเป็นจุดสุ่มเสี่ยง จึงขออนุญาตปิดเคสครับ`;
+      text = `${commandPrefix} คนไข้เบอร์ ${cleanPhone} เนื่องจากแพทย์ไม่สามารถเข้าถึงพื้นที่เพื่อทำการรักษาได้ รบกวนเปิด Ticket แจ้ง Admin เพื่อรับการช่วยเหลือ ขอบคุณครับ/ค่ะ`;
     }
 
     navigator.clipboard.writeText(text)
