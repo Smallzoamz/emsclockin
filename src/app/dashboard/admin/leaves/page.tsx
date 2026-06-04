@@ -139,7 +139,7 @@ export default function LeaveManagementPage() {
         if (settingsData.settings.medical_contract_default_template) {
           setNewContractContent(settingsData.settings.medical_contract_default_template);
         } else {
-          setNewContractContent(`สัญญาปฏิบัติหน้าที่บุคลากรทางการแพทย์\n\nเขียนที่ ศูนย์ปฏิบัติการแพทย์กู้ภัย FiveM EMS Service\nวันที่ [วันที่]\n\nสัญญาฉบับนี้ทำขึ้นระหว่าง ศูนย์ปฏิบัติการแพทย์กู้ภัย FiveM EMS Service ฝ่ายหนึ่ง กับ [ชื่อแพทย์] ([Discord]) อีกฝ่ายหนึ่ง\n\nโดยทั้งสองฝ่ายตกลงยินยอมปฏิบัติตามเงื่อนไขดังนี้:\n1. ผู้ปฏิบัติการตกลงที่จะเข้าเวรปฏิบัติหน้าที่ช่วยชีวิตผู้ป่วยอย่างเต็มความสามารถ\n2. รักษาวินัย มารยาท และความสามัคคีในองค์กร\n3. ปฏิบัติตามกฎระเบียบของโรงพยาบาลและคำสั่งของผู้อำนวยการอย่างเคร่งครัด`);
+          setNewContractContent(`เลขที่สัญญา : FCMU-EMS-[เลขสัญญา]\n\nข้าพเจ้า [ชื่อผู้ลงนาม]\nชื่อในเมือง (Character Name) : [ชื่อแพทย์]\n\nมีความประสงค์เข้าร่วมปฏิบัติหน้าที่เป็นบุคลากรทางการแพทย์ภายใต้หน่วยงาน Fox Community Medical Unit (FCMU) และตกลงตามเงื่อนไขดังต่อไปนี้\n\nข้อกำหนด\n1. ข้าพเจ้าตกลงปฏิบัติหน้าที่ในสังกัด FCMU เป็นระยะเวลาไม่น้อยกว่า 30 วัน นับจากวันที่ลงนามในสัญญา\n2. ตลอดระยะเวลาของสัญญา ข้าพเจ้าจะปฏิบัติตามกฎ ระเบียบ และคำสั่งของหน่วยงานอย่างเคร่งครัด\n3. หากข้าพเจ้าลาออก ย้ายหน่วยงาน หรือกระทำการใด ๆ ที่ส่งผลให้พ้นสภาพการเป็นบุคลากรทางการแพทย์ก่อนครบกำหนดสัญญา 30 วัน จะถือว่าเป็นการ ผิดสัญญา\n4. ผู้ที่ผิดสัญญาจะต้องเลือกดำเนินการอย่างใดอย่างหนึ่ง ดังต่อไปนี้\n   • ชำระค่าฉีกสัญญาเป็นจำนวน 5,000,000 บาท (5M)\n   • ยินยอมให้ดำเนินการ รีเซ็ตตัวละคร (Character Reset) ตามระเบียบของเซิร์ฟเวอร์\n5. ในกรณีที่พ้นสภาพจากตำแหน่งเนื่องจากการปลดออกโดยคำสั่งผู้บังคับบัญชา หรือมีเหตุอันสมควรที่ได้รับการอนุมัติจากผู้บริหารหน่วยงาน ให้ถือเป็นดุลยพินิจของผู้บริหารในการยกเว้นค่าฉีกสัญญา\n\nข้าพเจ้าได้อ่าน ทำความเข้าใจ และยอมรับเงื่อนไขทั้งหมดข้างต้นโดยไม่มีข้อโต้แย้งใด ๆ`);
         }
       }
     } catch (err: any) {
@@ -764,12 +764,12 @@ export default function LeaveManagementPage() {
         // Title Header
         ctx.textAlign = "center";
         ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 28px Arial, sans-serif";
-        ctx.fillText("FIVEM EMS SERVICE", canvas.width / 2, 120);
+        ctx.font = "bold 26px Arial, sans-serif";
+        ctx.fillText("FOX COMMUNITY MEDICAL UNIT", canvas.width / 2, 120);
 
         ctx.fillStyle = themeAccentColor || "#10b981";
         ctx.font = "bold 13px Arial, sans-serif";
-        ctx.fillText("ศูนย์ปฏิบัติการแพทย์กู้ภัยและรักษาพยาบาลฉุกเฉิน", canvas.width / 2, 155);
+        ctx.fillText("Fox Community Medical Unit (FCMU)", canvas.width / 2, 155);
 
         // Divider
         ctx.strokeStyle = "rgba(255,255,255,0.1)";
@@ -801,6 +801,8 @@ export default function LeaveManagementPage() {
         bodyText = bodyText
           .replace(/\[ชื่อแพทย์\]/g, selectedContractForDoc.doctor_name)
           .replace(/\[Discord\]/g, `@${selectedContractForDoc.doctor_discord_username}`)
+          .replace(/\[เลขสัญญา\]/g, selectedContractForDoc.id ? selectedContractForDoc.id.substring(0, 8).toUpperCase() : "XXXX")
+          .replace(/\[ชื่อผู้ลงนาม\]/g, selectedContractForDoc.signature_name || "_________________________________")
           .replace(/\[วันที่\]/g, formattedDate);
 
         // Draw body texts

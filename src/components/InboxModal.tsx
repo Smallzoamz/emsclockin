@@ -258,12 +258,12 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
     // Title
     ctx.textAlign = "center";
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 28px Arial, sans-serif";
-    ctx.fillText("FIVEM EMS SERVICE", canvas.width / 2, 120);
+    ctx.font = "bold 26px Arial, sans-serif";
+    ctx.fillText("FOX COMMUNITY MEDICAL UNIT", canvas.width / 2, 120);
 
     ctx.fillStyle = "#10b981";
     ctx.font = "bold 13px Arial, sans-serif";
-    ctx.fillText("ศูนย์ปฏิบัติการแพทย์กู้ภัยและรักษาพยาบาลฉุกเฉิน", canvas.width / 2, 155);
+    ctx.fillText("Fox Community Medical Unit (FCMU)", canvas.width / 2, 155);
 
     // Divider
     ctx.strokeStyle = "rgba(255,255,255,0.1)";
@@ -295,6 +295,8 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
     bodyText = bodyText
       .replace(/\[ชื่อแพทย์\]/g, contract.doctor_name)
       .replace(/\[Discord\]/g, `@${contract.doctor_discord_username}`)
+      .replace(/\[เลขสัญญา\]/g, contract.id ? contract.id.substring(0, 8).toUpperCase() : "XXXX")
+      .replace(/\[ชื่อผู้ลงนาม\]/g, contract.signature_name || "_________________________________")
       .replace(/\[วันที่\]/g, formattedDate);
 
     // Wrap and draw text
