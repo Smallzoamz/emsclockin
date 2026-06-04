@@ -4,13 +4,16 @@ import { useState, useEffect, useCallback } from "react";
 import { getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { supabaseClient } from "@/lib/supabase-client";
-import { Phone, Check, ExternalLink, Siren } from "lucide-react";
+import { Phone, Check, ExternalLink, Siren, MessageSquare, Inbox } from "lucide-react";
 
 export default function EmergenciesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  
+  const [activeTab, setActiveTab] = useState<"emergencies" | "complaints">("emergencies");
   const [emergencyCalls, setEmergencyCalls] = useState<any[]>([]);
+  const [complaints, setComplaints] = useState<any[]>([]);
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   const showToast = useCallback((message: string, type: "success" | "error") => {
@@ -78,6 +81,23 @@ export default function EmergenciesPage() {
     }
   }, []);
 
+  // Fetch pending complaints
+  const fetchComplaints = useCallback(async () => {
+    try {
+      const { data, error } = await supabaseClient
+        .from("complaints")
+        .select("*")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false }); // Newest first
+
+      if (!error && data) {
+        setComplaints(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch complaints:", err);
+    }
+  }, []);
+
   const handleResolveEmergency = async (id: string) => {
     try {
       const res = await fetch(`/api/emergency-calls/${id}/resolve`, {
@@ -87,6 +107,23 @@ export default function EmergenciesPage() {
       if (data.success) {
         showToast("ช่วยเหลือสำเร็จแล้ว", "success");
         setEmergencyCalls(prev => prev.filter(c => c.id !== id));
+      } else {
+        showToast(data.error || "เกิดข้อผิดพลาด", "error");
+      }
+    } catch {
+      showToast("เกิดข้อผิดพลาดในการบันทึกข้อมูล", "error");
+    }
+  };
+
+  const handleResolveComplaint = async (id: string) => {
+    try {
+      const res = await fetch(`/api/complaints/${id}/resolve`, {
+        method: "POST"
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("รับเรื่องและแก้ไขเรื่องร้องเรียนสำเร็จแล้ว", "success");
+        setComplaints(prev => prev.filter(c => c.id !== id));
       } else {
         showToast(data.error || "เกิดข้อผิดพลาด", "error");
       }
@@ -140,15 +177,16 @@ export default function EmergenciesPage() {
       } else {
         setLoading(false);
         fetchEmergencyCalls();
+        fetchComplaints();
       }
     });
-  }, [router, fetchEmergencyCalls]);
+  }, [router, fetchEmergencyCalls, fetchComplaints]);
 
-  // Setup Supabase Realtime subscription for emergency calls
+  // Setup Supabase Realtime subscription
   useEffect(() => {
     if (loading) return;
 
-    const channel = supabaseClient
+    const channelEmergencies = supabaseClient
       .channel("realtime-emergencies-page")
       .on(
         "postgres_changes",
@@ -183,18 +221,56 @@ export default function EmergenciesPage() {
       )
       .subscribe();
 
+    const channelComplaints = supabaseClient
+      .channel("realtime-complaints-page")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "complaints",
+        },
+        (payload: any) => {
+          if (payload.eventType === "INSERT") {
+            const newComplaint = payload.new;
+            if (newComplaint && newComplaint.status === "pending") {
+              setComplaints(prev => [newComplaint, ...prev]);
+              playEmergencyChime();
+            }
+          } else if (payload.eventType === "UPDATE") {
+            const updated = payload.new;
+            if (updated) {
+              if (updated.status !== "pending") {
+                setComplaints(prev => prev.filter(c => c.id !== updated.id));
+              } else {
+                setComplaints(prev => prev.map(c => c.id === updated.id ? updated : c));
+              }
+            }
+          } else if (payload.eventType === "DELETE") {
+            const deleted = payload.old;
+            if (deleted) {
+              setComplaints(prev => prev.filter(c => c.id !== deleted.id));
+            }
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabaseClient.removeChannel(channel);
+      supabaseClient.removeChannel(channelEmergencies);
+      supabaseClient.removeChannel(channelComplaints);
     };
-  }, [loading, fetchEmergencyCalls, playEmergencyChime]);
+  }, [loading, fetchEmergencyCalls, fetchComplaints, playEmergencyChime]);
 
   useEffect(() => {
-    document.title = "บอร์ดรับแจ้งเหตุฉุกเฉิน | EMS Clock-in";
+    document.title = "บอร์ดรับแจ้งเหตุและเรื่องร้องเรียน | EMS Clock-in";
   }, []);
 
   if (loading) {
     return <div className="loading-spinner" />;
   }
+
+  const hasPendingItems = emergencyCalls.length > 0 || complaints.length > 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -202,8 +278,8 @@ export default function EmergenciesPage() {
       <div 
         className="weekly-bonus-summary-card" 
         style={{ 
-          border: emergencyCalls.length > 0 ? "1px solid rgba(239, 68, 68, 0.35)" : "1px solid var(--border-subtle)", 
-          boxShadow: emergencyCalls.length > 0 ? "0 0 16px rgba(239, 68, 68, 0.15)" : undefined,
+          border: hasPendingItems ? "1px solid rgba(239, 68, 68, 0.35)" : "1px solid var(--border-subtle)", 
+          boxShadow: hasPendingItems ? "0 0 16px rgba(239, 68, 68, 0.15)" : undefined,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -213,8 +289,8 @@ export default function EmergenciesPage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <div style={{
-            background: emergencyCalls.length > 0 ? "rgba(239, 68, 68, 0.1)" : "rgba(255, 255, 255, 0.02)",
-            border: emergencyCalls.length > 0 ? "1px solid rgba(239, 68, 68, 0.3)" : "1px solid var(--border-subtle)",
+            background: hasPendingItems ? "rgba(239, 68, 68, 0.1)" : "rgba(255, 255, 255, 0.02)",
+            border: hasPendingItems ? "1px solid rgba(239, 68, 68, 0.3)" : "1px solid var(--border-subtle)",
             borderRadius: "10px",
             width: "44px",
             height: "44px",
@@ -225,28 +301,28 @@ export default function EmergenciesPage() {
             <Siren 
               size={24} 
               style={{ 
-                color: emergencyCalls.length > 0 ? "#ef4444" : "var(--text-secondary)", 
-                animation: emergencyCalls.length > 0 ? "pulse 1.5s infinite" : undefined 
+                color: hasPendingItems ? "#ef4444" : "var(--text-secondary)", 
+                animation: hasPendingItems ? "pulse 1.5s infinite" : undefined 
               }} 
             />
           </div>
           <div>
             <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#fff", marginBottom: "2px" }}>
-              ศูนย์รับแจ้งเหตุฉุกเฉิน (Emergency Dispatch Board)
+              ศูนย์รับเรื่องแจ้งเหตุและร้องเรียน (Emergency & Complaint Dispatch Board)
             </h2>
             <p style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-              แสดงเหตุผู้ป่วยสลบและต้องการความช่วยเหลือแบบ Real-time
+              แสดงเหตุฉุกเฉินและข้อความร้องเรียนจากผู้เล่นแบบ Real-time
             </p>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <span 
-            className={`portal-status-badge ${emergencyCalls.length > 0 ? "pending_proof" : "completed"}`}
+            className={`portal-status-badge ${hasPendingItems ? "pending_proof" : "completed"}`}
             style={{ fontSize: "0.85rem", padding: "6px 14px", fontWeight: "bold" }}
           >
-            {emergencyCalls.length > 0 ? (
-              <>มีเหตุสลบ {emergencyCalls.length} เคส</>
+            {hasPendingItems ? (
+              <>มีรายการค้าง: แจ้งเหตุ {emergencyCalls.length} | ร้องเรียน {complaints.length}</>
             ) : (
               <>🟢 สถานะปกติไม่มีเหตุ</>
             )}
@@ -254,213 +330,429 @@ export default function EmergenciesPage() {
         </div>
       </div>
 
-      {/* Cards Grid */}
-      {emergencyCalls.length > 0 ? (
-        <div 
-          style={{ 
-            display: "grid", 
-            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", 
-            gap: "24px" 
-          }}
-        >
-          {emergencyCalls.map((call) => {
-            const minutesElapsed = Math.max(0, Math.floor((currentTime - new Date(call.created_at).getTime()) / 60000));
-            const timeText = minutesElapsed === 0 ? "เมื่อครู่นี้" : `แจ้งเมื่อ ${minutesElapsed} นาทีที่แล้ว`;
-
-            return (
-              <div 
-                key={call.id} 
-                className="weekly-bonus-summary-card" 
-                style={{ 
-                  background: "rgba(239, 68, 68, 0.02)", 
-                  border: "1px solid rgba(239, 68, 68, 0.2)", 
-                  boxShadow: "0 4px 12px rgba(239, 68, 68, 0.05)",
-                  display: "flex", 
-                  flexDirection: "column", 
-                  gap: "16px",
-                  borderRadius: "12px",
-                  padding: "18px",
-                  transition: "transform 0.2s, border-color 0.2s"
-                }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.4)"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.2)"}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Phone size={16} style={{ color: "var(--accent-light)" }} />
-                    <span style={{ fontSize: "0.92rem", fontWeight: 800, color: "#fff" }}>{call.phone}</span>
-                  </div>
-                  <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.45)" }}>{timeText}</span>
-                </div>
-
-                {/* Spot Image */}
-                <a 
-                  href={call.image_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ 
-                    width: "100%", 
-                    height: "180px", 
-                    borderRadius: "8px", 
-                    overflow: "hidden", 
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    position: "relative",
-                    display: "block"
-                  }}
-                >
-                  <img 
-                    src={call.image_url} 
-                    alt="Emergency Spot" 
-                    style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s" }}
-                    onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
-                    onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
-                  />
-                  <div 
-                    style={{ 
-                      position: "absolute", 
-                      bottom: "8px", 
-                      right: "8px", 
-                      background: "rgba(0,0,0,0.75)", 
-                      padding: "4px 8px", 
-                      borderRadius: "6px", 
-                      fontSize: "0.68rem", 
-                      color: "#fff", 
-                      display: "flex", 
-                      alignItems: "center", 
-                      gap: "6px" 
-                    }}
-                  >
-                    <ExternalLink size={12} /> คลิกเพื่อดูจุดเกิดเหตุขนาดใหญ่
-                  </div>
-                </a>
-
-                {/* Copy Shortcuts */}
-                <div style={{ display: "flex", gap: "10px", marginTop: "-4px" }}>
-                  <button 
-                    onClick={() => handleCopyAnnouncement(call.phone, "not_found")}
-                    className="btn btn-ghost"
-                    style={{
-                      flex: 1,
-                      padding: "8px 0",
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
-                      background: "rgba(255, 255, 255, 0.01)",
-                      borderRadius: "8px",
-                      fontSize: "0.74rem",
-                      color: "rgba(255, 255, 255, 0.75)",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "4px",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
-                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
-                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.01)";
-                    }}
-                  >
-                    🔍 ไม่พบศพ
-                  </button>
-                  <button 
-                    onClick={() => handleCopyAnnouncement(call.phone, "inaccessible")}
-                    className="btn btn-ghost"
-                    style={{
-                      flex: 1,
-                      padding: "8px 0",
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
-                      background: "rgba(255, 255, 255, 0.01)",
-                      borderRadius: "8px",
-                      fontSize: "0.74rem",
-                      color: "rgba(255, 255, 255, 0.75)",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "4px",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
-                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
-                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.01)";
-                    }}
-                  >
-                    🚧 เข้าถึงไม่ได้
-                  </button>
-                </div>
-
-                {/* Action button */}
-                <button
-                  onClick={() => handleResolveEmergency(call.id)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 0",
-                    background: "var(--accent)",
-                    color: "#060a13",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: "0.85rem",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    transition: "background 0.2s, transform 0.1s"
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = "var(--accent-light)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "var(--accent)"}
-                >
-                  <Check size={16} strokeWidth={3} /> ช่วยเหลือสำเร็จแล้ว
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        /* Clean Empty State */
-        <div 
-          className="weekly-bonus-summary-card" 
-          style={{ 
-            padding: "48px 24px", 
-            textAlign: "center", 
-            display: "flex", 
-            flexDirection: "column", 
-            alignItems: "center", 
-            justifyContent: "center", 
-            gap: "16px",
-            background: "rgba(255, 255, 255, 0.005)",
-            border: "1px dashed var(--border-subtle)"
-          }}
-        >
-          <div style={{
-            width: "56px",
-            height: "56px",
-            borderRadius: "50%",
-            background: "rgba(16, 185, 129, 0.05)",
-            border: "1px solid rgba(16, 185, 129, 0.15)",
+      {/* Tab Switcher */}
+      <div style={{ display: "flex", gap: "12px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
+        <button
+          onClick={() => setActiveTab("emergencies")}
+          style={{
+            padding: "10px 18px",
+            borderRadius: "8px",
+            fontSize: "0.9rem",
+            fontWeight: "bold",
+            cursor: "pointer",
+            background: activeTab === "emergencies" ? "rgba(239, 68, 68, 0.15)" : "transparent",
+            color: activeTab === "emergencies" ? "#f87171" : "var(--text-secondary)",
+            border: activeTab === "emergencies" ? "1px solid rgba(239, 68, 68, 0.35)" : "1px solid transparent",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <span style={{ fontSize: "1.5rem" }}>🟢</span>
+            gap: "8px",
+            transition: "all 0.2s"
+          }}
+        >
+          <Siren size={16} />
+          แจ้งเหตุฉุกเฉิน ({emergencyCalls.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("complaints")}
+          style={{
+            padding: "10px 18px",
+            borderRadius: "8px",
+            fontSize: "0.9rem",
+            fontWeight: "bold",
+            cursor: "pointer",
+            background: activeTab === "complaints" ? "rgba(250, 204, 21, 0.1)" : "transparent",
+            color: activeTab === "complaints" ? "#facc15" : "var(--text-secondary)",
+            border: activeTab === "complaints" ? "1px solid rgba(250, 204, 21, 0.3)" : "1px solid transparent",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            transition: "all 0.2s"
+          }}
+        >
+          <MessageSquare size={16} />
+          เรื่องร้องเรียน ({complaints.length})
+        </button>
+      </div>
+
+      {/* Active Tab Panel */}
+      {activeTab === "emergencies" ? (
+        emergencyCalls.length > 0 ? (
+          <div 
+            style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", 
+              gap: "24px" 
+            }}
+          >
+            {emergencyCalls.map((call) => {
+              const minutesElapsed = Math.max(0, Math.floor((currentTime - new Date(call.created_at).getTime()) / 60000));
+              const timeText = minutesElapsed === 0 ? "เมื่อครู่นี้" : `แจ้งเมื่อ ${minutesElapsed} นาทีที่แล้ว`;
+
+              return (
+                <div 
+                  key={call.id} 
+                  className="weekly-bonus-summary-card" 
+                  style={{ 
+                    background: "rgba(239, 68, 68, 0.02)", 
+                    border: "1px solid rgba(239, 68, 68, 0.2)", 
+                    boxShadow: "0 4px 12px rgba(239, 68, 68, 0.05)",
+                    display: "flex", 
+                    flexDirection: "column", 
+                    gap: "16px",
+                    borderRadius: "12px",
+                    padding: "18px",
+                    transition: "transform 0.2s, border-color 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.4)"}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.2)"}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Phone size={16} style={{ color: "var(--accent-light)" }} />
+                      <span style={{ fontSize: "0.92rem", fontWeight: 800, color: "#fff" }}>{call.phone}</span>
+                    </div>
+                    <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.45)" }}>{timeText}</span>
+                  </div>
+
+                  {/* Spot Image */}
+                  <a 
+                    href={call.image_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ 
+                      width: "100%", 
+                      height: "180px", 
+                      borderRadius: "8px", 
+                      overflow: "hidden", 
+                      border: "1px solid rgba(255,255,255,0.06)",
+                      position: "relative",
+                      display: "block"
+                    }}
+                  >
+                    <img 
+                      src={call.image_url} 
+                      alt="Emergency Spot" 
+                      style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s" }}
+                      onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+                      onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                    />
+                    <div 
+                      style={{ 
+                        position: "absolute", 
+                        bottom: "8px", 
+                        right: "8px", 
+                        background: "rgba(0,0,0,0.75)", 
+                        padding: "4px 8px", 
+                        borderRadius: "6px", 
+                        fontSize: "0.68rem", 
+                        color: "#fff", 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: "6px" 
+                      }}
+                    >
+                      <ExternalLink size={12} /> คลิกเพื่อดูจุดเกิดเหตุขนาดใหญ่
+                    </div>
+                  </a>
+
+                  {/* Copy Shortcuts */}
+                  <div style={{ display: "flex", gap: "10px", marginTop: "-4px" }}>
+                    <button 
+                      onClick={() => handleCopyAnnouncement(call.phone, "not_found")}
+                      className="btn btn-ghost"
+                      style={{
+                        flex: 1,
+                        padding: "8px 0",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                        background: "rgba(255, 255, 255, 0.01)",
+                        borderRadius: "8px",
+                        fontSize: "0.74rem",
+                        color: "rgba(255, 255, 255, 0.75)",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "4px",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+                        e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+                        e.currentTarget.style.background = "rgba(255, 255, 255, 0.01)";
+                      }}
+                    >
+                      🔍 ไม่พบศพ
+                    </button>
+                    <button 
+                      onClick={() => handleCopyAnnouncement(call.phone, "inaccessible")}
+                      className="btn btn-ghost"
+                      style={{
+                        flex: 1,
+                        padding: "8px 0",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                        background: "rgba(255, 255, 255, 0.01)",
+                        borderRadius: "8px",
+                        fontSize: "0.74rem",
+                        color: "rgba(255, 255, 255, 0.75)",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "4px",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+                        e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+                        e.currentTarget.style.background = "rgba(255, 255, 255, 0.01)";
+                      }}
+                    >
+                      🚧 เข้าถึงไม่ได้
+                    </button>
+                  </div>
+
+                  {/* Action button */}
+                  <button
+                    onClick={() => handleResolveEmergency(call.id)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 0",
+                      background: "var(--accent)",
+                      color: "#060a13",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "0.85rem",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      transition: "background 0.2s, transform 0.1s"
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--accent-light)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "var(--accent)"}
+                  >
+                    <Check size={16} strokeWidth={3} /> ช่วยเหลือสำเร็จแล้ว
+                  </button>
+                </div>
+              );
+            })}
           </div>
-          <div>
-            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#fff", marginBottom: "4px" }}>
-              สถานการณ์ปกติ
-            </h3>
-            <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", maxWidth: "360px" }}>
-              ไม่มีรายงานผู้ป่วยสลบเข้ามาในระบบในขณะนี้ ทุกคนปลอดภัยดี
-            </p>
+        ) : (
+          /* Clean Empty State */
+          <div 
+            className="weekly-bonus-summary-card" 
+            style={{ 
+              padding: "48px 24px", 
+              textAlign: "center", 
+              display: "flex", 
+              flexDirection: "column", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              gap: "16px",
+              background: "rgba(255, 255, 255, 0.005)",
+              border: "1px dashed var(--border-subtle)"
+            }}
+          >
+            <div style={{
+              width: "56px",
+              height: "56px",
+              borderRadius: "50%",
+              background: "rgba(16, 185, 129, 0.05)",
+              border: "1px solid rgba(16, 185, 129, 0.15)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <span style={{ fontSize: "1.5rem" }}>🟢</span>
+            </div>
+            <div>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#fff", marginBottom: "4px" }}>
+                สถานการณ์ปกติ
+              </h3>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", maxWidth: "360px" }}>
+                ไม่มีรายงานผู้ป่วยสลบเข้ามาในระบบในขณะนี้ ทุกคนปลอดภัยดี
+              </p>
+            </div>
           </div>
-        </div>
+        )
+      ) : (
+        /* Complaints Tab Panel */
+        complaints.length > 0 ? (
+          <div 
+            style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", 
+              gap: "24px" 
+            }}
+          >
+            {complaints.map((complaint) => {
+              const minutesElapsed = Math.max(0, Math.floor((currentTime - new Date(complaint.created_at).getTime()) / 60000));
+              const timeText = minutesElapsed === 0 ? "เมื่อครู่นี้" : `ร้องเรียนเมื่อ ${minutesElapsed} นาทีที่แล้ว`;
+
+              return (
+                <div 
+                  key={complaint.id} 
+                  className="weekly-bonus-summary-card" 
+                  style={{ 
+                    background: "rgba(250, 204, 21, 0.01)", 
+                    border: "1px solid rgba(250, 204, 21, 0.15)", 
+                    boxShadow: "0 4px 12px rgba(250, 204, 21, 0.03)",
+                    display: "flex", 
+                    flexDirection: "column", 
+                    gap: "16px",
+                    borderRadius: "12px",
+                    padding: "18px",
+                    transition: "transform 0.2s, border-color 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(250, 204, 21, 0.35)"}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(250, 204, 21, 0.15)"}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <span style={{ fontSize: "0.92rem", fontWeight: 800, color: "#fff" }}>
+                        {complaint.discord_nickname || complaint.discord_username || "ผู้แจ้งเรื่อง"}
+                      </span>
+                      {complaint.discord_username && (
+                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                          @{complaint.discord_username}
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.45)" }}>{timeText}</span>
+                  </div>
+
+                  {/* Complaint Content */}
+                  <div style={{
+                    background: "rgba(255, 255, 255, 0.015)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    padding: "14px",
+                    fontSize: "0.85rem",
+                    color: "rgba(255, 255, 255, 0.85)",
+                    lineHeight: "1.5",
+                    whiteSpace: "pre-wrap",
+                    minHeight: "80px"
+                  }}>
+                    {complaint.content}
+                  </div>
+
+                  {/* Attachment Image (if any) */}
+                  {complaint.image_url && (
+                    <a 
+                      href={complaint.image_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ 
+                        width: "100%", 
+                        height: "180px", 
+                        borderRadius: "8px", 
+                        overflow: "hidden", 
+                        border: "1px solid rgba(255,255,255,0.06)",
+                        position: "relative",
+                        display: "block"
+                      }}
+                    >
+                      <img 
+                        src={complaint.image_url} 
+                        alt="Complaint Evidence" 
+                        style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s" }}
+                        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+                        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                      />
+                      <div 
+                        style={{ 
+                          position: "absolute", 
+                          bottom: "8px", 
+                          right: "8px", 
+                          background: "rgba(0,0,0,0.75)", 
+                          padding: "4px 8px", 
+                          borderRadius: "6px", 
+                          fontSize: "0.68rem", 
+                          color: "#fff", 
+                          display: "flex", 
+                          alignItems: "center", 
+                          gap: "6px" 
+                        }}
+                      >
+                        <ExternalLink size={12} /> คลิกเพื่อดูหลักฐานขนาดใหญ่
+                      </div>
+                    </a>
+                  )}
+
+                  {/* Action button */}
+                  <button
+                    onClick={() => handleResolveComplaint(complaint.id)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 0",
+                      background: "#facc15",
+                      color: "#060a13",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "0.85rem",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      transition: "background 0.2s, transform 0.1s"
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#fde047"}
+                    onMouseLeave={e => e.currentTarget.style.background = "#facc15"}
+                  >
+                    <Check size={16} strokeWidth={3} /> รับเรื่องและแก้ไขสำเร็จ
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Clean Empty State for Complaints */
+          <div 
+            className="weekly-bonus-summary-card" 
+            style={{ 
+              padding: "48px 24px", 
+              textAlign: "center", 
+              display: "flex", 
+              flexDirection: "column", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              gap: "16px",
+              background: "rgba(255, 255, 255, 0.005)",
+              border: "1px dashed var(--border-subtle)"
+            }}
+          >
+            <div style={{
+              width: "56px",
+              height: "56px",
+              borderRadius: "50%",
+              background: "rgba(250, 204, 21, 0.05)",
+              border: "1px solid rgba(250, 204, 21, 0.15)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <span style={{ fontSize: "1.5rem" }}>🟢</span>
+            </div>
+            <div>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#fff", marginBottom: "4px" }}>
+                ไม่มีเรื่องร้องเรียน
+              </h3>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", maxWidth: "360px" }}>
+                ขณะนี้ไม่มีเรื่องร้องเรียนใดๆ ตกค้างในระบบ ทุกอย่างเรียบร้อยดี
+              </p>
+            </div>
+          </div>
+        )
       )}
 
       {toast && (
