@@ -43,7 +43,8 @@ import {
   Power,
   Upload,
   CornerUpLeft,
-  UserPlus
+  UserPlus,
+  Siren
 } from "lucide-react";
 
 export const ClockIcon = FcClock;
@@ -86,3 +87,4 @@ export const StarIcon = FcRating;
 export const InfoIcon = FcInfo;
 export const FileTextIcon = FcDocument;
 export const UserPlusIcon = UserPlus;
+export const SirenIcon = Siren;

@@ -13,7 +13,8 @@ import {
   CoinsIcon,
   SettingsIcon,
   FileTextIcon,
-  UserPlusIcon
+  UserPlusIcon,
+  SirenIcon
 } from "./Icons";
 
 export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; discordId?: string } }) {
@@ -45,6 +46,10 @@ export function MobileNav({ user }: { user?: { role?: string; isOp?: boolean; di
       <Link href="/dashboard/op" className={pathname === "/dashboard/op" ? "active" : ""}>
         <HospitalIcon size={20} />
         {(user?.isOp || user?.role === "admin") ? "คิว OP" : "เวร OP"}
+      </Link>
+      <Link href="/dashboard/emergencies" className={pathname === "/dashboard/emergencies" ? "active" : ""} style={{ color: pathname === "/dashboard/emergencies" ? "var(--accent-light)" : "#f87171" }}>
+        <SirenIcon size={20} style={{ color: pathname === "/dashboard/emergencies" ? "var(--accent)" : "#ef4444" }} />
+        แจ้งเหตุ
       </Link>
       <Link href="/dashboard/ranking" className={pathname === "/dashboard/ranking" ? "active" : ""}>
         <TrophyIcon size={20} />

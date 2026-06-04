@@ -96,24 +96,21 @@ client.on('messageCreate', async (message) => {
   const content = message.content.trim();
 
   // ตรวจสอบคีย์เวิร์ด ID (เช่น ID 123, ไอดี 456)
-  const idPattern = /\b(id|ไอดี|เลข|ดิบ)\s*:?\s*\d+/i;
-  const hasId = idPattern.test(content);
-
-  // ตรวจสอบเบอร์โทรศัพท์ (ฟอร์แมตรองรับ 0812345678, 081-234-5678, 090 123 4567)
-  const phonePattern = /\b0[5689]\d{8}\b|\b0\d{1,2}[- ]?\d{3}[- ]?\d{4}\b/;
+  const phonePattern = /(?:เบอร์โทรศัพท์|เบอร์โทร|เบอร์)\s*[:\- ]*\s*([0-9\- ]+)/i;
   const phoneMatch = content.match(phonePattern);
 
   // ตรวจสอบความถูกต้องของฟอร์มการแจ้งเหตุ
-  const isFormatValid = phoneMatch && !hasId && imageUrl;
+  const isFormatValid = !!(phoneMatch && imageUrl);
 
   if (!isFormatValid) {
-    // กรณีที่ 1: กรอกผิดฟอร์ม (ส่ง ID หรือไม่มีรูปภาพ หรือไม่มีเบอร์โทร)
+    // กรณีที่ 1: กรอกผิดฟอร์ม (ไม่มีรูปภาพ หรือไม่มีคำว่าเบอร์/เบอร์โทร)
     try {
       let warningMsg = `สวัสดีครับ <@${message.author.id}> 🚨 คุณกรอกข้อมูลผิดฟอร์มการแจ้งเหตุครับ\n\n`;
       warningMsg += `**ฟอร์มการแจ้งเหตุฉุกเฉินที่ถูกต้อง:**\n`;
-      warningMsg += `📱 **เบอร์โทร**: [เบอร์โทรศัพท์ 9-10 หลัก]\n`;
+      warningMsg += `📱 **เบอร์โทร**: [ระบุเบอร์โทรศัพท์]\n`;
       warningMsg += `📸 **รูปภาพ**: [แนบรูปภาพจุดเกิดเหตุ]\n\n`;
-      warningMsg += `*⚠️ ห้ามใช้เลข ID แทนเบอร์โทร และต้องแนบภาพเสมอตัวอย่างการกรอก:\n`;
+      warningMsg += `*⚠️ ต้องระบุคำว่า "เบอร์" หรือ "เบอร์โทร" ตามด้วยหมายเลข และแนบภาพจุดเกิดเหตุเสมอ\n`;
+      warningMsg += `ตัวอย่างการกรอก:\n`;
       warningMsg += `เบอร์โทร: 0891234567 (พร้อมแนบรูปภาพ)*`;
 
       // ส่งข้อความแจ้งเตือนแทกผู้เล่นคนนั้น
@@ -125,7 +122,7 @@ client.on('messageCreate', async (message) => {
   }
 
   // กรณีที่ 2: กรอกฟอร์มถูกต้อง -> ดึงข้อมูลยิงเข้าเว็บ
-  const phone = phoneMatch[0].replace(/[- ]/g, ''); // ลบขีดหรือช่องว่างออกให้เหลือแต่ตัวเลข
+  const phone = phoneMatch[1].trim().replace(/[- ]/g, ''); // ลบขีดหรือช่องว่างออกให้เหลือแต่ตัวเลข
   
   try {
     console.log(`📞 พบการแจ้งเหตุใหม่จากผู้เล่น: เบอร์โทร ${phone} | รูปภาพ ${imageUrl}`);

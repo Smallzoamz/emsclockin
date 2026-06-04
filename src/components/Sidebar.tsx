@@ -17,7 +17,8 @@ import {
   CoinsIcon,
   SettingsIcon,
   FileTextIcon,
-  UserPlusIcon
+  UserPlusIcon,
+  SirenIcon
 } from "./Icons";
 
 interface SidebarProps {
@@ -153,6 +154,15 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
             >
               <HospitalIcon size={18} />
               {(user.isOp || user.role === "admin") ? "ระบบจัดการคิว OP" : "ตารางเวร OP"}
+            </Link>
+
+            <Link
+              href="/dashboard/emergencies"
+              className={`nav-link ${pathname === "/dashboard/emergencies" ? "active" : ""}`}
+              style={{ color: pathname === "/dashboard/emergencies" ? "var(--accent-light)" : "#f87171" }}
+            >
+              <SirenIcon size={18} style={{ color: pathname === "/dashboard/emergencies" ? "var(--accent)" : "#ef4444" }} />
+              แจ้งเหตุฉุกเฉิน
             </Link>
 
             <Link
