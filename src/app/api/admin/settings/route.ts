@@ -23,6 +23,45 @@ export async function GET() {
       });
     }
 
+    // Run reset check for conduct points
+    const session = await auth();
+    const userEmail = session?.user?.email;
+    let registeredDoctors = settings['registered_doctors'] || [];
+    let updated = false;
+
+    if (userEmail && Array.isArray(registeredDoctors)) {
+      const docIdx = registeredDoctors.findIndex((d: any) => d.email?.toLowerCase() === userEmail.toLowerCase());
+      if (docIdx !== -1) {
+        const doc = registeredDoctors[docIdx];
+        const now = new Date();
+        const lastUpdated = doc.conductPointsUpdatedAt ? new Date(doc.conductPointsUpdatedAt) : null;
+        const daysDiff = lastUpdated ? (now.getTime() - lastUpdated.getTime()) / (1000 * 3600 * 24) : 0;
+        
+        // Initialize or reset conduct points to 10
+        if (doc.conductPoints === undefined) {
+          doc.conductPoints = 10;
+          doc.conductPointsUpdatedAt = now.toISOString();
+          updated = true;
+        } else if (!lastUpdated || daysDiff >= 30) {
+          doc.conductPoints = 10;
+          doc.conductPointsUpdatedAt = now.toISOString();
+          updated = true;
+        }
+        
+        if (updated) {
+          registeredDoctors[docIdx] = doc;
+          await supabase
+            .from("system_settings")
+            .upsert({ 
+              key: "registered_doctors", 
+              value: registeredDoctors, 
+              updated_at: now.toISOString() 
+            });
+          settings['registered_doctors'] = registeredDoctors;
+        }
+      }
+    }
+
     // Return all settings, while ensuring defaults
     return NextResponse.json({ 
       settings: {
@@ -109,7 +148,57 @@ export async function POST(req: Request) {
           discordUsername?: string;
           avatarUrl?: string;
           discordId?: string;
+          conductPoints?: number;
+          conductPointsUpdatedAt?: string;
         }>;
+
+        // Check for doctors who reached 0 conduct points to trigger dismissal requests
+        for (const doc of newDoctors) {
+          if (doc.conductPoints === 0) {
+            const docDiscordId = doc.discordId || "Unknown";
+            const docDiscordUsername = doc.discordUsername || "Unknown";
+            const docName = doc.name || "Unknown";
+            
+            const { data: existing } = await supabase
+              .from("resignation_requests")
+              .select("id")
+              .eq("discord_id", docDiscordId)
+              .eq("type", "dismissal")
+              .eq("status", "pending")
+              .maybeSingle();
+
+            if (!existing) {
+              // Calculate total completed shift hours
+              let totalHours = 0;
+              if (doc.email) {
+                const { data: userShifts } = await supabase
+                  .from("shifts")
+                  .select("duration_minutes")
+                  .eq("user_email", doc.email)
+                  .eq("status", "completed");
+                const totalMinutes = (userShifts || []).reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+                totalHours = parseFloat((totalMinutes / 60).toFixed(1));
+              }
+
+              // Insert pending dismissal request
+              await supabase
+                .from("resignation_requests")
+                .insert({
+                  discord_username: docDiscordUsername,
+                  discord_id: docDiscordId,
+                  doctor_name: docName,
+                  reason: "คะแนนความประพฤติสะสมเหลือ 0 คะแนน (โดนหักคะแนนความประพฤติครบ 10 แต้ม)",
+                  total_hours: totalHours,
+                  passing_hours: 40,
+                  is_reset: true,
+                  status: "pending",
+                  type: "dismissal",
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                });
+            }
+          }
+        }
 
         const deletedDoctors = oldDoctors.filter(oldDoc => 
           !newDoctors.some(newDoc => newDoc.email === oldDoc.email)

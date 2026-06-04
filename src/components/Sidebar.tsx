@@ -38,6 +38,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
   const [weeklyHours, setWeeklyHours] = useState(0);
   const [bonusThreshold, setBonusThreshold] = useState(20);
   const [userRankName, setUserRankName] = useState("แพทย์ประจำการ");
+  const [conductPoints, setConductPoints] = useState(10);
 
   useEffect(() => {
     // Fetch weekly summary and settings to render profile details
@@ -53,6 +54,16 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
         if (settingsData.settings) {
           const threshold = Number(settingsData.settings.bonus_threshold) || 20;
           setBonusThreshold(threshold);
+
+          // Find current user's conduct points
+          if (user.email && settingsData.settings.registered_doctors) {
+            const docObj = settingsData.settings.registered_doctors.find(
+              (d: any) => d.email?.toLowerCase() === user.email?.toLowerCase()
+            );
+            if (docObj && docObj.conductPoints !== undefined) {
+              setConductPoints(docObj.conductPoints);
+            }
+          }
 
           if (user.email && settingsData.settings.user_ranks && settingsData.settings.doctor_ranks) {
             const userRankId = settingsData.settings.user_ranks[user.email];
@@ -299,34 +310,68 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
         )}
       </nav>
 
-      <div className="sidebar-footer">
-        <div className="user-info">
-          {user.image && (
-            <img
-              src={user.image}
-              alt={user.name || "User"}
-              className="user-avatar"
-              referrerPolicy="no-referrer"
-            />
-          )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="user-name" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {user.name}
+      <div className="sidebar-footer" style={{ padding: "12px", borderTop: "none" }}>
+        <div className="sidebar-status-window">
+          <div className="sidebar-status-user">
+            {user.image ? (
+              <img
+                src={user.image}
+                alt=""
+                className="sidebar-status-avatar"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div 
+                className="sidebar-status-avatar" 
+                style={{ 
+                  background: "var(--bg-secondary)", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  fontSize: "1.1rem", 
+                  fontWeight: "bold", 
+                  color: "white" 
+                }}
+              >
+                {user.name ? user.name.charAt(0).toUpperCase() : "D"}
+              </div>
+            )}
+            <div className="sidebar-status-meta">
+              <div className="sidebar-status-name" title={user.name || ""}>
+                {user.name}
+              </div>
+              <div className="sidebar-status-job">{userRankName}</div>
             </div>
-            <span className="rank-badge">{userRankName}</span>
           </div>
-        </div>
 
-        {/* Weekly hours meter */}
-        <div className="sidebar-hours-progress-container">
-          <div className="sidebar-hours-header">
-            <span>สะสมสัปดาห์นี้</span>
-            <span style={{ fontWeight: 600, fontFamily: "var(--font-mono)" }}>
-              {weeklyHours.toFixed(1)} / {bonusThreshold} ชม.
-            </span>
+          {/* HP Bar (Conduct Points) */}
+          <div className="sidebar-stat-item">
+            <div className="sidebar-stat-header hp">
+              <span>HP (ความประพฤติ)</span>
+              <span style={{ fontFamily: "var(--font-mono)" }}>{conductPoints} / 10</span>
+            </div>
+            <div className="sidebar-stat-track hp">
+              <div 
+                className={`sidebar-stat-fill hp ${conductPoints <= 4 ? "low" : ""}`}
+                style={{ width: `${(conductPoints / 10) * 100}%` }}
+              />
+            </div>
           </div>
-          <div className="sidebar-progress-track">
-            <div className="sidebar-progress-bar" style={{ width: `${percentage}%` }} />
+
+          {/* EXP Bar (Weekly Hours) */}
+          <div className="sidebar-stat-item">
+            <div className="sidebar-stat-header exp">
+              <span>EXP (สะสมสัปดาห์นี้)</span>
+              <span style={{ fontFamily: "var(--font-mono)" }}>
+                {weeklyHours.toFixed(1)} / {bonusThreshold} ชม.
+              </span>
+            </div>
+            <div className="sidebar-stat-track exp">
+              <div 
+                className="sidebar-stat-fill exp" 
+                style={{ width: `${percentage}%` }}
+              />
+            </div>
           </div>
         </div>
 

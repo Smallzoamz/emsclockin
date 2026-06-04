@@ -45,7 +45,7 @@ export default function AdminDashboardPage() {
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
   // OP Schedule & Settings State
-  const [registeredDoctors, setRegisteredDoctors] = useState<Array<{ email: string, name: string, discordUsername: string, avatarUrl?: string, discordId?: string }>>([]);
+  const [registeredDoctors, setRegisteredDoctors] = useState<Array<{ email: string, name: string, discordUsername: string, avatarUrl?: string, discordId?: string, conductPoints?: number, conductPointsUpdatedAt?: string }>>([]);
   const [doctorRanks, setDoctorRanks] = useState<Array<{ id: string; name: string; rate: number }>>([]);
   const [userRanks, setUserRanks] = useState<Record<string, string>>({});
   const [opSchedule, setOpSchedule] = useState<Record<string, Array<string>>>({
@@ -238,6 +238,41 @@ export default function AdminDashboardPage() {
       });
     } catch (err) {
       console.error("Failed to update doctor name:", err);
+    }
+  };
+
+  const handleUpdateConductPoints = async (email: string, points: number) => {
+    const clappedPoints = Math.max(0, Math.min(10, points));
+    const targetDoc = registeredDoctors.find(d => d.email === email);
+    if (!targetDoc) return;
+
+    if (clappedPoints === 0) {
+      if (!await confirm({
+        title: "⚠️ สั่งหักคะแนนประพฤติจนเหลือ 0",
+        message: `คุณกำลังสั่งหักคะแนนประพฤติของแพทย์ ${targetDoc.name || targetDoc.discordUsername} จนหมด (0/10 HP) ซึ่งระบบจะส่งคำร้องขอพ้นสภาพแพทย์ไปยังหน้าผู้บริหารเพื่อรอสั่งปลดออกทันที ยืนยันการดำเนินการนี้หรือไม่?`,
+        confirmText: "ยืนยันและส่งคำขอปลด",
+        cancelText: "ยกเลิก",
+        variant: "danger"
+      })) return;
+    }
+
+    const updated = registeredDoctors.map(d => 
+      d.email === email 
+        ? { ...d, conductPoints: clappedPoints, conductPointsUpdatedAt: d.conductPointsUpdatedAt || new Date().toISOString() } 
+        : d
+    );
+    setRegisteredDoctors(updated);
+    try {
+      await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "registered_doctors", value: updated })
+      });
+      if (clappedPoints === 0) {
+        alert(`ส่งใบคำร้องปลดพ้นสภาพแพทย์สำหรับ ${targetDoc.name || targetDoc.discordUsername} เรียบร้อยแล้ว`);
+      }
+    } catch (err) {
+      console.error("Failed to update conduct points:", err);
     }
   };
 
@@ -616,8 +651,30 @@ export default function AdminDashboardPage() {
                           }}
                         />
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        @{doc.discordUsername}
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "4px" }}>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "120px" }}>
+                          @{doc.discordUsername}
+                        </div>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border-subtle)", padding: "2px 6px", borderRadius: "12px" }}>
+                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: "600" }}>HP:</span>
+                          <button
+                            onClick={() => handleUpdateConductPoints(doc.email, (doc.conductPoints !== undefined ? doc.conductPoints : 10) - 1)}
+                            disabled={doc.conductPoints === 0}
+                            style={{ width: "16px", height: "16px", background: "rgba(239, 68, 68, 0.2)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "50%", color: "#ef4444", cursor: "pointer", fontSize: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
+                          >
+                            -
+                          </button>
+                          <span style={{ fontSize: "0.75rem", fontWeight: "bold", fontFamily: "var(--font-mono)", color: (doc.conductPoints === 0 ? "#ef4444" : ((doc.conductPoints ?? 10) <= 4 ? "#f59e0b" : "var(--accent-light)")) }}>
+                            {doc.conductPoints !== undefined ? doc.conductPoints : 10}
+                          </span>
+                          <button
+                            onClick={() => handleUpdateConductPoints(doc.email, (doc.conductPoints !== undefined ? doc.conductPoints : 10) + 1)}
+                            disabled={(doc.conductPoints !== undefined ? doc.conductPoints : 10) >= 10}
+                            style={{ width: "16px", height: "16px", background: "rgba(16, 185, 129, 0.2)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "50%", color: "var(--accent-light)", cursor: "pointer", fontSize: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
                     </div>
                     <button
