@@ -6774,30 +6774,71 @@ body::before {
   background: rgba(15, 23, 42, 0.85);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   backdrop-filter: blur(16px);
   position: relative;
   box-shadow: var(--shadow-card);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-status-window.low-hp-warning {
+  border-color: rgba(239, 68, 68, 0.4);
+  animation: cardPulse 1.5s infinite alternate;
+}
+
+.sidebar-status-window:hover {
+  border-color: var(--border-glow);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 15px var(--accent-glow);
 }
 
 .sidebar-status-user {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
-  padding-bottom: 10px;
+  padding-bottom: 6px;
+}
+
+.sidebar-avatar-wrapper {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .sidebar-status-avatar {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   border: 2px solid var(--border-glow);
   box-shadow: 0 0 8px var(--accent-glow);
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-status-window:hover .sidebar-status-avatar {
+  transform: scale(1.08) rotate(5deg);
+  border-color: var(--accent);
+}
+
+.char-level-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+  border: 1.5px solid #060a13;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  z-index: 2;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
 }
 
 .sidebar-status-meta {
@@ -6806,7 +6847,7 @@ body::before {
 }
 
 .sidebar-status-name {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: white;
   overflow: hidden;
@@ -6815,7 +6856,7 @@ body::before {
 }
 
 .sidebar-status-job {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--accent-light);
   font-weight: 800;
   text-transform: uppercase;
@@ -6827,13 +6868,13 @@ body::before {
 .sidebar-stat-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .sidebar-stat-header {
   display: flex;
   justify-content: space-between;
-  font-size: 0.72rem;
+  font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.5px;
 }
@@ -6847,8 +6888,8 @@ body::before {
 }
 
 .sidebar-stat-track {
-  height: 10px;
-  border-radius: var(--radius-full);
+  height: 7px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
   overflow: hidden;
@@ -6867,7 +6908,7 @@ body::before {
 
 .sidebar-stat-fill {
   height: 100%;
-  border-radius: var(--radius-full);
+  border-radius: 4px;
   transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
@@ -6885,6 +6926,80 @@ body::before {
   box-shadow: 0 0 8px var(--accent-glow);
 }
 
+/* MMORPG RPG Stats Sub-Panel */
+.sidebar-status-stats {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, padding 0.3s ease;
+  border-top: 1px dashed transparent;
+}
+
+.sidebar-status-window:hover .sidebar-status-stats {
+  max-height: 120px;
+  opacity: 1;
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.rpg-online-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.rpg-online-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--accent);
+  animation: blink 1.5s infinite;
+}
+
+.rpg-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.rpg-stat-box {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+  padding: 3px 2px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.rpg-stat-box:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-glow);
+  transform: translateY(-1px);
+}
+
+.rpg-stat-lbl {
+  color: var(--text-muted);
+  font-size: 0.5rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.rpg-stat-val {
+  color: #f59e0b;
+  font-size: 0.65rem;
+  font-weight: 850;
+  font-family: var(--font-mono);
+  margin-top: 1px;
+}
+
 @keyframes hpPulse {
   0% {
     background: linear-gradient(90deg, #ef4444, #b91c1c);
@@ -6895,6 +7010,18 @@ body::before {
     box-shadow: 0 0 14px rgba(239, 68, 68, 0.7);
   }
 }
+
+@keyframes cardPulse {
+  0% {
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.4), inset 0 0 6px rgba(239, 68, 68, 0.05);
+    border-color: rgba(239, 68, 68, 0.45);
+  }
+}
+
 
 
 

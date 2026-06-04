@@ -87,6 +87,14 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
 
   const percentage = Math.min(100, Math.floor((weeklyHours / bonusThreshold) * 100));
 
+  // MMORPG Stats
+  const charLevel = Math.max(1, Math.floor(weeklyHours / 5) + 1);
+  const statSTR = Math.floor(weeklyHours * 2) + 10;
+  const statVIT = conductPoints * 10;
+  const statAGI = Math.max(10, Math.floor(100 - (10 - conductPoints) * 5));
+  const statINT = 95;
+  const statLUK = 77;
+
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -207,7 +215,7 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
                   className={`nav-link ${pathname === "/dashboard/history" ? "active" : ""}`}
                 >
                   <ChartBarIcon size={18} />
-                  ประวัติ & ชั่วโมง
+                  ประวัติ &amp; ชั่วโมง
                 </Link>
                 <Link
                   href="/dashboard/my-bonus"
@@ -311,31 +319,34 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
       </nav>
 
       <div className="sidebar-footer" style={{ padding: "12px", borderTop: "none" }}>
-        <div className="sidebar-status-window">
+        <div className={`sidebar-status-window ${conductPoints <= 4 ? "low-hp-warning" : ""}`}>
           <div className="sidebar-status-user">
-            {user.image ? (
-              <img
-                src={user.image}
-                alt=""
-                className="sidebar-status-avatar"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div 
-                className="sidebar-status-avatar" 
-                style={{ 
-                  background: "var(--bg-secondary)", 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center", 
-                  fontSize: "1.1rem", 
-                  fontWeight: "bold", 
-                  color: "white" 
-                }}
-              >
-                {user.name ? user.name.charAt(0).toUpperCase() : "D"}
-              </div>
-            )}
+            <div className="sidebar-avatar-wrapper">
+              {user.image ? (
+                <img
+                  src={user.image}
+                  alt=""
+                  className="sidebar-status-avatar"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div 
+                  className="sidebar-status-avatar" 
+                  style={{ 
+                    background: "var(--bg-secondary)", 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center", 
+                    fontSize: "0.95rem", 
+                    fontWeight: "bold", 
+                    color: "white" 
+                  }}
+                >
+                  {user.name ? user.name.charAt(0).toUpperCase() : "D"}
+                </div>
+              )}
+              <span className="char-level-badge">{charLevel}</span>
+            </div>
             <div className="sidebar-status-meta">
               <div className="sidebar-status-name" title={user.name || ""}>
                 {user.name}
@@ -371,6 +382,39 @@ export function Sidebar({ user, logoUrl }: SidebarProps) {
                 className="sidebar-stat-fill exp" 
                 style={{ width: `${percentage}%` }}
               />
+            </div>
+          </div>
+
+          {/* MMORPG Expandable Stats Panel */}
+          <div className="sidebar-status-stats">
+            <div className="rpg-online-status">
+              <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <span className="rpg-online-dot" />
+                ONLINE
+              </span>
+              <span style={{ color: "#f59e0b", fontFamily: "var(--font-mono)" }}>Lv.{charLevel}</span>
+            </div>
+            <div className="rpg-stats-grid">
+              <div className="rpg-stat-box">
+                <span className="rpg-stat-lbl">STR</span>
+                <span className="rpg-stat-val">{statSTR}</span>
+              </div>
+              <div className="rpg-stat-box">
+                <span className="rpg-stat-lbl">VIT</span>
+                <span className="rpg-stat-val">{statVIT}</span>
+              </div>
+              <div className="rpg-stat-box">
+                <span className="rpg-stat-lbl">AGI</span>
+                <span className="rpg-stat-val">{statAGI}</span>
+              </div>
+              <div className="rpg-stat-box">
+                <span className="rpg-stat-lbl">INT</span>
+                <span className="rpg-stat-val">{statINT}</span>
+              </div>
+              <div className="rpg-stat-box">
+                <span className="rpg-stat-lbl">LUK</span>
+                <span className="rpg-stat-val">{statLUK}</span>
+              </div>
             </div>
           </div>
         </div>
