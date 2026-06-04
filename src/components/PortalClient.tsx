@@ -372,6 +372,21 @@ export function PortalClient({
 
   const displayShifts = recentShifts;
 
+  const recruitmentTerms = landingPageData?.recruitment_terms || {
+    title: "เงื่อนไขการสมัครเข้าร่วมหน่วยงานแพทย์",
+    subtext: "กรุณาอ่านเงื่อนไขให้ครบถ้วนก่อนดำเนินการสมัคร",
+    terms_title: "ข้อกำหนดและเงื่อนไข",
+    items: [
+      "ผู้สมัครจะต้องเป็นสมาชิกของ Discord Server หน่วยงานแพทย์เท่านั้น",
+      "ข้อมูลที่กรอกต้องเป็นข้อมูลจริงตามตัวละครในเกม (IC) ห้ามกรอกข้อมูลเท็จ",
+      "หลังจากส่งใบสมัคร ผู้สมัครจะต้องเข้ารับการสอบภายใน 48 ชั่วโมง",
+      "หากไม่เข้ารับการสอบภายในเวลาที่กำหนด ระบบจะทำการลบข้อมูลผู้สมัครออกโดยอัตโนมัติ",
+      "ผู้สมัครที่ถูกลบข้อมูลสามารถกรอกใบสมัครใหม่ได้",
+      "การตัดสินผลสอบขึ้นอยู่กับดุลยพินิจของ ผอ. และทีมผู้ดูแลเท่านั้น ผลการตัดสินถือเป็นที่สิ้นสุด",
+      "ผู้สมัครที่ผ่านการสอบจะเข้าสู่ตำแหน่ง \"นักเรียนแพทย์\" และต้องปฏิบัติตามกฎระเบียบของหน่วยงานอย่างเคร่งครัด"
+    ]
+  };
+
   const renderLoginModal = () => {
     if (!isLoginModalOpen) return null;
     const modalContent = (
@@ -1601,20 +1616,16 @@ export function PortalClient({
                   <div style={{ width: "48px", height: "48px", borderRadius: "8px", background: "color-mix(in srgb, var(--accent) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--accent) 15%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px auto" }}>
                     <ClipboardList size={22} style={{ color: "var(--accent)" }} />
                   </div>
-                  <h3 style={{ color: "#ffffff", fontSize: "1rem", fontWeight: "700", margin: "0 0 6px 0" }}>เงื่อนไขการสมัครเข้าร่วมหน่วยงานแพทย์</h3>
-                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.7rem" }}>กรุณาอ่านเงื่อนไขให้ครบถ้วนก่อนดำเนินการสมัคร</p>
+                  <h3 style={{ color: "#ffffff", fontSize: "1rem", fontWeight: "700", margin: "0 0 6px 0" }}>{recruitmentTerms.title}</h3>
+                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.7rem" }}>{recruitmentTerms.subtext}</p>
                 </div>
 
                 <div style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "6px", padding: "16px", marginBottom: "20px", fontSize: "0.72rem", color: "rgba(255,255,255,0.65)", lineHeight: "1.7" }}>
-                  <div style={{ fontWeight: "700", color: "#ffffff", marginBottom: "8px", fontSize: "0.78rem" }}>ข้อกำหนดและเงื่อนไข</div>
+                  <div style={{ fontWeight: "700", color: "#ffffff", marginBottom: "8px", fontSize: "0.78rem" }}>{recruitmentTerms.terms_title}</div>
                   <ol style={{ margin: 0, paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <li>ผู้สมัครจะต้องเป็นสมาชิกของ Discord Server หน่วยงานแพทย์เท่านั้น</li>
-                    <li>ข้อมูลที่กรอกต้องเป็นข้อมูลจริงตามตัวละครในเกม (IC) ห้ามกรอกข้อมูลเท็จ</li>
-                    <li>หลังจากส่งใบสมัคร ผู้สมัครจะต้องเข้ารับการสอบภายใน 48 ชั่วโมง</li>
-                    <li>หากไม่เข้ารับการสอบภายในเวลาที่กำหนด ระบบจะทำการลบข้อมูลผู้สมัครออกโดยอัตโนมัติ</li>
-                    <li>ผู้สมัครที่ถูกลบข้อมูลสามารถกรอกใบสมัครใหม่ได้</li>
-                    <li>การตัดสินผลสอบขึ้นอยู่กับดุลยพินิจของ ผอ. และทีมผู้ดูแลเท่านั้น ผลการตัดสินถือเป็นที่สิ้นสุด</li>
-                    <li>ผู้สมัครที่ผ่านการสอบจะเข้าสู่ตำแหน่ง "นักเรียนแพทย์" และต้องปฏิบัติตามกฎระเบียบของหน่วยงานอย่างเคร่งครัด</li>
+                    {(recruitmentTerms.items || []).map((item: string, idx: number) => (
+                      <li key={idx}>{item}</li>
+                    ))}
                   </ol>
                 </div>
 

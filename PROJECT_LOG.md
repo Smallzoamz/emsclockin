@@ -1,5 +1,7 @@
 # PROJECT_LOG.md — FiveM Doctor Clock-in System
 
+## [2026-06-04 09:51] | File: PortalClient.tsx, settings/page.tsx | Line: 373, 91 | Keyword: Editable Recruitment Terms | Status: ✅ Complete | Change: Migrated the static recruitment terms and conditions list from PortalClient.tsx into a dynamic db-backed settings field under landing_page_data. Added a list builder tab interface under the Admin Settings page to add, edit, reorder, and remove terms dynamically, providing full administrative control over application policies.
+
 ## [2026-05-17 08:45] | File: (multiple) | Keyword: Initial Setup | Status: ✅ Complete | Change: Created full Next.js project with App Router, NextAuth.js (Google + Discord OAuth), Supabase integration, Discord webhook logging, and premium dark medical UI theme.
 
 ### Files Created:

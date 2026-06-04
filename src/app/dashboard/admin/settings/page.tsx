@@ -81,7 +81,7 @@ export default function AdminSettingsPage() {
 
   const [isSavingLanding, setIsSavingLanding] = useState(false);
   const [landingStatus, setLandingStatus] = useState<{ message: string, type: "success" | "error" } | null>(null);
-  const [activeLandingTab, setActiveLandingTab] = useState<"slides" | "news" | "recruitment_slides">("slides");
+  const [activeLandingTab, setActiveLandingTab] = useState<"slides" | "news" | "recruitment_slides" | "recruitment_terms">("slides");
   
   // Slide Upload state (to track which slide image is uploading)
   const [isUploadingSlideIndex, setIsUploadingSlideIndex] = useState<number | null>(null);
@@ -91,6 +91,27 @@ export default function AdminSettingsPage() {
   // Recruitment slides state
   const [landingRecruitmentSlides, setLandingRecruitmentSlides] = useState<Array<{ image: string }>>([]);
   const [isUploadingRecruitmentSlideIndex, setIsUploadingRecruitmentSlideIndex] = useState<number | null>(null);
+
+  // Recruitment Terms state
+  const [landingRecruitmentTerms, setLandingRecruitmentTerms] = useState<{
+    title: string;
+    subtext: string;
+    terms_title: string;
+    items: string[];
+  }>({
+    title: "เงื่อนไขการสมัครเข้าร่วมหน่วยงานแพทย์",
+    subtext: "กรุณาอ่านเงื่อนไขให้ครบถ้วนก่อนดำเนินการสมัคร",
+    terms_title: "ข้อกำหนดและเงื่อนไข",
+    items: [
+      "ผู้สมัครจะต้องเป็นสมาชิกของ Discord Server หน่วยงานแพทย์เท่านั้น",
+      "ข้อมูลที่กรอกต้องเป็นข้อมูลจริงตามตัวละครในเกม (IC) ห้ามกรอกข้อมูลเท็จ",
+      "หลังจากส่งใบสมัคร ผู้สมัครจะต้องเข้ารับการสอบภายใน 48 ชั่วโมง",
+      "หากไม่เข้ารับการสอบภายในเวลาที่กำหนด ระบบจะทำการลบข้อมูลผู้สมัครออกโดยอัตโนมัติ",
+      "ผู้สมัครที่ถูกลบข้อมูลสามารถกรอกใบสมัครใหม่ได้",
+      "การตัดสินผลสอบขึ้นอยู่กับดุลยพินิจของ ผอ. และทีมผู้ดูแลเท่านั้น ผลการตัดสินถือเป็นที่สิ้นสุด",
+      "ผู้สมัครที่ผ่านการสอบจะเข้าสู่ตำแหน่ง \"นักเรียนแพทย์\" และต้องปฏิบัติตามกฎระเบียบของหน่วยงานอย่างเคร่งครัด"
+    ]
+  });
 
   // Resignation System State
   const [resignationCriteriaHours, setResignationCriteriaHours] = useState(40);
@@ -358,7 +379,8 @@ export default function AdminSettingsPage() {
       slides: landingSlides,
       news: landingNews,
       forum: [],
-      recruitment_slides: landingRecruitmentSlides
+      recruitment_slides: landingRecruitmentSlides,
+      recruitment_terms: landingRecruitmentTerms
     };
 
     try {
@@ -468,6 +490,25 @@ export default function AdminSettingsPage() {
               { image: "/images/welcome_banner.jpg" }
             ]);
           }
+
+          if (lpd.recruitment_terms) {
+            setLandingRecruitmentTerms(lpd.recruitment_terms);
+          } else {
+            setLandingRecruitmentTerms({
+              title: "เงื่อนไขการสมัครเข้าร่วมหน่วยงานแพทย์",
+              subtext: "กรุณาอ่านเงื่อนไขให้ครบถ้วนก่อนดำเนินการสมัคร",
+              terms_title: "ข้อกำหนดและเงื่อนไข",
+              items: [
+                "ผู้สมัครจะต้องเป็นสมาชิกของ Discord Server หน่วยงานแพทย์เท่านั้น",
+                "ข้อมูลที่กรอกต้องเป็นข้อมูลจริงตามตัวละครในเกม (IC) ห้ามกรอกข้อมูลเท็จ",
+                "หลังจากส่งใบสมัคร ผู้สมัครจะต้องเข้ารับการสอบภายใน 48 ชั่วโมง",
+                "หากไม่เข้ารับการสอบภายในเวลาที่กำหนด ระบบจะทำการลบข้อมูลผู้สมัครออกโดยอัตโนมัติ",
+                "ผู้สมัครที่ถูกลบข้อมูลสามารถกรอกใบสมัครใหม่ได้",
+                "การตัดสินผลสอบขึ้นอยู่กับดุลยพินิจของ ผอ. และทีมผู้ดูแลเท่านั้น ผลการตัดสินถือเป็นที่สิ้นสุด",
+                "ผู้สมัครที่ผ่านการสอบจะเข้าสู่ตำแหน่ง \"นักเรียนแพทย์\" และต้องปฏิบัติตามกฎระเบียบของหน่วยงานอย่างเคร่งครัด"
+              ]
+            });
+          }
         } else {
           setLandingSlides([
             {
@@ -523,6 +564,20 @@ export default function AdminSettingsPage() {
             { image: "/images/leave_banner.jpg" },
             { image: "/images/welcome_banner.jpg" }
           ]);
+          setLandingRecruitmentTerms({
+            title: "เงื่อนไขการสมัครเข้าร่วมหน่วยงานแพทย์",
+            subtext: "กรุณาอ่านเงื่อนไขให้ครบถ้วนก่อนดำเนินการสมัคร",
+            terms_title: "ข้อกำหนดและเงื่อนไข",
+            items: [
+              "ผู้สมัครจะต้องเป็นสมาชิกของ Discord Server หน่วยงานแพทย์เท่านั้น",
+              "ข้อมูลที่กรอกต้องเป็นข้อมูลจริงตามตัวละครในเกม (IC) ห้ามกรอกข้อมูลเท็จ",
+              "หลังจากส่งใบสมัคร ผู้สมัครจะต้องเข้ารับการสอบภายใน 48 ชั่วโมง",
+              "หากไม่เข้ารับการสอบภายในเวลาที่กำหนด ระบบจะทำการลบข้อมูลผู้สมัครออกโดยอัตโนมัติ",
+              "ผู้สมัครที่ถูกลบข้อมูลสามารถกรอกใบสมัครใหม่ได้",
+              "การตัดสินผลสอบขึ้นอยู่กับดุลยพินิจของ ผอ. และทีมผู้ดูแลเท่านั้น ผลการตัดสินถือเป็นที่สิ้นสุด",
+              "ผู้สมัครที่ผ่านการสอบจะเข้าสู่ตำแหน่ง \"นักเรียนแพทย์\" และต้องปฏิบัติตามกฎระเบียบของหน่วยงานอย่างเคร่งครัด"
+            ]
+          });
         }
       })
       .catch(err => console.error("Failed to load settings:", err));
@@ -1983,7 +2038,8 @@ export default function AdminSettingsPage() {
           {([
             { id: "slides", label: "🖼️ สไลด์แบนเนอร์ (Slideshow)" },
             { id: "news", label: "📰 ข่าวสาร & ประกาศ (News)" },
-            { id: "recruitment_slides", label: "🩺 สไลด์รับสมัคร (Recruitment)" }
+            { id: "recruitment_slides", label: "🩺 สไลด์รับสมัคร (Recruitment)" },
+            { id: "recruitment_terms", label: "📄 เงื่อนไขการสมัคร (Terms)" }
           ] as const).map((tab) => (
             <button
               key={tab.id}
@@ -2485,6 +2541,155 @@ export default function AdminSettingsPage() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Tab 5: Recruitment Terms */}
+          {activeLandingTab === "recruitment_terms" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <h3 style={{ fontSize: "0.95rem", color: "var(--text-primary)", margin: 0 }}>
+                แก้ไขเงื่อนไขการสมัครเข้าร่วมหน่วยงาน (Recruitment Terms & Conditions)
+              </h3>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>หัวข้อนอกการ์ด (Title)</span>
+                  <input
+                    type="text"
+                    value={landingRecruitmentTerms.title}
+                    onChange={(e) => {
+                      setLandingRecruitmentTerms(prev => ({ ...prev, title: e.target.value }));
+                    }}
+                    placeholder="เงื่อนไขการสมัครเข้าร่วมหน่วยงานแพทย์"
+                    style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>คำอธิบายเพิ่มเติม (Subtext)</span>
+                  <input
+                    type="text"
+                    value={landingRecruitmentTerms.subtext}
+                    onChange={(e) => {
+                      setLandingRecruitmentTerms(prev => ({ ...prev, subtext: e.target.value }));
+                    }}
+                    placeholder="กรุณาอ่านเงื่อนไขให้ครบถ้วนก่อนดำเนินการสมัคร"
+                    style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>หัวข้อในการ์ดเงื่อนไข (Terms Title)</span>
+                <input
+                  type="text"
+                  value={landingRecruitmentTerms.terms_title}
+                  onChange={(e) => {
+                    setLandingRecruitmentTerms(prev => ({ ...prev, terms_title: e.target.value }));
+                  }}
+                  placeholder="ข้อกำหนดและเงื่อนไข"
+                  style={{ padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                />
+              </div>
+
+              {/* Items List Builder */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "bold" }}>รายการข้อตกลงและเงื่อนไข (List of Terms)</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLandingRecruitmentTerms(prev => ({
+                        ...prev,
+                        items: [...prev.items, ""]
+                      }));
+                    }}
+                    style={{
+                      padding: "4px 10px",
+                      background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+                      border: "1px solid var(--border-glow)",
+                      color: "var(--accent-light)",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                      cursor: "pointer"
+                    }}
+                  >
+                    ➕ เพิ่มข้อกำหนด
+                  </button>
+                </div>
+
+                {landingRecruitmentTerms.items.map((item, idx) => (
+                  <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", width: "24px" }}>{idx + 1}.</span>
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => {
+                        const updatedItems = [...landingRecruitmentTerms.items];
+                        updatedItems[idx] = e.target.value;
+                        setLandingRecruitmentTerms(prev => ({ ...prev, items: updatedItems }));
+                      }}
+                      placeholder={`ข้อตกลงข้อที่ ${idx + 1}`}
+                      style={{ flex: 1, padding: "8px 12px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "6px", fontSize: "0.8rem", outline: "none" }}
+                    />
+                    <div style={{ display: "flex", gap: "4px" }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedItems = [...landingRecruitmentTerms.items];
+                          if (idx > 0) {
+                            const temp = updatedItems[idx];
+                            updatedItems[idx] = updatedItems[idx - 1];
+                            updatedItems[idx - 1] = temp;
+                            setLandingRecruitmentTerms(prev => ({ ...prev, items: updatedItems }));
+                          }
+                        }}
+                        disabled={idx === 0}
+                        style={{ padding: "4px 8px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "6px", fontSize: "0.7rem", cursor: idx === 0 ? "not-allowed" : "pointer" }}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedItems = [...landingRecruitmentTerms.items];
+                          if (idx < updatedItems.length - 1) {
+                            const temp = updatedItems[idx];
+                            updatedItems[idx] = updatedItems[idx + 1];
+                            updatedItems[idx + 1] = temp;
+                            setLandingRecruitmentTerms(prev => ({ ...prev, items: updatedItems }));
+                          }
+                        }}
+                        disabled={idx === landingRecruitmentTerms.items.length - 1}
+                        style={{ padding: "4px 8px", background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "6px", fontSize: "0.7rem", cursor: idx === landingRecruitmentTerms.items.length - 1 ? "not-allowed" : "pointer" }}
+                      >
+                        ▼
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (landingRecruitmentTerms.items.length <= 1) {
+                            alert("ต้องมีอย่างน้อย 1 ข้อตกลงค่ะ");
+                            return;
+                          }
+                          if (!await confirm({
+                            title: "🗑️ ลบข้อกำหนด",
+                            message: `ยืนยันว่าต้องการลบข้อกำหนดข้อที่ ${idx + 1} หรือไม่?`,
+                            confirmText: "ลบออก",
+                            cancelText: "ยกเลิก",
+                            variant: "danger"
+                          })) return;
+                          const updatedItems = landingRecruitmentTerms.items.filter((_, i) => i !== idx);
+                          setLandingRecruitmentTerms(prev => ({ ...prev, items: updatedItems }));
+                        }}
+                        style={{ padding: "4px 8px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid var(--danger)", color: "var(--danger)", borderRadius: "6px", fontSize: "0.7rem", cursor: "pointer" }}
+                      >
+                        ลบ
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
