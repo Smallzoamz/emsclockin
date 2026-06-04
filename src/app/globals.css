@@ -2954,10 +2954,10 @@ body::before {
     transform: rotate(0deg);
   }
   25% {
-    transform: rotate(-6deg); /* Shake head left */
+    transform: rotate(-8deg); /* Shake head left */
   }
   75% {
-    transform: rotate(6deg);  /* Shake head right */
+    transform: rotate(8deg);  /* Shake head right */
   }
 }
 
@@ -2969,7 +2969,7 @@ body::before {
 .map-pin-main.active image,
 .map-pin-main.active-wiggle image {
   animation: pinBounce 0.6s ease-in-out infinite;
-  transform-origin: 50% 50%;
+  transform-origin: 50% 100%;
 }
 
 .map-pin-second image {
@@ -2979,7 +2979,7 @@ body::before {
 .map-pin-second:hover image,
 .map-pin-second.active-wiggle image {
   animation: pinWiggle 0.4s ease-in-out infinite;
-  transform-origin: 50% 50%;
+  transform-origin: 50% 100%;
 }
 
 
