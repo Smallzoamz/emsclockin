@@ -727,7 +727,7 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          zIndex: 3000,
+          zIndex: 110000,
           padding: "20px"
         }}
         onClick={() => setIsContractModalOpen(false)}
