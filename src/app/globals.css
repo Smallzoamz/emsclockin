@@ -6324,4 +6324,15 @@ body::before {
   gap: 8px;
 }
 
+/* Responsive top header settings for tablet/mobile viewports */
+@media (max-width: 768px) {
+  .dashboard-top-header {
+    padding: 0 16px !important;
+  }
+  .header-clock-widget {
+    display: none !important;
+  }
+}
+
+
 

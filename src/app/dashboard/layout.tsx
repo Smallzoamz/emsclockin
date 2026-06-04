@@ -127,7 +127,7 @@ export default async function DashboardLayout({
       <Sidebar user={userWithOp as any} logoUrl={logoUrl} />
       <div className="dashboard-layout-container">
         <TopHeader user={userWithOp as any} />
-        <main className="main-content" style={{ maxWidth: "100%", margin: "0", padding: "32px" }}>
+        <main className="main-content" style={{ maxWidth: "100%", margin: "0" }}>
           {children}
         </main>
       </div>

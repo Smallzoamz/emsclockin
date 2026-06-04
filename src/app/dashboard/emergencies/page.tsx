@@ -336,7 +336,7 @@ export default function EmergenciesPage() {
       </div>
 
       {/* Tab Switcher */}
-      <div style={{ display: "flex", gap: "12px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "12px" }}>
         <button
           onClick={() => setActiveTab("emergencies")}
           style={{
@@ -385,7 +385,7 @@ export default function EmergenciesPage() {
           <div 
             style={{ 
               display: "grid", 
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", 
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 320px), 1fr))", 
               gap: "24px" 
             }}
           >
@@ -594,7 +594,7 @@ export default function EmergenciesPage() {
           <div 
             style={{ 
               display: "grid", 
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", 
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 320px), 1fr))", 
               gap: "24px" 
             }}
           >
