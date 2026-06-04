@@ -413,7 +413,4 @@
 
 ## [2026-06-03 16:10] | File: src/app/dashboard/admin/leaves/page.tsx | Line: 462 | Keyword: Dynamic Canvas Certificate Approver Signature | Status: ✅ Complete | Change: Modified LeaveManagementPage to load doctor list and ranks configuration, and updated the medical discharge certificate canvas rendering engine to dynamically look up the approver's name and position (e.g. "ผู้อำนวยการ" or "รองผู้อำนวยการ") and draw it at the bottom signature section of the document.
 
-
-
-
-
+## [2026-06-04 10:15] | File: multiple | Line: 1 | Keyword: Medical Contracts and Unilateral Doctor Dismissal | Status: ✅ Complete | Change: Implemented a robust Medical Contracts system enabling admins to draft, review, and send customized contracts to individual doctors, allowing doctors to view, accept (with a typed signature), or reject contracts via their inbox drawer, and download signed contracts featuring an on-the-fly rendered canvas document with cursive handwriting and official EMS seal watermark. Also built a unilateral doctor dismissal system for the Director (ผอ.) to immediately dismiss any doctor, wiping all doctor references (registered list, ranks, schedule slots, shifts, exam logs, leave requests, mentorship relations, and bonus payouts), saving the record in resignation history as a 'dismissal' type, and drawing a custom dismissal certificate on canvas. Verified Next.js build compilation successfully with zero errors.

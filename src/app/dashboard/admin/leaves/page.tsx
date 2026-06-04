@@ -43,14 +43,15 @@ interface ResignationRequest {
   discord_thread_id: string | null;
   created_at: string;
   updated_at: string;
+  type?: "resignation" | "dismissal";
 }
 
 export default function LeaveManagementPage() {
   const confirm = useConfirm();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Top level mode: leaves or resignations
-  const [systemMode, setSystemMode] = useState<"leaves" | "resignations">("leaves");
+  // Top level mode: leaves or resignations or contracts
+  const [systemMode, setSystemMode] = useState<"leaves" | "resignations" | "contracts">("leaves");
 
   // Leaves State
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
@@ -61,6 +62,24 @@ export default function LeaveManagementPage() {
   const [resignations, setResignations] = useState<ResignationRequest[]>([]);
   const [resignationTab, setResignationTab] = useState<"pending" | "approved" | "rejected" | "acknowledged">("pending");
   const [selectedResignationForDoc, setSelectedResignationForDoc] = useState<ResignationRequest | null>(null);
+
+  // Contracts State
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [selectedContractForDoc, setSelectedContractForDoc] = useState<any | null>(null);
+
+  // Dismiss Doctor Modal State
+  const [isDismissModalOpen, setIsDismissModalOpen] = useState(false);
+  const [dismissEmail, setDismissEmail] = useState("");
+  const [dismissReason, setDismissReason] = useState("");
+  const [dismissIsReset, setDismissIsReset] = useState(true);
+  const [isDismissing, setIsDismissing] = useState(false);
+
+  // Create Contract Modal State
+  const [isCreateContractModalOpen, setIsCreateContractModalOpen] = useState(false);
+  const [newContractEmail, setNewContractEmail] = useState("");
+  const [newContractTitle, setNewContractTitle] = useState("สัญญาปฏิบัติหน้าที่บุคลากรทางการแพทย์");
+  const [newContractContent, setNewContractContent] = useState("");
+  const [isSendingContract, setIsSendingContract] = useState(false);
 
   // Config settings for Resignation Canvas
   const [resignationCriteriaHours, setResignationCriteriaHours] = useState(40);
@@ -76,26 +95,31 @@ export default function LeaveManagementPage() {
   const [doctorRanks, setDoctorRanks] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const contractCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Fetch data
   const loadData = async () => {
     setLoading(true);
     try {
-      const [leavesRes, resignationsRes, settingsRes] = await Promise.all([
+      const [leavesRes, resignationsRes, settingsRes, contractsRes] = await Promise.all([
         fetch("/api/admin/leaves"),
         fetch("/api/admin/resignations"),
-        fetch("/api/admin/settings")
+        fetch("/api/admin/settings"),
+        fetch("/api/admin/contracts")
       ]);
 
       if (!leavesRes.ok) throw new Error("Failed to fetch leaves");
       if (!resignationsRes.ok) throw new Error("Failed to fetch resignations");
+      if (!contractsRes.ok) throw new Error("Failed to fetch contracts");
 
       const leavesData = await leavesRes.json();
       const resignationsData = await resignationsRes.json();
       const settingsData = await settingsRes.json();
+      const contractsData = await contractsRes.json();
 
       setLeaves(leavesData.leaves || []);
       setResignations(resignationsData.resignations || []);
+      setContracts(contractsData.contracts || []);
 
       if (settingsData.settings) {
         setThemeAccentColor(settingsData.settings.theme_accent_color || "#10b981");
@@ -111,6 +135,11 @@ export default function LeaveManagementPage() {
         }
         if (settingsData.settings.resignation_cooldown_text) {
           setResignationCooldownText(settingsData.settings.resignation_cooldown_text);
+        }
+        if (settingsData.settings.medical_contract_default_template) {
+          setNewContractContent(settingsData.settings.medical_contract_default_template);
+        } else {
+          setNewContractContent(`สัญญาปฏิบัติหน้าที่บุคลากรทางการแพทย์\n\nเขียนที่ ศูนย์ปฏิบัติการแพทย์กู้ภัย FiveM EMS Service\nวันที่ [วันที่]\n\nสัญญาฉบับนี้ทำขึ้นระหว่าง ศูนย์ปฏิบัติการแพทย์กู้ภัย FiveM EMS Service ฝ่ายหนึ่ง กับ [ชื่อแพทย์] ([Discord]) อีกฝ่ายหนึ่ง\n\nโดยทั้งสองฝ่ายตกลงยินยอมปฏิบัติตามเงื่อนไขดังนี้:\n1. ผู้ปฏิบัติการตกลงที่จะเข้าเวรปฏิบัติหน้าที่ช่วยชีวิตผู้ป่วยอย่างเต็มความสามารถ\n2. รักษาวินัย มารยาท และความสามัคคีในองค์กร\n3. ปฏิบัติตามกฎระเบียบของโรงพยาบาลและคำสั่งของผู้อำนวยการอย่างเคร่งครัด`);
         }
       }
     } catch (err: any) {
@@ -349,7 +378,10 @@ export default function LeaveManagementPage() {
         // Document Title
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 24px Arial, sans-serif";
-        ctx.fillText("ใบประกาศพ้นสภาพบุคลากรทางการแพทย์", canvas.width / 2, 250);
+        const titleText = selectedResignationForDoc.type === "dismissal" 
+          ? "ใบประกาศปลดพ้นสภาพบุคลากรทางการแพทย์" 
+          : "ใบประกาศพ้นสภาพบุคลากรทางการแพทย์";
+        ctx.fillText(titleText, canvas.width / 2, 250);
         
         ctx.fillStyle = "rgba(255,255,255,0.35)";
         ctx.font = "11px Courier, monospace";
@@ -363,11 +395,16 @@ export default function LeaveManagementPage() {
           timeZone: "Asia/Bangkok"
         });
         
-        const resetStatusText = selectedResignationForDoc.is_reset ? "ถูกรีตัว (ไม่ผ่านเกณฑ์ชั่วโมงสะสม)" : "ผ่านเกณฑ์ไม่รีตัว";
+        const resetStatusText = selectedResignationForDoc.is_reset ? "ถูกรีตัว (พ้นสภาพการปฏิบัติหน้าที่)" : "ผ่านเกณฑ์ไม่รีตัว";
 
         // Resolve body template
-        let bodyText = resignationDocTemplate || 
-          "ขอประกาศพ้นสภาพของแพทย์ [ชื่อแพทย์] ([Discord]) จากหน่วยงานแพทย์กู้ภัย FiveM EMS Service เนื่องจากได้ทำการยื่นขอลาออก\\n\\nเหตุผลการลาออก: [เหตุผล]\\nชั่วโมงงานสะสมทั้งหมด: [ชั่วโมงสะสม] / [เกณฑ์ชั่วโมง] ชั่วโมง\\nสถานะการพ้นสภาพ: [สถานะรีตัว]\\n\\nขอขอบคุณในการร่วมงานและดูแลผู้ป่วยตลอดเวลาที่ผ่านมา\\nลงชื่อ ผอ. หน่วยงานแพทย์กู้ภัย";
+        let bodyText = "";
+        if (selectedResignationForDoc.type === "dismissal") {
+          bodyText = "ขอประกาศปลดพ้นสภาพของแพทย์ [ชื่อแพทย์] ([Discord]) จากหน่วยงานแพทย์กู้ภัย FiveM EMS Service โดยให้มีผลบังคับใช้ในทันที\\n\\nเหตุผลการปลดพ้นสภาพ: [เหตุผล]\\nชั่วโมงงานสะสมรวม: [ชั่วโมงสะสม] ชั่วโมง\\nสถานะการพ้นสภาพ: [สถานะรีตัว]\\n\\nขอประกาศให้ทราบโดยทั่วกัน\\nลงชื่อ ผอ. หน่วยงานแพทย์กู้ภัย";
+        } else {
+          bodyText = resignationDocTemplate || 
+            "ขอประกาศพ้นสภาพของแพทย์ [ชื่อแพทย์] ([Discord]) จากหน่วยงานแพทย์กู้ภัย FiveM EMS Service เนื่องจากได้ทำการยื่นขอลาออก\\n\\nเหตุผลการลาออก: [เหตุผล]\\nชั่วโมงงานสะสมทั้งหมด: [ชั่วโมงสะสม] / [เกณฑ์ชั่วโมง] ชั่วโมง\\nสถานะการพ้นสภาพ: [สถานะรีตัว]\\n\\nขอขอบคุณในการร่วมงานและดูแลผู้ป่วยตลอดเวลาที่ผ่านมา\\nลงชื่อ ผอ. หน่วยงานแพทย์กู้ภัย";
+        }
 
         bodyText = bodyText
           .replace(/\[ชื่อแพทย์\]/g, selectedResignationForDoc.doctor_name)
@@ -421,7 +458,7 @@ export default function LeaveManagementPage() {
           return currentY + lineH;
         }
 
-        paragraphs.forEach((p) => {
+        paragraphs.forEach((p: string) => {
           if (p.trim() === "") {
             y += 15;
           } else {
@@ -441,9 +478,13 @@ export default function LeaveManagementPage() {
 
         ctx.fillStyle = selectedResignationForDoc.is_reset ? "#fca5a5" : "#a7f3d0";
         ctx.font = "bold 18px Arial, sans-serif";
-        const statusTextDisplay = selectedResignationForDoc.is_reset 
-          ? `🚨 สถานะ: ถูกรีตัว (ชั่วโมงงานสะสมไม่ครบเกณฑ์ ${selectedResignationForDoc.passing_hours} ชม.)`
-          : `🟢 สถานะ: พ้นสภาพปกติ (ชั่วโมงสะสมครบเกณฑ์ ไม่ถูกรีตัว)`;
+        const statusTextDisplay = selectedResignationForDoc.type === "dismissal"
+          ? (selectedResignationForDoc.is_reset 
+              ? `🚨 สถานะ: ถูกปลดพ้นสภาพ (มีผลบังคับใช้ทันที & รีตัว)` 
+              : `🚨 สถานะ: ถูกปลดพ้นสภาพ (มีผลบังคับใช้ทันที)`)
+          : (selectedResignationForDoc.is_reset 
+              ? `🚨 สถานะ: ถูกรีตัว (ชั่วโมงงานสะสมไม่ครบเกณฑ์ ${selectedResignationForDoc.passing_hours} ชม.)`
+              : `🟢 สถานะ: พ้นสภาพปกติ (ชั่วโมงสะสมครบเกณฑ์ ไม่ถูกรีตัว)`);
         ctx.fillText(statusTextDisplay, canvas.width / 2, y + 38);
 
         y += 110;
@@ -555,12 +596,382 @@ export default function LeaveManagementPage() {
     const canvas = canvasRef.current;
     const dataUrl = canvas.toDataURL("image/png");
     const link = document.createElement("a");
-    link.download = `ประกาศพ้นสภาพ_${selectedResignationForDoc.doctor_name}.png`;
+    const docNamePrefix = selectedResignationForDoc.type === "dismissal" ? "ประกาศปลดพ้นสภาพ_" : "ประกาศพ้นสภาพ_";
+    link.download = `${docNamePrefix}${selectedResignationForDoc.doctor_name}.png`;
     link.href = dataUrl;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
+
+  // Dismiss Doctor handler
+  const handleDismissDoctor = async () => {
+    if (!dismissEmail) {
+      alert("กรุณาเลือกแพทย์ที่ต้องการปลดพ้นสภาพ");
+      return;
+    }
+    if (!dismissReason.trim()) {
+      alert("กรุณาระบุเหตุผลการปลดพ้นสภาพ");
+      return;
+    }
+
+    const selectedDoc = registeredDoctors.find(d => d.email === dismissEmail);
+    const targetName = selectedDoc?.name || selectedDoc?.discordUsername || dismissEmail;
+
+    const isConfirmed = await confirm({
+      title: "🚨 ยืนยันการปลดแพทย์พ้นสภาพ",
+      message: `คุณกำลังจะทำการปลด "${targetName}" พ้นสภาพการเป็นบุคลากรทางการแพทย์โดยตรง โดยไม่มีเงื่อนไขและไม่สามารถกู้คืนได้ ต้องการดำเนินการต่อใช่หรือไม่?`,
+      confirmText: "ยืนยันปลดทันที",
+      cancelText: "ยกเลิก",
+      variant: "danger"
+    });
+
+    if (!isConfirmed) return;
+
+    setIsDismissing(true);
+    try {
+      const res = await fetch("/api/admin/dismiss", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: dismissEmail,
+          reason: dismissReason,
+          isReset: dismissIsReset
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Failed to dismiss doctor");
+      }
+
+      alert("ดำเนินการปลดแพทย์พ้นสภาพสำเร็จแล้วค่ะ");
+      setIsDismissModalOpen(false);
+      setDismissEmail("");
+      setDismissReason("");
+      
+      // Reload data to reflect changes
+      loadData();
+    } catch (err: any) {
+      console.error(err);
+      alert("ไม่สามารถทำรายการได้: " + err.message);
+    } finally {
+      setIsDismissing(false);
+    }
+  };
+
+  // Send Contract handler
+  const handleSendContract = async () => {
+    if (!newContractEmail) {
+      alert("กรุณาเลือกแพทย์ผู้รับสัญญา");
+      return;
+    }
+    if (!newContractTitle.trim()) {
+      alert("กรุณาระบุหัวข้อสัญญา");
+      return;
+    }
+    if (!newContractContent.trim()) {
+      alert("กรุณาระบุเนื้อหาข้อตกลงสัญญา");
+      return;
+    }
+
+    setIsSendingContract(true);
+    try {
+      const res = await fetch("/api/admin/contracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          doctorEmail: newContractEmail,
+          title: newContractTitle,
+          content: newContractContent
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Failed to send contract");
+      }
+
+      alert("ส่งข้อตกลงสัญญาแพทย์เรียบร้อยแล้วค่ะ สัญญาจะไปปรากฏใน Inbox ของเป้าหมาย");
+      setIsCreateContractModalOpen(false);
+      setNewContractEmail("");
+      
+      // Reload contracts
+      loadData();
+    } catch (err: any) {
+      console.error(err);
+      alert("ไม่สามารถส่งสัญญาได้: " + err.message);
+    } finally {
+      setIsSendingContract(false);
+    }
+  };
+
+  // Download Contract Document Canvas handler
+  const handleDownloadContractDoc = () => {
+    if (!contractCanvasRef.current || !selectedContractForDoc) return;
+    const canvas = contractCanvasRef.current;
+    const dataUrl = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.download = `สัญญาจ้างแพทย์_${selectedContractForDoc.doctor_name}.png`;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // useEffect to draw contract on canvas
+  useEffect(() => {
+    if (selectedContractForDoc && contractCanvasRef.current) {
+      const canvas = contractCanvasRef.current;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, "#080c18");
+      gradient.addColorStop(1, "#030408");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Borders
+      ctx.strokeStyle = themeAccentColor || "#10b981";
+      ctx.lineWidth = 6;
+      ctx.strokeRect(15, 15, canvas.width - 30, canvas.height - 30);
+      
+      ctx.strokeStyle = "rgba(255,255,255,0.05)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(22, 22, canvas.width - 44, canvas.height - 44);
+
+      // Corner decorations
+      const drawCorner = (x: number, y: number, w: number, h: number) => {
+        ctx.strokeStyle = themeAccentColor || "#10b981";
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(x + w, y);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x, y + h);
+        ctx.stroke();
+      };
+      drawCorner(10, 10, 50, 50);
+      drawCorner(canvas.width - 10, 10, -50, 50);
+      drawCorner(10, canvas.height - 10, 50, -50);
+      drawCorner(canvas.width - 10, canvas.height - 10, -50, -50);
+
+      const drawTextContent = () => {
+        // Title Header
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 28px Arial, sans-serif";
+        ctx.fillText("FIVEM EMS SERVICE", canvas.width / 2, 120);
+
+        ctx.fillStyle = themeAccentColor || "#10b981";
+        ctx.font = "bold 13px Arial, sans-serif";
+        ctx.fillText("ศูนย์ปฏิบัติการแพทย์กู้ภัยและรักษาพยาบาลฉุกเฉิน", canvas.width / 2, 155);
+
+        // Divider
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(100, 185);
+        ctx.lineTo(canvas.width - 100, 185);
+        ctx.stroke();
+
+        // Document Title
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 22px Arial, sans-serif";
+        ctx.fillText(selectedContractForDoc.title, canvas.width / 2, 230);
+        
+        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.font = "11px Courier, monospace";
+        ctx.fillText(`CONTRACT ID: ${selectedContractForDoc.id.toUpperCase()}`, canvas.width / 2, 260);
+
+        // Date formatting
+        const formattedDate = new Date(selectedContractForDoc.created_at).toLocaleDateString("th-TH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          timeZone: "Asia/Bangkok"
+        });
+
+        // Resolve contract text replacements
+        let bodyText = selectedContractForDoc.content || "";
+        bodyText = bodyText
+          .replace(/\[ชื่อแพทย์\]/g, selectedContractForDoc.doctor_name)
+          .replace(/\[Discord\]/g, `@${selectedContractForDoc.doctor_discord_username}`)
+          .replace(/\[วันที่\]/g, formattedDate);
+
+        // Draw body texts
+        ctx.textAlign = "left";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+        ctx.font = "15px Arial, sans-serif";
+        
+        const paragraphs = bodyText.split("\n");
+        let y = 310;
+        const maxWidth = canvas.width - 160;
+        const lineHeight = 26;
+
+        function wrapText(text: string, x: number, startY: number, maxW: number, lineH: number) {
+          const words = text.split(" ");
+          let line = "";
+          let currentY = startY;
+
+          for (let n = 0; n < words.length; n++) {
+            if (text.length > 30 && !text.includes(" ")) {
+              let i = 0;
+              while (i < text.length) {
+                const chunk = text.substring(i, i + 55);
+                ctx!.fillText(chunk, x, currentY);
+                currentY += lineH;
+                i += 55;
+              }
+              return currentY;
+            }
+
+            const testLine = line + words[n] + " ";
+            const metrics = ctx!.measureText(testLine);
+            const testWidth = metrics.width;
+            if (testWidth > maxW && n > 0) {
+              ctx!.fillText(line, x, currentY);
+              line = words[n] + " ";
+              currentY += lineH;
+            } else {
+              line = testLine;
+            }
+          }
+          ctx!.fillText(line, x, currentY);
+          return currentY + lineH;
+        }
+
+        paragraphs.forEach((p: string) => {
+          if (p.trim() === "") {
+            y += 12;
+          } else {
+            y = wrapText(p, 80, y, maxWidth, lineHeight);
+          }
+        });
+
+        y = Math.max(y + 40, 800);
+
+        // Divider before signatures
+        ctx.strokeStyle = "rgba(255,255,255,0.06)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(80, y);
+        ctx.lineTo(canvas.width - 80, y);
+        ctx.stroke();
+
+        y += 40;
+
+        // Management Signature (Left Side)
+        ctx.textAlign = "left";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+        ctx.font = "13px Arial, sans-serif";
+        ctx.fillText("ผู้ลงนามฝ่ายบริหาร / ผู้ว่าจ้าง", 80, y);
+
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(80, y + 35);
+        ctx.lineTo(280, y + 35);
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 14px Arial, sans-serif";
+        ctx.fillText(`( ${selectedContractForDoc.created_by} )`, 80, y + 55);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.font = "12px Arial, sans-serif";
+        ctx.fillText("ฝ่ายบริหารงานบุคคล", 80, y + 75);
+
+        // Doctor Signature (Right Side)
+        ctx.textAlign = "right";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+        ctx.font = "13px Arial, sans-serif";
+        ctx.fillText("ผู้ยินยอมลงนาม / แพทย์กู้ภัย", canvas.width - 80, y);
+
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(canvas.width - 280, y + 35);
+        ctx.lineTo(canvas.width - 80, y + 35);
+        ctx.stroke();
+
+        if (selectedContractForDoc.status === "accepted" && selectedContractForDoc.signature_name) {
+          // Draw handwriting style signature
+          ctx.save();
+          ctx.textAlign = "center";
+          ctx.font = "italic 32px 'Brush Script MT', 'Courier New', cursive";
+          ctx.fillStyle = themeAccentColor || "#10b981";
+          ctx.fillText(selectedContractForDoc.signature_name, canvas.width - 180, y + 25);
+          ctx.restore();
+
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 14px Arial, sans-serif";
+          ctx.fillText(`( ${selectedContractForDoc.signature_name} )`, canvas.width - 80, y + 55);
+
+          const signedDate = new Date(selectedContractForDoc.signed_at).toLocaleDateString("th-TH", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Asia/Bangkok"
+          }) + " น.";
+          ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+          ctx.font = "12px Arial, sans-serif";
+          ctx.fillText(`ลงนามเมื่อ: ${signedDate}`, canvas.width - 80, y + 75);
+        } else if (selectedContractForDoc.status === "rejected") {
+          ctx.fillStyle = "#ef4444";
+          ctx.font = "bold 14px Arial, sans-serif";
+          ctx.fillText("ปฏิเสธข้อตกลงสัญญา ❌", canvas.width - 180, y + 25);
+        } else {
+          ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+          ctx.font = "italic 13px Arial, sans-serif";
+          ctx.fillText("( รอแพทย์ลงนามสัญญา )", canvas.width - 180, y + 25);
+        }
+
+        // Seal of EMS
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+        ctx.font = "bold 8px Arial, sans-serif";
+        ctx.fillText("OFFICIAL SEAL", canvas.width / 2, y + 35);
+        
+        ctx.strokeStyle = "rgba(255,255,255,0.04)";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(canvas.width / 2, y + 20, 38, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      if (cityLogoUrl) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          ctx.save();
+          ctx.globalAlpha = 0.03;
+          ctx.drawImage(img, canvas.width / 2 - 160, canvas.height / 2 - 160, 320, 320);
+          ctx.restore();
+          
+          ctx.save();
+          ctx.drawImage(img, canvas.width / 2 - 25, 45, 50, 50);
+          ctx.restore();
+          
+          drawTextContent();
+        };
+        img.onerror = () => {
+          drawTextContent();
+        };
+        img.src = cityLogoUrl;
+      } else {
+        drawTextContent();
+      }
+    }
+  }, [selectedContractForDoc, themeAccentColor, cityLogoUrl]);
 
   // Rest of the component follows...
 
@@ -577,15 +988,27 @@ export default function LeaveManagementPage() {
             จัดการ ตรวจสอบ และอนุมัติใบลาพักงาน/ใบลาออกของแพทย์กู้ภัยแบบ Real-Time
           </p>
         </div>
-        <button 
-          onClick={loadData} 
-          disabled={loading}
-          className="btn btn-ghost"
-          style={{ display: "flex", alignItems: "center", gap: "8px" }}
-        >
-          <RefreshIcon size={14} className={loading ? "spin" : ""} />
-          รีเฟรชข้อมูล
-        </button>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          {systemMode === "resignations" && (
+            <button
+              onClick={() => setIsDismissModalOpen(true)}
+              className="btn btn-danger"
+              style={{ display: "flex", alignItems: "center", gap: "8px", borderRadius: "8px", fontSize: "0.85rem", padding: "10px 16px" }}
+            >
+              <ShieldIcon size={14} />
+              🚨 ปลดแพทย์พ้นสภาพ
+            </button>
+          )}
+          <button 
+            onClick={loadData} 
+            disabled={loading}
+            className="btn btn-ghost"
+            style={{ display: "flex", alignItems: "center", gap: "8px" }}
+          >
+            <RefreshIcon size={14} className={loading ? "spin" : ""} />
+            รีเฟรชข้อมูล
+          </button>
+        </div>
       </header>
 
       {/* System Mode Selection Tab */}
@@ -629,6 +1052,26 @@ export default function LeaveManagementPage() {
         >
           <ShieldIcon size={16} style={{ color: systemMode === "resignations" ? "#000" : "inherit" }} />
           จัดการใบลาออก ({resignations.length})
+        </button>
+        <button 
+          onClick={() => setSystemMode("contracts")}
+          style={{ 
+            fontSize: "0.9rem", 
+            padding: "10px 20px", 
+            borderRadius: "10px", 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "8px",
+            border: "1px solid var(--border-subtle)",
+            background: systemMode === "contracts" ? "var(--accent)" : "rgba(255,255,255,0.015)",
+            color: systemMode === "contracts" ? "#000" : "var(--text-secondary)",
+            fontWeight: 600,
+            cursor: "pointer",
+            transition: "all 0.2s"
+          }}
+        >
+          <FileTextIcon size={16} style={{ color: systemMode === "contracts" ? "#000" : "inherit" }} />
+          จัดการสัญญาแพทย์ ({contracts.length})
         </button>
       </div>
 
@@ -855,7 +1298,7 @@ export default function LeaveManagementPage() {
             </div>
           )}
         </>
-      ) : (
+      ) : systemMode === "resignations" ? (
         <>
           {/* Resignations Tabs Menu */}
           <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "1px", marginBottom: "24px" }}>
@@ -1077,6 +1520,102 @@ export default function LeaveManagementPage() {
             </div>
           )}
         </>
+      ) : (
+        <>
+          {/* Contracts Grid/Table */}
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "80px 0" }}>
+              <div className="loading-spinner"></div>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "12px" }}>กำลังโหลดข้อมูลสัญญาแพทย์...</p>
+            </div>
+          ) : (
+            <div className="card" style={{ padding: "20px", border: "1px solid var(--border-subtle)", borderRadius: "16px", background: "var(--bg-card)", backdropFilter: "blur(12px)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)" }}>📄 สัญญาจ้างแพทย์กู้ภัยทั้งหมด ({contracts.length})</h3>
+                <button
+                  onClick={() => setIsCreateContractModalOpen(true)}
+                  className="btn btn-primary"
+                  style={{ display: "flex", alignItems: "center", gap: "8px", borderRadius: "8px", fontSize: "0.85rem" }}
+                >
+                  <FileTextIcon size={14} style={{ color: "#000" }} />
+                  ส่งสัญญาแพทย์ใหม่
+                </button>
+              </div>
+
+              {contracts.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-muted)" }}>
+                  ไม่มีประวัติการส่งสัญญาแพทย์ในระบบ
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.88rem" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid var(--border-subtle)", color: "var(--text-muted)" }}>
+                        <th style={{ padding: "12px 16px" }}>แพทย์ผู้รับ</th>
+                        <th style={{ padding: "12px 16px" }}>หัวข้อสัญญา</th>
+                        <th style={{ padding: "12px 16px" }}>ผู้ทำสัญญา</th>
+                        <th style={{ padding: "12px 16px" }}>วันที่ส่ง</th>
+                        <th style={{ padding: "12px 16px" }}>สถานะ</th>
+                        <th style={{ padding: "12px 16px" }}>ลายมือชื่อ</th>
+                        <th style={{ padding: "12px 16px", textAlign: "right" }}>การดำเนินการ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contracts.map((c) => (
+                        <tr key={c.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.02)", color: "var(--text-secondary)" }}>
+                          <td style={{ padding: "14px 16px" }}>
+                            <div style={{ fontWeight: 600, color: "#fff" }}>{c.doctor_name}</div>
+                            <div style={{ fontSize: "0.75rem", color: "#818cf8" }}>@{c.doctor_discord_username}</div>
+                          </td>
+                          <td style={{ padding: "14px 16px", fontWeight: 500 }}>{c.title}</td>
+                          <td style={{ padding: "14px 16px", fontSize: "0.8rem" }}>{c.created_by}</td>
+                          <td style={{ padding: "14px 16px", fontSize: "0.8rem" }}>{new Date(c.created_at).toLocaleDateString("th-TH")}</td>
+                          <td style={{ padding: "14px 16px" }}>
+                            <span
+                              style={{
+                                display: "inline-block",
+                                padding: "4px 10px",
+                                borderRadius: "99px",
+                                fontSize: "0.75rem",
+                                fontWeight: 600,
+                                backgroundColor: c.status === "accepted" ? "rgba(16, 185, 129, 0.12)" : c.status === "rejected" ? "rgba(239, 68, 68, 0.12)" : "rgba(245, 158, 11, 0.12)",
+                                color: c.status === "accepted" ? "#4ade80" : c.status === "rejected" ? "#f87171" : "#fbbf24",
+                                border: `1px solid ${c.status === "accepted" ? "rgba(16, 185, 129, 0.2)" : c.status === "rejected" ? "rgba(239, 68, 68, 0.2)" : "rgba(245, 158, 11, 0.2)"}`
+                              }}
+                            >
+                              {c.status === "accepted" ? "ยินยอมแล้ว ✅" : c.status === "rejected" ? "ปฏิเสธสัญญา ❌" : "รอดำเนินการ ⏳"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "14px 16px", fontStyle: "italic", fontFamily: "cursive", fontSize: "0.95rem", color: "var(--accent-light)" }}>
+                            {c.signature_name || "—"}
+                          </td>
+                          <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                            <button
+                              onClick={() => setSelectedContractForDoc(c)}
+                              className="btn btn-ghost"
+                              style={{
+                                fontSize: "0.75rem",
+                                padding: "6px 12px",
+                                border: "1px solid var(--border-subtle)",
+                                color: "var(--accent-light)",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px"
+                              }}
+                            >
+                              <FileTextIcon size={12} />
+                              ดูเอกสารสัญญา
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/* Fullscreen Image Lightbox Modal */}
@@ -1198,6 +1737,363 @@ export default function LeaveManagementPage() {
                 <CameraIcon size={16} style={{ color: "#000" }} />
                 ดาวน์โหลดประกาศ (PNG)
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dismiss Doctor Modal */}
+      {isDismissModalOpen && (
+        <div 
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.8)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1500,
+            padding: "20px"
+          }}
+        >
+          <div 
+            className="card"
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "16px",
+              padding: "24px",
+              maxWidth: "500px",
+              width: "100%",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "var(--danger)" }}>
+                🚨 ปลดบุคลากรแพทย์พ้นสภาพ (ทันที)
+              </h3>
+              <button 
+                onClick={() => {
+                  setIsDismissModalOpen(false);
+                  setDismissEmail("");
+                  setDismissReason("");
+                }}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", fontSize: "1.5rem", cursor: "pointer" }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: 600 }}>เลือกแพทย์ที่จะปลด:</label>
+                <select
+                  value={dismissEmail}
+                  onChange={e => setDismissEmail(e.target.value)}
+                  style={{
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)",
+                    background: "rgba(0,0,0,0.2)",
+                    color: "#fff",
+                    fontSize: "0.9rem"
+                  }}
+                >
+                  <option value="">-- เลือกรายชื่อแพทย์ --</option>
+                  {registeredDoctors.map(doc => (
+                    <option key={doc.email} value={doc.email}>
+                      {doc.name || doc.discordUsername} ({doc.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: 600 }}>ระบุเหตุผลการปลดพ้นสภาพ:</label>
+                <textarea
+                  placeholder="เช่น ทำผิดวินัยร้ายแรง หรือ ไม่สามารถปฏิบัติงานตามเงื่อนไขของหน่วยงาน"
+                  value={dismissReason}
+                  onChange={e => setDismissReason(e.target.value)}
+                  style={{
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)",
+                    background: "rgba(0,0,0,0.2)",
+                    color: "#fff",
+                    fontSize: "0.9rem",
+                    minHeight: "100px",
+                    resize: "vertical",
+                    lineHeight: 1.5
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <input
+                  type="checkbox"
+                  id="dismiss-reset"
+                  checked={dismissIsReset}
+                  onChange={e => setDismissIsReset(e.target.checked)}
+                  style={{ width: "16px", height: "16px", accentColor: "var(--danger)" }}
+                />
+                <label htmlFor="dismiss-reset" style={{ fontSize: "0.85rem", color: "var(--text-secondary)", userSelect: "none" }}>
+                  รีเซ็ตชั่วโมงงานสะสมทั้งหมดและลบประวัติการทำงาน (Reset Hours)
+                </label>
+              </div>
+
+              <div style={{ fontSize: "0.78rem", color: "var(--danger)", background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.15)", padding: "10px", borderRadius: "6px", lineHeight: 1.4 }}>
+                ⚠️ <strong>คำเตือน:</strong> การปลดแพทย์จะดำเนินการลบสิทธิ์ ข้อมูลเวร คิว และชั่วโมงทำงานในระบบทั้งหมดทันที โดยไม่ต้องผ่านการรับการยินยอมจากตัวแพทย์ มีผลบังคับใช้ทันที
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button 
+                onClick={() => {
+                  setIsDismissModalOpen(false);
+                  setDismissEmail("");
+                  setDismissReason("");
+                }}
+                disabled={isDismissing}
+                className="btn btn-ghost"
+                style={{ padding: "10px 20px", borderRadius: "8px" }}
+              >
+                ยกเลิก
+              </button>
+              <button 
+                onClick={handleDismissDoctor}
+                disabled={isDismissing}
+                className="btn btn-danger"
+                style={{ padding: "10px 24px", borderRadius: "8px", fontWeight: 600 }}
+              >
+                {isDismissing ? "กำลังทำรายการ..." : "ยืนยันการปลดออก"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create New Contract Modal */}
+      {isCreateContractModalOpen && (
+        <div 
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.8)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1500,
+            padding: "20px"
+          }}
+        >
+          <div 
+            className="card"
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "16px",
+              padding: "24px",
+              maxWidth: "600px",
+              width: "100%",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+              maxHeight: "90vh",
+              overflowY: "auto"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                📄 สร้างและส่งเอกสารสัญญาแพทย์รายบุคคล
+              </h3>
+              <button 
+                onClick={() => setIsCreateContractModalOpen(false)}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", fontSize: "1.5rem", cursor: "pointer" }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: 600 }}>เลือกแพทย์ผู้รับสัญญา:</label>
+                <select
+                  value={newContractEmail}
+                  onChange={e => setNewContractEmail(e.target.value)}
+                  style={{
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)",
+                    background: "rgba(0,0,0,0.2)",
+                    color: "#fff",
+                    fontSize: "0.9rem"
+                  }}
+                >
+                  <option value="">-- เลือกรายชื่อแพทย์ --</option>
+                  {registeredDoctors.map(doc => (
+                    <option key={doc.email} value={doc.email}>
+                      {doc.name || doc.discordUsername} ({doc.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: 600 }}>หัวข้อข้อตกลงสัญญา:</label>
+                <input
+                  type="text"
+                  value={newContractTitle}
+                  onChange={e => setNewContractTitle(e.target.value)}
+                  style={{
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)",
+                    background: "rgba(0,0,0,0.2)",
+                    color: "#fff",
+                    fontSize: "0.9rem"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: 600 }}>รายละเอียดเนื้อหาข้อตกลงสัญญา:</label>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>รองรับคำทดแทน: [ชื่อแพทย์], [Discord], [วันที่]</span>
+                </div>
+                <textarea
+                  value={newContractContent}
+                  onChange={e => setNewContractContent(e.target.value)}
+                  style={{
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)",
+                    background: "rgba(0,0,0,0.2)",
+                    color: "#fff",
+                    fontSize: "0.9rem",
+                    minHeight: "220px",
+                    resize: "vertical",
+                    lineHeight: 1.6,
+                    fontFamily: "inherit"
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button 
+                onClick={() => setIsCreateContractModalOpen(false)}
+                disabled={isSendingContract}
+                className="btn btn-ghost"
+                style={{ padding: "10px 20px", borderRadius: "8px" }}
+              >
+                ยกเลิก
+              </button>
+              <button 
+                onClick={handleSendContract}
+                disabled={isSendingContract}
+                className="btn btn-primary"
+                style={{ padding: "10px 24px", borderRadius: "8px", fontWeight: 600 }}
+              >
+                {isSendingContract ? "กำลังส่ง..." : "ส่งสัญญาแพทย์"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contract Document Viewer Modal */}
+      {selectedContractForDoc && (
+        <div 
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.85)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 2000,
+            padding: "20px"
+          }}
+        >
+          <div 
+            className="card"
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "16px",
+              padding: "24px",
+              maxWidth: "600px",
+              width: "100%",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+              maxHeight: "95vh",
+              overflowY: "auto"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                📄 เอกสารสัญญาปฏิบัติงานแพทย์
+              </h3>
+              <button 
+                onClick={() => setSelectedContractForDoc(null)}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", fontSize: "1.5rem", cursor: "pointer" }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "center", padding: "10px", background: "rgba(0,0,0,0.3)", borderRadius: "8px", overflow: "hidden" }}>
+              <canvas 
+                ref={contractCanvasRef} 
+                width={800} 
+                height={1100} 
+                style={{ 
+                  width: "100%", 
+                  maxWidth: "400px", 
+                  height: "auto", 
+                  border: "1px solid rgba(255,255,255,0.08)", 
+                  borderRadius: "6px",
+                  background: "#080c18"
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button 
+                onClick={() => setSelectedContractForDoc(null)}
+                className="btn btn-ghost"
+                style={{ padding: "10px 20px", borderRadius: "8px" }}
+              >
+                ปิดหน้าต่าง
+              </button>
+              {selectedContractForDoc.status === "accepted" && (
+                <button 
+                  onClick={handleDownloadContractDoc}
+                  className="btn btn-primary"
+                  style={{ padding: "10px 24px", borderRadius: "8px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <CameraIcon size={16} style={{ color: "#000" }} />
+                  ดาวน์โหลดสัญญา (PNG)
+                </button>
+              )}
             </div>
           </div>
         </div>

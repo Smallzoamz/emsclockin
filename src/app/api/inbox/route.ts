@@ -21,6 +21,20 @@ export async function GET() {
           score,
           started_at,
           submitted_at
+        ),
+        medical_contracts:contract_id (
+          id,
+          doctor_email,
+          doctor_name,
+          doctor_discord_id,
+          doctor_discord_username,
+          title,
+          content,
+          status,
+          signature_name,
+          signed_at,
+          created_by,
+          created_at
         )
       `)
       .eq("user_email", userEmail)

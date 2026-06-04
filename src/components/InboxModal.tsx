@@ -22,6 +22,21 @@ interface Message {
     started_at: string;
     submitted_at: string | null;
   } | null;
+  contract_id?: string | null;
+  medical_contracts?: {
+    id: string;
+    doctor_email: string;
+    doctor_name: string;
+    doctor_discord_id: string;
+    doctor_discord_username: string;
+    title: string;
+    content: string;
+    status: string;
+    signature_name: string | null;
+    signed_at: string | null;
+    created_by: string;
+    created_at: string;
+  } | null;
 }
 
 interface InboxModalProps {
@@ -37,6 +52,8 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [startingExam, setStartingExam] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [typedSignature, setTypedSignature] = useState("");
+  const [respondingContract, setRespondingContract] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -120,6 +137,310 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
   const handleSelectMessage = (msg: Message) => {
     setSelectedMessage(msg);
     markAsRead(msg);
+    setTypedSignature(""); // reset signature on selection
+  };
+
+  const handleRespondContract = async (msg: Message, action: "accepted" | "rejected") => {
+    if (!msg.medical_contracts) return;
+    
+    if (action === "accepted" && (!typedSignature || typedSignature.trim() === "")) {
+      alert("กรุณาพิมพ์ชื่อจริง-นามสกุลของคุณเพื่อใช้ในการลงนามยินยอมค่ะ");
+      return;
+    }
+
+    const confirmMsg = action === "accepted"
+      ? `คุณแน่ใจใช่หรือไม่ที่จะกดยินยอมข้อตกลงสัญญา "${msg.medical_contracts.title}"? ระบบจะทำการประทับตราชื่อลายเซ็นอิเล็กทรอนิกส์ของคุณลงในเอกสารโดยทันที`
+      : `คุณแน่ใจใช่หรือไม่ที่จะปฏิเสธข้อตกลงสัญญานี้?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setRespondingContract(true);
+    setErrorMsg("");
+    try {
+      const res = await fetch(`/api/contracts/${msg.medical_contracts.id}/respond`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: action,
+          signatureName: typedSignature
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(action === "accepted" ? "ลงนามสัญญาเรียบร้อยแล้วค่ะ!" : "ปฏิเสธสัญญาเรียบร้อยแล้วค่ะ");
+        
+        // Update local state in messages array
+        setMessages(prev =>
+          prev.map(m => {
+            if (m.id === msg.id && m.medical_contracts) {
+              return {
+                ...m,
+                is_read: true,
+                medical_contracts: {
+                  ...m.medical_contracts,
+                  status: action,
+                  signature_name: action === "accepted" ? typedSignature : null,
+                  signed_at: new Date().toISOString()
+                }
+              };
+            }
+            return m;
+          })
+        );
+
+        // Update selectedMessage state
+        setSelectedMessage(prev => {
+          if (prev && prev.id === msg.id && prev.medical_contracts) {
+            return {
+              ...prev,
+              is_read: true,
+              medical_contracts: {
+                ...prev.medical_contracts,
+                status: action,
+                signature_name: action === "accepted" ? typedSignature : null,
+                signed_at: new Date().toISOString()
+              }
+            };
+          }
+          return prev;
+        });
+      } else {
+        setErrorMsg(data.error || "เกิดข้อผิดพลาดในการตอบกลับสัญญา");
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("เกิดข้อผิดพลาดในการเชื่อมต่อระบบ");
+    } finally {
+      setRespondingContract(false);
+    }
+  };
+
+  const handleDownloadDoctorContract = (contract: any) => {
+    if (!contract) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = 800;
+    canvas.height = 1100;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Draw background
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, "#080c18");
+    gradient.addColorStop(1, "#030408");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw borders
+    ctx.strokeStyle = "#10b981";
+    ctx.lineWidth = 6;
+    ctx.strokeRect(15, 15, canvas.width - 30, canvas.height - 30);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(22, 22, canvas.width - 44, canvas.height - 44);
+
+    // Corner decorations
+    const drawCorner = (x: number, y: number, w: number, h: number) => {
+      ctx.strokeStyle = "#10b981";
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(x + w, y);
+      ctx.lineTo(x, y);
+      ctx.lineTo(x, y + h);
+      ctx.stroke();
+    };
+    drawCorner(10, 10, 50, 50);
+    drawCorner(canvas.width - 10, 10, -50, 50);
+    drawCorner(10, canvas.height - 10, 50, -50);
+    drawCorner(canvas.width - 10, canvas.height - 10, -50, -50);
+
+    // Title
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 28px Arial, sans-serif";
+    ctx.fillText("FIVEM EMS SERVICE", canvas.width / 2, 120);
+
+    ctx.fillStyle = "#10b981";
+    ctx.font = "bold 13px Arial, sans-serif";
+    ctx.fillText("ศูนย์ปฏิบัติการแพทย์กู้ภัยและรักษาพยาบาลฉุกเฉิน", canvas.width / 2, 155);
+
+    // Divider
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(100, 185);
+    ctx.lineTo(canvas.width - 100, 185);
+    ctx.stroke();
+
+    // Document Title
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 22px Arial, sans-serif";
+    ctx.fillText(contract.title, canvas.width / 2, 230);
+    
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.font = "11px Courier, monospace";
+    ctx.fillText(`CONTRACT ID: ${contract.id.toUpperCase()}`, canvas.width / 2, 260);
+
+    // Date formatting
+    const formattedDate = new Date(contract.created_at).toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: "Asia/Bangkok"
+    });
+
+    // Body content replacement
+    let bodyText = contract.content || "";
+    bodyText = bodyText
+      .replace(/\[ชื่อแพทย์\]/g, contract.doctor_name)
+      .replace(/\[Discord\]/g, `@${contract.doctor_discord_username}`)
+      .replace(/\[วันที่\]/g, formattedDate);
+
+    // Wrap and draw text
+    ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.font = "15px Arial, sans-serif";
+    
+    const paragraphs = bodyText.split("\n");
+    let y = 310;
+    const maxWidth = canvas.width - 160;
+    const lineHeight = 26;
+
+    function wrapText(text: string, x: number, startY: number, maxW: number, lineH: number) {
+      const words = text.split(" ");
+      let line = "";
+      let currentY = startY;
+
+      for (let n = 0; n < words.length; n++) {
+        if (text.length > 30 && !text.includes(" ")) {
+          let i = 0;
+          while (i < text.length) {
+            const chunk = text.substring(i, i + 55);
+            ctx!.fillText(chunk, x, currentY);
+            currentY += lineH;
+            i += 55;
+          }
+          return currentY;
+        }
+
+        const testLine = line + words[n] + " ";
+        const metrics = ctx!.measureText(testLine);
+        const testWidth = metrics.width;
+        if (testWidth > maxW && n > 0) {
+          ctx!.fillText(line, x, currentY);
+          line = words[n] + " ";
+          currentY += lineH;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx!.fillText(line, x, currentY);
+      return currentY + lineH;
+    }
+
+    paragraphs.forEach((p: string) => {
+      if (p.trim() === "") {
+        y += 12;
+      } else {
+        y = wrapText(p, 80, y, maxWidth, lineHeight);
+      }
+    });
+
+    y = Math.max(y + 40, 800);
+
+    // Divider before signatures
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(80, y);
+    ctx.lineTo(canvas.width - 80, y);
+    ctx.stroke();
+
+    y += 40;
+
+    // Management Signature (Left Side)
+    ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+    ctx.font = "13px Arial, sans-serif";
+    ctx.fillText("ผู้ลงนามฝ่ายบริหาร / ผู้ว่าจ้าง", 80, y);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.2)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(80, y + 35);
+    ctx.lineTo(280, y + 35);
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 14px Arial, sans-serif";
+    ctx.fillText(`( ${contract.created_by} )`, 80, y + 55);
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+    ctx.font = "12px Arial, sans-serif";
+    ctx.fillText("ฝ่ายบริหารงานบุคคล", 80, y + 75);
+
+    // Doctor Signature (Right Side)
+    ctx.textAlign = "right";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+    ctx.font = "13px Arial, sans-serif";
+    ctx.fillText("ผู้ยินยอมลงนาม / แพทย์กู้ภัย", canvas.width - 80, y);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.2)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(canvas.width - 280, y + 35);
+    ctx.lineTo(canvas.width - 80, y + 35);
+    ctx.stroke();
+
+    if (contract.status === "accepted" && contract.signature_name) {
+      // Draw handwriting style signature
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.font = "italic 32px 'Brush Script MT', 'Courier New', cursive";
+      ctx.fillStyle = "#10b981";
+      ctx.fillText(contract.signature_name, canvas.width - 180, y + 25);
+      ctx.restore();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 14px Arial, sans-serif";
+      ctx.fillText(`( ${contract.signature_name} )`, canvas.width - 80, y + 55);
+
+      const signedDate = new Date(contract.signed_at).toLocaleDateString("th-TH", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Asia/Bangkok"
+      }) + " น.";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.font = "12px Arial, sans-serif";
+      ctx.fillText(`ลงนามเมื่อ: ${signedDate}`, canvas.width - 80, y + 75);
+    }
+
+    // Seal of EMS
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+    ctx.font = "bold 8px Arial, sans-serif";
+    ctx.fillText("OFFICIAL SEAL", canvas.width / 2, y + 35);
+    
+    ctx.strokeStyle = "rgba(255,255,255,0.04)";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, y + 20, 38, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Trigger download
+    const dataUrl = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.download = `สัญญาจ้างแพทย์_${contract.doctor_name}.png`;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Format date
@@ -196,6 +517,87 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
                     <p key={idx} style={{ marginBottom: "8px", color: "var(--text-secondary)" }}>{line}</p>
                   ))}
                 </div>
+
+                {/* If type is Contract, show Contract control card */}
+                {selectedMessage.type === "contract" && selectedMessage.medical_contracts && (
+                  <div className="inbox-exam-action-card" style={{ border: "1px solid var(--border-subtle)", padding: "16px", borderRadius: "12px", background: "rgba(255,255,255,0.015)", display: "flex", flexDirection: "column", gap: "14px" }}>
+                    <div className="exam-flex-row-center" style={{ color: "var(--accent-light)", fontWeight: 600, fontSize: "0.92rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <FileText size={18} />
+                      <span>รายละเอียดสัญญาปฏิบัติหน้าที่</span>
+                    </div>
+
+                    <div style={{ maxHeight: "250px", overflowY: "auto", padding: "12px", borderRadius: "8px", background: "rgba(0,0,0,0.2)", fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.6, border: "1px solid rgba(255,255,255,0.04)" }}>
+                      {selectedMessage.medical_contracts.content.split("\n").map((line, idx) => (
+                        <p key={idx} style={{ marginBottom: "8px" }}>{line}</p>
+                      ))}
+                    </div>
+
+                    {selectedMessage.medical_contracts.status === "pending" ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "4px" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>พิมพ์ชื่อ-นามสกุลจริงเพื่อยอมรับและลงนามสัญญา:</label>
+                          <input
+                            type="text"
+                            placeholder="พิมพ์ชื่อ-นามสกุลจริงของคุณที่นี่"
+                            value={typedSignature}
+                            onChange={e => setTypedSignature(e.target.value)}
+                            style={{
+                              padding: "10px",
+                              borderRadius: "8px",
+                              border: "1px solid var(--border-subtle)",
+                              background: "rgba(0,0,0,0.3)",
+                              color: "#fff",
+                              fontSize: "0.88rem"
+                            }}
+                          />
+                        </div>
+                        <div style={{ display: "flex", gap: "10px" }}>
+                          <button
+                            onClick={() => handleRespondContract(selectedMessage, "rejected")}
+                            disabled={respondingContract}
+                            className="btn btn-danger"
+                            style={{ flex: 1, padding: "10px", fontSize: "0.85rem" }}
+                          >
+                            ปฏิเสธสัญญา
+                          </button>
+                          <button
+                            onClick={() => handleRespondContract(selectedMessage, "accepted")}
+                            disabled={respondingContract}
+                            className="btn btn-primary"
+                            style={{ flex: 2, padding: "10px", fontSize: "0.85rem", fontWeight: 600 }}
+                          >
+                            {respondingContract ? "กำลังประทับลงนาม..." : "ยินยอม & ลงนามสัญญา ✅"}
+                          </button>
+                        </div>
+                      </div>
+                    ) : selectedMessage.medical_contracts.status === "accepted" ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "4px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--success)", padding: "10px", background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: "8px", fontSize: "0.85rem" }}>
+                          <CheckCircle size={16} />
+                          <div>
+                            <strong>ลงนามสัญญาเรียบร้อยแล้วค่ะ</strong>
+                            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                              ลงชื่อ: {selectedMessage.medical_contracts.signature_name} | วันที่: {new Date(selectedMessage.medical_contracts.signed_at || "").toLocaleDateString("th-TH")}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDownloadDoctorContract(selectedMessage.medical_contracts)}
+                          className="btn btn-primary"
+                          style={{ width: "100%", padding: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontSize: "0.85rem", fontWeight: 600 }}
+                        >
+                          <FileText size={16} style={{ color: "#000" }} />
+                          ดาวน์โหลดเอกสารสัญญา (PNG)
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--danger)", padding: "10px", background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: "8px", fontSize: "0.85rem", marginTop: "4px" }}>
+                        <AlertTriangle size={16} />
+                        <span>คุณได้ทำการปฏิเสธสัญญาฉบับนี้แล้วค่ะ</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* If type is Exam, show Exam control card */}
                 {selectedMessage.type === "exam" && (
@@ -296,6 +698,8 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
                       <div className="inbox-message-item-icon">
                         {msg.type === "exam" ? (
                           <FileText size={18} className="text-[var(--accent)]" />
+                        ) : msg.type === "contract" ? (
+                          <FileText size={18} className="text-[#818cf8]" />
                         ) : msg.is_read ? (
                           <MailOpen size={18} className="text-[var(--text-secondary)]" />
                         ) : (
@@ -319,6 +723,13 @@ export function InboxModal({ isOpen, onClose }: InboxModalProps) {
                              msg.exam_attempts?.status === "failed" ? "สอบไม่ผ่าน ❌" :
                              msg.exam_attempts?.status === "submitted" ? "รอตรวจคะแนน ⏳" :
                              msg.exam_attempts?.status === "in_progress" ? "กำลังทำค้างไว้ ⏳" : "ยังไม่ได้ทำ ✍️"}
+                          </div>
+                        )}
+
+                        {msg.type === "contract" && msg.medical_contracts && (
+                          <div className="inbox-exam-badge" style={{ backgroundColor: msg.medical_contracts.status === "accepted" ? "rgba(16,185,129,0.12)" : msg.medical_contracts.status === "rejected" ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)", color: msg.medical_contracts.status === "accepted" ? "#4ade80" : msg.medical_contracts.status === "rejected" ? "#f87171" : "#fbbf24" }}>
+                            {msg.medical_contracts.status === "accepted" ? "เซ็นสัญญาแล้ว ✅" :
+                             msg.medical_contracts.status === "rejected" ? "ปฏิเสธสัญญา ❌" : "รอเซ็นสัญญา ⏳"}
                           </div>
                         )}
                       </div>
