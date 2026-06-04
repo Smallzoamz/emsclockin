@@ -46,8 +46,7 @@ export default function RankingPage() {
     );
   }
 
-  const top3 = ranking.slice(0, 3);
-  const others = ranking.slice(3);
+  const maxHours = ranking.length > 0 && ranking[0].totalHours > 0 ? ranking[0].totalHours : 1;
 
   return (
     <div className="page-container">
@@ -68,66 +67,59 @@ export default function RankingPage() {
           <h3 style={{ color: "var(--text-secondary)" }}>ยังไม่มีข้อมูลการเข้าเวรในสัปดาห์นี้</h3>
         </div>
       ) : (
-        <>
-          {/* Top 3 Podium */}
-          <div className="podium-grid">
-            {top3.map((entry, index) => {
-              const rank = index + 1;
-              const isFirst = rank === 1;
-              const rankIcon = isFirst ? (
-                <CrownIcon size={14} className="inline mr-1 align-text-top text-[#f59e0b]" />
-              ) : (
-                <TrophyIcon size={14} className="inline mr-1 align-text-top" />
-              );
-              const accentColor = isFirst ? "#f59e0b" : rank === 2 ? "#94a3b8" : "#d97706";
+        <div className="leaderboard-container">
+          {ranking.map((entry, index) => {
+            const rank = index + 1;
+            const percentage = (entry.totalHours / maxHours) * 100;
 
-              return (
-                <div key={index} className={`podium-card rank-${rank}`}>
-                  <div className="podium-rank-badge" style={{ background: accentColor, display: "inline-flex", alignItems: "center", gap: "2px" }}>
-                    {rankIcon} อันดับ {rank}
-                  </div>
-                  <div className="podium-avatar">
+            return (
+              <div key={index} className={`leaderboard-row rank-${rank <= 3 ? rank : 'other'}`}>
+                <div 
+                  className="leaderboard-progress-bg" 
+                  style={{ width: `${percentage}%` }}
+                />
+                <div 
+                  className="leaderboard-progress-line" 
+                  style={{ width: `${percentage}%` }}
+                />
+                
+                <div className={`leaderboard-rank rank-${rank <= 3 ? rank : 'other'}`}>
+                  {rank === 1 && <CrownIcon size={24} />}
+                  {rank === 2 && <TrophyIcon size={22} style={{ filter: "grayscale(100%) brightness(1.2)" }} />}
+                  {rank === 3 && <TrophyIcon size={22} style={{ filter: "hue-rotate(320deg) saturate(1.5)" }} />}
+                  {rank > 3 && `#${rank}`}
+                </div>
+
+                <div className="leaderboard-avatar-wrapper">
+                  <div className="leaderboard-avatar">
                     {entry.name ? entry.name.charAt(0).toUpperCase() : (entry.discordUsername ? entry.discordUsername.charAt(0).toUpperCase() : "D")}
                   </div>
-                  <div className="podium-info">
-                    <div className="podium-name">
-                      {entry.name}
-                    </div>
-                    {entry.discordUsername && (
-                      <div className="podium-subname">@{entry.discordUsername}</div>
-                    )}
-                    <div className="podium-hours" style={{ color: accentColor }}>
-                      {formatHoursToHHMMSS(entry.totalHours)}
-                    </div>
-                  </div>
                 </div>
-              );
-            })}
-          </div>
 
-          {/* Others List */}
-          {others.length > 0 && (
-            <div className="ranking-list card" style={{ marginTop: "32px", padding: "0" }}>
-              {others.map((entry, index) => (
-                <div key={index + 3} className="ranking-list-item">
-                  <div className="rank-number">#{index + 4}</div>
-                  <div className="ranking-user-info">
-                    <div className="ranking-name">
-                      {entry.name}
-                    </div>
-                    {entry.discordUsername && (
-                      <div className="ranking-subname">@{entry.discordUsername}</div>
+                <div className="leaderboard-user-info">
+                  <div className="leaderboard-name">
+                    {entry.name}
+                    {rank === 1 && (
+                      <span className="text-[10px] bg-[#fbbf24]/20 text-[#fbbf24] px-2 py-0.5 rounded-full border border-[#fbbf24]/30 uppercase font-extrabold tracking-wider animate-pulse">
+                        Top Active
+                      </span>
                     )}
                   </div>
+                  {entry.discordUsername && (
+                    <div className="leaderboard-subname">@{entry.discordUsername}</div>
+                  )}
+                </div>
 
-                  <div className="ranking-hours">
+                <div className="leaderboard-hours-wrapper">
+                  <div className="leaderboard-hours">
                     {formatHoursToHHMMSS(entry.totalHours)}
                   </div>
+                  <div className="leaderboard-hours-label">ชั่วโมงงาน</div>
                 </div>
-              ))}
-            </div>
-          )}
-        </>
+              </div>
+            );
+          })}
+        </div>
       )}
 
     </div>
