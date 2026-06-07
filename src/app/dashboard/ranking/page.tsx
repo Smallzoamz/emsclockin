@@ -14,6 +14,36 @@ interface RankingEntry {
   totalHours: number;
 }
 
+function RankingAvatar({
+  avatarUrl,
+  name,
+  className,
+}: {
+  avatarUrl?: string | null;
+  name?: string | null;
+  className: string;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const fallback = name?.trim()?.charAt(0).toUpperCase() || "D";
+
+  return (
+    <div className={className} aria-label={`Discord profile image: ${name || "Doctor"}`}>
+      {avatarUrl && !imageFailed ? (
+        <img
+          src={avatarUrl}
+          alt=""
+          className="ranking-avatar-image"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <span className="ranking-avatar-fallback">{fallback}</span>
+      )}
+    </div>
+  );
+}
+
 export default function RankingPage() {
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +114,7 @@ export default function RankingPage() {
     <div className="page-container">
       <header className="page-header">
         <div>
-          <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "8px", background: "linear-gradient(135deg, #f59e0b, #fbbf24)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          <h1 className="page-title ranking-page-title">
             <TrophyIcon className="text-[#f59e0b]" size={28} /> ทำเนียบแพทย์ดีเด่น
           </h1>
           <p className="page-subtitle">ชั่วโมงการเข้าเวรสูงสุดประจำสัปดาห์</p>
@@ -107,9 +137,7 @@ export default function RankingPage() {
                 <div className="pyramid-rank-badge rank-2">
                   <TrophyIcon size={14} style={{ filter: "grayscale(100%) brightness(1.2)" }} /> อันดับ 2
                 </div>
-                <div className="pyramid-avatar">
-                  {rank2.name ? rank2.name.charAt(0).toUpperCase() : "D"}
-                </div>
+                <RankingAvatar avatarUrl={rank2.avatarUrl} name={rank2.name} className="pyramid-avatar" />
                 <div className="pyramid-name">{rank2.name}</div>
                 {rank2.discordUsername && <div className="pyramid-subname">@{rank2.discordUsername}</div>}
                 <div className="pyramid-hours">{formatHoursToHHMMSS(rank2.totalHours)}</div>
@@ -121,12 +149,10 @@ export default function RankingPage() {
                 <div className="pyramid-rank-badge rank-1">
                   <CrownIcon size={14} /> อันดับ 1
                 </div>
-                <div className="pyramid-avatar">
-                  {rank1.name ? rank1.name.charAt(0).toUpperCase() : "D"}
-                </div>
+                <RankingAvatar avatarUrl={rank1.avatarUrl} name={rank1.name} className="pyramid-avatar" />
                 <div className="pyramid-name">
                   {rank1.name}
-                  <span className="block mt-1.5 text-[10px] bg-[#fbbf24]/20 text-[#fbbf24] px-2 py-0.5 rounded-full border border-[#fbbf24]/30 uppercase font-extrabold tracking-wider animate-pulse max-w-max mx-auto">
+                  <span className="top-active-badge">
                     Top Active
                   </span>
                 </div>
@@ -140,9 +166,7 @@ export default function RankingPage() {
                 <div className="pyramid-rank-badge rank-3">
                   <TrophyIcon size={14} style={{ filter: "hue-rotate(320deg) saturate(1.5)" }} /> อันดับ 3
                 </div>
-                <div className="pyramid-avatar">
-                  {rank3.name ? rank3.name.charAt(0).toUpperCase() : "D"}
-                </div>
+                <RankingAvatar avatarUrl={rank3.avatarUrl} name={rank3.name} className="pyramid-avatar" />
                 <div className="pyramid-name">{rank3.name}</div>
                 {rank3.discordUsername && <div className="pyramid-subname">@{rank3.discordUsername}</div>}
                 <div className="pyramid-hours">{formatHoursToHHMMSS(rank3.totalHours)}</div>
@@ -173,13 +197,13 @@ export default function RankingPage() {
                     </div>
 
                     <div className="leaderboard-avatar-wrapper">
-                      <div className="leaderboard-avatar">
-                        {entry.name ? entry.name.charAt(0).toUpperCase() : "D"}
-                      </div>
+                      <RankingAvatar avatarUrl={entry.avatarUrl} name={entry.name} className="leaderboard-avatar" />
                     </div>
 
                     <div className="leaderboard-user-info">
-                      <div className="leaderboard-name">{entry.name}</div>
+                      <div className="leaderboard-name">
+                        <span className="leaderboard-name-text">{entry.name}</span>
+                      </div>
                       {entry.discordUsername && (
                         <div className="leaderboard-subname">@{entry.discordUsername}</div>
                       )}
@@ -206,17 +230,17 @@ export default function RankingPage() {
             <div className="personal-rank-title">ข้อมูลอันดับของคุณ (Your Ranking)</div>
             <div className="personal-rank-content">
               <div className="leaderboard-avatar-wrapper">
-                <div className="leaderboard-avatar" style={{ borderColor: 'var(--accent)', boxShadow: '0 0 10px var(--accent-glow)' }}>
-                  {userEntry?.name 
-                    ? userEntry.name.charAt(0).toUpperCase() 
-                    : (sessionUser.name ? sessionUser.name.charAt(0).toUpperCase() : "D")}
-                </div>
+                <RankingAvatar
+                  avatarUrl={userEntry?.avatarUrl || sessionUser.avatar || sessionUser.image}
+                  name={userEntry?.name || sessionUser.name}
+                  className="leaderboard-avatar personal-rank-avatar"
+                />
               </div>
               
               <div className="leaderboard-user-info">
                 <div className="leaderboard-name" style={{ color: 'var(--text-primary)' }}>
-                  {userEntry?.name || sessionUser.name || "Unknown"}
-                  <span className="text-[10px] bg-[var(--accent-glow)] text-[var(--accent-light)] px-2 py-0.5 rounded-full border border-[var(--border-subtle)] uppercase font-extrabold tracking-wider ml-2">
+                  <span className="leaderboard-name-text">{userEntry?.name || sessionUser.name || "Unknown"}</span>
+                  <span className="active-user-badge">
                     Active User
                   </span>
                 </div>
