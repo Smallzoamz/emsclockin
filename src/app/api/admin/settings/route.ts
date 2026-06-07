@@ -26,7 +26,7 @@ export async function GET() {
     // Run reset check for conduct points
     const session = await auth();
     const userEmail = session?.user?.email;
-    let registeredDoctors = settings['registered_doctors'] || [];
+    const registeredDoctors = settings['registered_doctors'] || [];
     let updated = false;
 
     if (userEmail && Array.isArray(registeredDoctors)) {

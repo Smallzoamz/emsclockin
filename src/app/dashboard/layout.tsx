@@ -6,6 +6,7 @@ import { TopHeader } from "@/components/TopHeader";
 import { supabase } from "@/lib/supabase";
 import { headers } from "next/headers";
 import { HospitalIcon } from "@/components/Icons";
+import { getBangkokDayName } from "@/lib/utils";
 
 export default async function DashboardLayout({
   children,
@@ -104,11 +105,7 @@ export default async function DashboardLayout({
     if (settingsData?.value) {
       const op_schedule = settingsData.value;
       if (!isOp && discordUsername && op_schedule) {
-        // Calculate current day of the week in GMT+7
-        const thaiTime = new Date(new Date().getTime() + (7 * 60 * 60 * 1000));
-        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        const currentDay = dayNames[thaiTime.getUTCDay()];
-
+        const currentDay = getBangkokDayName();
         const todayOPs = op_schedule[currentDay] || [];
         isOp = todayOPs.includes(discordUsername);
       }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
 import { runNicknameSync } from "@/app/api/op/sync-nicknames/route";
+import { getCurrentWeekRange } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -126,12 +127,7 @@ export async function GET() {
       .limit(5);
 
     // 5. Calculate start of current week (Monday at 00:00:00 BKK) to query weekly total shifts count
-    const nowBkk = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
-    const day = nowBkk.getDay(); // 0 Sunday, 1 Monday, ...
-    const diff = nowBkk.getDate() - day + (day === 0 ? -6 : 1);
-    const mondayBkk = new Date(nowBkk.setDate(diff));
-    mondayBkk.setHours(0, 0, 0, 0);
-    const startOfWeekISO = mondayBkk.toISOString();
+    const startOfWeekISO = getCurrentWeekRange().start.toISOString();
 
     const { count: weeklyShiftsCount } = await supabase
       .from("shifts")

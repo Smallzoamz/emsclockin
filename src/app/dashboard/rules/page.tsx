@@ -102,7 +102,7 @@ function formatRuleDisplay(text: string) {
     const desc = parts[0] || "";
     const fine = parts[1] || "";
     const consequence = parts[2] || "";
-    let meta = [];
+    const meta = [];
     if (fine) meta.push(`ค่าปรับ: ${fine}`);
     if (consequence) meta.push(`โทษ: ${consequence}`);
     return meta.length > 0 ? `${desc} (${meta.join(" / ")})` : desc;
@@ -1048,7 +1048,7 @@ export default function RulesPage() {
         return dist < 2.5;
       });
 
-      let updatedPinsList = [...currentPins];
+      const updatedPinsList = [...currentPins];
       if (closeIndex > -1) {
         updatedPinsList.splice(closeIndex, 1);
         showToast("ลบจุดปักหมุดเรียบร้อยแล้วค่ะ", "success");

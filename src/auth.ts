@@ -146,8 +146,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               return acc;
             }, {});
 
-            let botToken = settingsMap["discord_bot_token"] || process.env.DISCORD_BOT_TOKEN;
-            let guildId = settingsMap["discord_guild_id"] || process.env.DISCORD_GUILD_ID;
+            const botToken = settingsMap["discord_bot_token"] || process.env.DISCORD_BOT_TOKEN;
+            const guildId = settingsMap["discord_guild_id"] || process.env.DISCORD_GUILD_ID;
             let isGranted = false;
 
             // 1. Dynamic Check for Director / Deputy Director Discord roles

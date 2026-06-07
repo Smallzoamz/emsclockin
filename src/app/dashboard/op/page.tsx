@@ -298,7 +298,7 @@ export default function OpQueuePage() {
     if (category === "inactive") return;
 
     const skippedAt = category === "skipped" ? Date.now() : undefined;
-    let nextCaseCounts = { ...opCaseCounts };
+    const nextCaseCounts = { ...opCaseCounts };
     let localDocs = [...doctors];
 
     // ── New logic: credit the PREVIOUS "receiving" doctor when a NEW doctor starts receiving ──

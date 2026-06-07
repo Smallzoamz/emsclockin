@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
-import { startOfWeek, subWeeks, format } from "date-fns";
+import { formatBangkokDateKey, getBangkokWeekStartKey, getCurrentWeekRange } from "@/lib/utils";
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function GET() {
   const session = await auth();
@@ -13,9 +15,8 @@ export async function GET() {
   try {
     // Get shifts from the last 8 weeks
     const weeksBack = 8;
-    const startDate = startOfWeek(subWeeks(new Date(), weeksBack - 1), {
-      weekStartsOn: 1,
-    });
+    const currentWeekStart = getCurrentWeekRange().start;
+    const startDate = new Date(currentWeekStart.getTime() - (weeksBack - 1) * WEEK_MS);
 
     const { data: shifts, error } = await supabase
       .from("shifts")
@@ -49,10 +50,8 @@ export async function GET() {
     > = {};
 
     for (let i = 0; i < weeksBack; i++) {
-      const weekStart = startOfWeek(subWeeks(new Date(), weeksBack - 1 - i), {
-        weekStartsOn: 1,
-      });
-      const key = format(weekStart, "yyyy-MM-dd");
+      const weekStart = new Date(startDate.getTime() + i * WEEK_MS);
+      const key = formatBangkokDateKey(weekStart);
       weeklyData[key] = {
         weekStart: key,
         totalMinutes: 0,
@@ -62,16 +61,14 @@ export async function GET() {
     }
 
     (shifts || []).forEach((shift) => {
-      const shiftWeekStart = startOfWeek(new Date(shift.clock_in), {
-        weekStartsOn: 1,
-      });
-      const weekKey = format(shiftWeekStart, "yyyy-MM-dd");
+      const shiftDate = new Date(shift.clock_in);
+      const weekKey = getBangkokWeekStartKey(shiftDate);
       if (weeklyData[weekKey]) {
         weeklyData[weekKey].totalMinutes += shift.duration_minutes || 0;
         weeklyData[weekKey].shiftCount += 1;
 
         // Accumulate minutes per calendar day
-        const dayKey = format(new Date(shift.clock_in), "yyyy-MM-dd");
+        const dayKey = formatBangkokDateKey(shiftDate);
         weeklyData[weekKey].dailyMinutes[dayKey] = 
           (weeklyData[weekKey].dailyMinutes[dayKey] || 0) + (shift.duration_minutes || 0);
       }

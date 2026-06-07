@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { formatThaiDate } from "@/lib/utils";
+import { formatThaiDate, getBangkokDayName } from "@/lib/utils";
 
 // Module-level state for Discord sync queue
 let isSyncing = false;
@@ -224,9 +224,7 @@ export async function syncOpQueueToDiscord(forceNewMessage = false, forceUpdate 
     const inactiveList = doctors.filter(d => d.queueCategory === "inactive").map(d => d.name);
 
     // 5. Determine today's day & OP details
-    const thaiTime = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const currentDay = dayNames[thaiTime.getUTCDay()];
+    const currentDay = getBangkokDayName();
     const todayOps = opSchedule[currentDay] || [];
 
     const opDisplayNames = opActive
@@ -423,8 +421,7 @@ export async function teardownOpQueue() {
 
     // Fallback: calculate today's day & scheduled OPs if opener not set
     const opSchedule = settings.op_schedule || {};
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const currentDay = dayNames[new Date(new Date().getTime() + 7 * 60 * 60 * 1000).getUTCDay()];
+    const currentDay = getBangkokDayName();
     const todayOps = opSchedule[currentDay] || [];
     const fallbackOpNames = todayOps.map((username: string) => {
       const doc = registeredDoctors.find((d: any) => d.discordUsername === username);

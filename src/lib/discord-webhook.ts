@@ -79,11 +79,6 @@ export async function sendDiscordWebhook(
     embeds: [embed],
   };
 
-  // Log the payload for debugging if it fails
-  try {
-    require("fs").writeFileSync("webhook-debug.log", JSON.stringify(requestBody, null, 2) + "\n\n", { flag: 'a' });
-  } catch (e) {}
-
   try {
     const response = await fetch(url, {
       method,
@@ -98,14 +93,8 @@ export async function sendDiscordWebhook(
       const text = await response.text();
       console.error(`[Discord Webhook] Failed: ${response.status} ${response.statusText}`);
       console.error(text);
-      try {
-        require("fs").writeFileSync("webhook-error.log", `[${new Date().toISOString()}] Failed: ${response.status} ${text}\nPayload: ${JSON.stringify(requestBody)}\n\n`, { flag: 'a' });
-      } catch (e) {}
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Discord Webhook] Error:", error);
-    try {
-        require("fs").writeFileSync("webhook-error.log", `[${new Date().toISOString()}] Exception: ${error.message}\n`, { flag: 'a' });
-    } catch (e) {}
   }
 }

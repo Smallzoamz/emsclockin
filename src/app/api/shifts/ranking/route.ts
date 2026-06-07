@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
-import { startOfWeek } from "date-fns";
+import { getCurrentWeekRange } from "@/lib/utils";
 
 export async function GET() {
   const session = await auth();
@@ -11,7 +11,7 @@ export async function GET() {
   }
 
   try {
-    const startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const startDate = getCurrentWeekRange().start;
 
     const { data: shifts, error } = await supabase
       .from("shifts")

@@ -259,7 +259,6 @@ export default function BonusCalculatorPage() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPayouts(selectedHistoryId);
   }, [selectedHistoryId, fetchPayouts]);
 
@@ -579,7 +578,6 @@ export default function BonusCalculatorPage() {
                     <td className="cell">
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         {entry.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img src={entry.avatarUrl} alt="" className="roster-doctor-avatar" />
                         ) : (
                           <div className="roster-doctor-fallback">
