@@ -6294,6 +6294,192 @@ body::before {
   gap: 12px;
 }
 
+.announcement-composer-card {
+  background: color-mix(in srgb, var(--bg-card) 94%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.announcement-composer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.announcement-composer-kicker {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.announcement-composer-title {
+  margin: 0;
+  font-size: 1.12rem;
+  line-height: 1.25;
+  font-weight: 800;
+  color: var(--accent-light);
+}
+
+.announcement-composer-summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: 58%;
+}
+
+.announcement-composer-summary span {
+  min-width: 0;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 5px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.announcement-composer-summary span.urgent {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+
+.announcement-composer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.82fr);
+  align-items: stretch;
+}
+
+.announcement-workspace-panel,
+.announcement-preview-panel {
+  min-width: 0;
+  padding: 22px;
+}
+
+.announcement-preview-panel {
+  border-left: 1px solid var(--border-subtle);
+  background: rgba(15, 23, 42, 0.16);
+}
+
+.announcement-composer-card .announce-wizard-card {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.announcement-composer-card .announce-stepper {
+  flex-direction: row;
+  gap: 10px;
+  padding: 0 0 16px 0;
+  border-right: none;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.announcement-composer-card .announce-step {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.announcement-composer-card .announce-step.active {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-subtle));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.announcement-composer-card .announce-step-info {
+  min-width: 0;
+}
+
+.announcement-composer-card .announce-step-title,
+.announcement-composer-card .announce-step-desc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.announcement-composer-card .live-preview-container,
+.announcement-composer-card .preview-system-card {
+  height: 100%;
+}
+
+.announcement-composer-card .preview-system-card {
+  min-height: 420px;
+}
+
+.preview-embed-buttons.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 1180px) {
+  .announcement-composer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .announcement-preview-panel {
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .announcement-composer-summary {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .announcement-composer-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .announcement-workspace-panel,
+  .announcement-preview-panel {
+    padding: 16px;
+  }
+
+  .announcement-composer-card .announce-stepper {
+    overflow-x: auto;
+    padding-bottom: 12px;
+  }
+
+  .announcement-composer-card .announce-step {
+    flex: 0 0 176px;
+  }
+
+  .announcement-composer-summary {
+    justify-content: flex-start;
+  }
+
+  .announcement-composer-summary span {
+    max-width: 100%;
+  }
+
+  .preview-embed-buttons.compact {
+    grid-template-columns: 1fr;
+  }
+}
+
 .blacklist-filter-tabs {
   display: flex;
   gap: 8px;

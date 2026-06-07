@@ -564,53 +564,6 @@ export default function AnnouncementsPage() {
     });
   };
 
-  const handleSendToDiscord = async () => {
-    let startStr = fixedStartTime;
-    let endStr = fixedEndTime;
-
-    if (!startStr || !endStr) {
-      const now = new Date();
-      const bkkNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
-      const bkkEnd = new Date(bkkNow.getTime() + cooldownMinutes * 60 * 1000);
-      const startH = bkkNow.getHours().toString().padStart(2, "0");
-      const startM = bkkNow.getMinutes().toString().padStart(2, "0");
-      startStr = `${startH}.${startM}`;
-      const endH = bkkEnd.getHours().toString().padStart(2, "0");
-      const endM = bkkEnd.getMinutes().toString().padStart(2, "0");
-      endStr = `${endH}.${endM}`;
-      setFixedStartTime(startStr);
-      setFixedEndTime(endStr);
-    }
-
-    const discordText = generateFormattedText(true, startStr, endStr);
-    if (!discordText) return;
-    setIsSendingDiscord(true);
-    setDiscordStatus(null);
-
-    try {
-      const res = await fetch("/api/announcements/send-discord", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: activeTemplate ? activeTemplate.title : "ประกาศด่วน",
-          content: discordText
-        })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setDiscordStatus({ message: "ส่งประกาศเข้าสู่ระบบ Discord เรียบร้อยแล้วค่ะ! 🚀", type: "success" });
-        await saveOrUpdateBlacklistRecord();
-      } else {
-        setDiscordStatus({ message: data.error || "เกิดข้อผิดพลาดในการส่ง", type: "error" });
-      }
-    } catch (err) {
-      setDiscordStatus({ message: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อส่งข้อมูลได้", type: "error" });
-    } finally {
-      setIsSendingDiscord(false);
-      setTimeout(() => setDiscordStatus(null), 5000);
-    }
-  };
-
   const openReleaseModal = (record: any) => {
     setReleasingRecord(record);
     setReleaseReason("");
@@ -917,11 +870,22 @@ export default function AnnouncementsPage() {
       {/* ╚════════════════════════════════════════════════════════════╝ */}
       {mode === "create" && (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "24px", alignItems: "start" }}>
+          <div className="announcement-composer-card">
+            <div className="announcement-composer-header">
+              <div>
+                <span className="announcement-composer-kicker">Announcement Composer</span>
+                <h2 className="announcement-composer-title">จัดการประกาศ</h2>
+              </div>
+              <div className="announcement-composer-summary" aria-label="ข้อมูลประกาศที่เลือก">
+                <span>{categories.find(c => c.id === selectedCatId)?.name || "ทั่วไป"}</span>
+                <span>{activeTemplate ? activeTemplate.title : "ยังไม่ได้เลือกเทมเพลต"}</span>
+                {isUrgent && <span className="urgent">ด่วน</span>}
+              </div>
+            </div>
 
-            {/* ─── Left Panel: Stepper + Form Wizard ─── */}
-            <div className="card" style={{ padding: "24px" }}>
-              <div className="announce-wizard-card">
+            <div className="announcement-composer-grid">
+              <div className="announcement-workspace-panel">
+                <div className="announce-wizard-card">
                 {/* Stepper Steps */}
                 <div className="announce-stepper">
                   <div className={`announce-step ${step === 1 ? "active" : step > 1 ? "completed" : ""}`}>
@@ -1359,8 +1323,8 @@ export default function AnnouncementsPage() {
                             <button onClick={() => setStep(2)} className="btn btn-ghost" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                               <ArrowLeft size={14} /> ย้อนกลับ
                             </button>
-                            <button onClick={handleConfirmPublish} disabled={!publishCopyToClipboard && !publishSendToDiscord} className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold" }}>
-                              <CheckCircle size={14} /> ยืนยันเผยแพร่ประกาศ
+                            <button onClick={handleConfirmPublish} disabled={isSendingDiscord || (!publishCopyToClipboard && !publishSendToDiscord)} className="btn btn-primary" style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold" }}>
+                              <CheckCircle size={14} /> {isSendingDiscord ? "กำลังเผยแพร่..." : "ยืนยันเผยแพร่ประกาศ"}
                             </button>
                           </div>
                         </>
@@ -1372,9 +1336,9 @@ export default function AnnouncementsPage() {
               </div>
             </div>
 
-            {/* ─── Right Panel: Live Preview Card ─── */}
-            <div className="live-preview-container">
-              <div className={`preview-system-card ${isUrgent ? "urgent" : ""}`} style={{ minHeight: "360px" }}>
+              <div className="announcement-preview-panel">
+                <div className="live-preview-container">
+                  <div className={`preview-system-card ${isUrgent ? "urgent" : ""}`} style={{ minHeight: "360px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "10px" }}>
                   <span style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
                     ตัวอย่างประกาศ (Live Preview)
@@ -1421,17 +1385,19 @@ export default function AnnouncementsPage() {
                   </div>
                 )}
 
-                <div className="preview-embed-buttons" style={{ marginTop: "auto" }}>
+                <div className="preview-embed-buttons compact" style={{ marginTop: "auto" }}>
                   <button onClick={handleCopyText} disabled={!formattedResultText} className="btn btn-ghost" style={{ justifyContent: "center", borderRadius: "8px" }}>
-                    <ClipboardIcon size={14} /> คัดลอกประกาศ
+                    <ClipboardIcon size={14} /> คัดลอก
                   </button>
-                  <button onClick={handleSendToDiscord} disabled={!formattedResultText || isSendingDiscord} className="btn btn-primary" style={{ justifyContent: "center", background: "#5865F2", color: "white", border: "none", borderRadius: "8px" }}>
-                    <SendIcon size={14} /> {isSendingDiscord ? "กำลังส่ง..." : "ส่งเข้า Discord"}
+                  <button onClick={() => setStep(3)} disabled={!formattedResultText || isPublished} className="btn btn-ghost" style={{ justifyContent: "center", borderRadius: "8px" }}>
+                    <SendIcon size={14} /> ตั้งค่าการเผยแพร่
                   </button>
                 </div>
                 <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "center" }}>
-                  * พรีวิวในระบบและดิสคอร์ด เมื่อส่งข้อมูลสำเร็จจะปรากฏในช่องทางต่างๆ
+                  * ตรวจพรีวิวที่นี่ แล้วส่งจริงจากขั้นเผยแพร่เพื่อยืนยัน action ก่อนออกประกาศ
                 </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
